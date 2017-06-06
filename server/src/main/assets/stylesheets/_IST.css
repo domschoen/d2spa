@@ -1,0 +1,722 @@
+
+* {
+	padding: 0;
+	margin: 0;
+}
+
+div#a {
+	width:auto;
+	max-width: 1735px;
+	margin-left: 20px;
+	margin-top: 15px;
+}
+
+div#a h1.task {
+	margin-top: 0.5em;
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+}
+
+div#a h2.entity {
+	-moz-border-radius-topright: 4px;
+	-moz-border-radius-topleft: 4px;
+	-webkit-border-top-right-radius: 4px;
+	-webkit-border-top-left-radius: 4px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	font-size: 20px;
+}
+
+div#b {
+	width: 180px;
+	background-color: #336699;
+}
+
+
+div#c {
+	height : 163px;
+	background: url(/WebObjects/Foss.woa/Contents/WebServerResources/image003.jpg) no-repeat; 
+}
+
+div#c h1 {
+	padding-left: 14px;
+	padding-top: 12px;
+	color: white;
+}
+
+div#c h2 {
+	padding-left: 125px;
+	color: maroon;
+}
+
+div#vertical_divider {
+	width:1px;
+	border-style:outset;
+	border-width:2px;
+	background-color: #336699;
+	border-left-color: SteelBlue;
+	border-top-color: SteelBlue;
+	border-right-color: DarkGray;
+	cursor: pointer;
+}
+
+div#b, div#vertical_divider, div#a {
+	float: left;
+	min-height: 1200px;
+}
+
+div#graphInfo {
+	position: relative;
+	top: -45px;
+	z-index: 100;
+}
+
+body {
+    min-width: 1920px;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    color: #0c1830;
+}
+
+#nagra_logo {
+	/*text-indent: -5000px;
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/foss-logo.gif);
+	width: 87px;
+	height: 58px;
+	height: 58px;*/
+	display : none;
+}
+
+h2#version {
+	margin-top: 20px;
+	/*display:none;*/
+	/*margin-left: 14px;
+	margin-top: 12px;
+	color: white;
+	margin-bottom: 52px;*/
+}
+h2#version span {
+	display:none;
+}
+
+#busy {
+	position: absolute; 
+	width: 100%; 
+	height: 100%; 
+	top: 0px; 
+	left: 0px; 
+	z-index: 9999;
+	opacity: 0.7; 
+}
+
+#busy div {
+	text-indent: -5000px;
+	background: url(/WebObjects/Foss.woa/Frameworks/Ajax.framework/WebServerResources/busyBigSpinner.gif) no-repeat;
+	width: 128px;
+	height: 128px;
+	top: 40%;
+	left: 45%;
+	position: absolute;
+}
+
+/* globals */
+
+ul, ol {
+	list-style-type: none;
+}
+
+span.required {
+	color: red;
+}
+
+em {
+	font-size: 9pt;
+	color: #777777;
+}
+
+em:before {
+	content: "(";
+}
+
+em:after {
+	content: ")";
+}
+
+button {
+	cursor: pointer;
+}
+
+input, textarea {
+	border: 2px solid rgb(219, 222, 227);
+	padding: 2px;
+}
+
+input[type="button"], button {
+	border: 2px outset buttonface;
+	padding: 2px 6px 3px 6px;
+}
+
+select {
+    border: none;
+    overflow: auto;
+}
+
+fieldset {
+	border: 0;
+}
+
+legend {
+	font-weight: bold;
+	color: black;
+}
+
+table thead tr {
+	background-color: transparent;
+}
+
+th {
+  background-color: #336699;
+  border: solid 1px;
+  color: #eeeeff;
+}
+
+tr {
+  background-color: rgb(226, 230, 234);
+}
+
+a {
+	text-decoration: none;
+	color: #3366bb;
+}
+
+a:hover {
+	text-decoration: underline;
+	color: #77aace;
+}
+
+br {
+	clear: both;
+}
+
+div.clear {
+	clear: both;
+	height: 0;
+}
+
+option {
+	border-bottom: 1px dotted rgb(226, 230, 234);
+}
+
+label {
+	font-size: 9pt;
+}
+
+option:hover {
+	color: blue;
+}
+
+a img {
+   border-style: none;
+}
+
+label {
+	padding-left: 2px;
+}
+
+/* d2w debug */
+
+span.d2wdebug {
+	font-size: 9pt; 
+}
+
+/* The following are styles for the menu */
+
+/* Home link */
+div#b div.link a#home_link,
+div#b div.link a#report_link {
+	/*clear: both;
+	text-indent: -5000px;
+	display: block;
+	width:156px;
+	height:32px;
+	border: 0px;
+	cursor: pointer;*/
+	color: white;
+	margin-left: 14px;
+	margin-top: 14px;
+	border-color : #5A8CBC #002030 #002030 #274D74;
+	border-style: solid;
+	background-color: #4976A2;
+	width:147px;
+	height:24px;
+	font-weight: bold;
+	display:block;
+    font-size:16.0pt;
+    /*font-weight:700;*/
+    font-family: Times New Roman;
+    cursor: pointer;
+    border-width : 2px 3px 3px 2px;
+    text-decoration : none;
+    line-height: 21px;
+}
+div#b div.loggedAs {
+}
+
+div#b div.user {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	height: 12px;
+	color: white;
+	margin-left: 14px;
+	margin-top: 14px;
+}
+
+div#b div.userString {
+	font-weight: bold;
+}
+
+div#b div.link a#home_link span,
+div#b div.link a#report_link span {
+	padding : 0px 8px 0px 7px;
+}
+
+  /*	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/Dashboard.gif); */
+  /*border-style: solid;*/
+  /*border-width : 1px 4px 4px 1px;*/
+  /*text-decoration : none;*/
+  /*padding : 4px;*/
+  /*border-color : #69f #00f #00f #69f;*/
+ /* display:block;*/ /* change to inline for horizontal menu */
+  /*width: 100px;*/
+  /*color: white;*/
+  /*border: 3px red ridge;
+  font-weight:bold;
+  margin-left:10px; /*indents left margin; change for horiz. menu */
+  /*background-color: #000000;*/ /* #336699; */
+
+
+/* a#home_link span {*/
+  /*font-color: white;*/
+   /* background-color:  #336699;*/
+
+
+div#b div.link a, div#b ul.action, div#b h3.section {
+	margin-left:auto;
+	margin-right:auto;
+}
+
+
+
+
+
+a#toggle_look_link {
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/SalesAndServices.gif);
+}
+
+div#b h3.section {
+	color: white;
+	font-size: 10pt;
+}
+
+div#b ul.action li, div#b h3.section {
+	width: 135px;
+}
+
+div#b ul.action li {
+	height: 21px;
+	overflow: hidden;
+}
+
+div#b ul.action {
+	border: 1px inset gray;
+	background-color: white;
+	-webkit-appearance: listbox;
+	max-height: 250px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	width: 150px;
+	font-size: 12px;
+}
+
+div#b ul.action li:hover a.text {
+	text-decoration: none;
+	background-color: #336699;
+	color: white;
+}
+
+div#b ul.action a.text, div#b ul.action a.box_add, div#b ul.action a.box_query  {
+	line-height: 21px;
+}
+
+div#b ul.action a.text {
+	float: left;
+	overflow: hidden hidden;
+	width: 99px;
+	color: black;
+}
+
+div#b ul.action a.box_add, div#b ul.action a.box_query {
+	text-indent: -5000px;
+}
+
+div#b ul.action a.box_add {
+	float: right;
+	width: 18px;
+}
+
+div#b ul.action a.box_query {
+	float: left;
+	width: 18px;
+}
+
+div#b ul.action li:hover a.box_add {
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/plus-btn.png) no-repeat 1px 50% #336699;
+}
+
+div#b ul.action li a.box_add:hover {
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/plus-btn-H.png) no-repeat 1px 50% grey;
+}
+
+div#b ul.action li:hover a.box_query {
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/magglass-btn.png) no-repeat 1px 50% #336699;
+}
+
+div#b ul.action li a.box_query:hover {
+	background: url(/WebObjects/Foss.woa/Frameworks/NVD2WExtensions.framework/WebServerResources/magglass-btn.png) no-repeat 1px 50% grey;
+}
+
+.fossTitleGrey	{
+	color:gray;
+	font-size:13.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Verdana, sans-serif;
+}
+
+.fossTitleRed {
+	color:maroon;
+	font-size:13.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Verdana, sans-serif;
+}
+
+.xl24	{
+	font-family:Verdana, sans-serif;
+	padding-right: 17px;
+}
+.xl25	{
+	font-family:Verdana, sans-serif;
+	background:#666699;
+}
+.xl26	{
+	color:maroon;
+	font-family:Verdana, sans-serif;
+	background:#666699;
+}
+.xl27	{
+	font-weight:700;
+	font-family:Verdana, sans-serif;
+}
+.xl28	{
+	color:gray;
+	font-size:13.0pt;
+	font-family:Verdana, sans-serif;
+}
+.xl29	{
+	font-size:12.0pt;
+	font-family:Verdana, sans-serif;
+}
+.xl30	{
+	font-size:12.0pt;
+	font-weight:700;
+	font-family:Verdana, sans-serif;
+}
+.homeSectionCell	{
+	font-size:12.0pt;
+	font-weight:700;
+	width : 149px;
+	font-family:Verdana, sans-serif;
+	background:silver;
+}
+.xl32	{
+	font-family:Verdana, sans-serif;
+	text-align:right;
+}
+.xl33	{
+	color:blue;
+	text-decoration:underline;
+	text-underline-style:single;
+	text-align:right;
+}
+.xl34	{
+	font-size:8.0pt;
+	font-family:Verdana, sans-serif;
+}
+.xl35	{
+	color:blue;
+	text-decoration:underline;
+}
+.xl36	{
+	font-family:Verdana, sans-serif;
+	text-align:left;
+}
+.xl37	{
+	color:maroon;
+	font-size:16.0pt;
+	font-weight:700;
+	font-family:Verdana, sans-serif;
+	background:#666699;
+}
+.xl38	{
+	font-size:7.0pt;
+	font-family:Verdana, sans-serif;
+	text-align:left;
+}
+
+
+tr.homeRow {
+	height:12.75px;
+	background-color: transparent;
+}
+tr.homeRowSection {
+	height:15px;
+	background-color: transparent;
+}
+
+h1.home {
+	color:maroon;
+	font-size:16.0pt;
+	font-weight:700;
+	font-family:Verdana, sans-serif;
+	/* background:#666699; */
+	padding-bottom: 5px;
+}
+
+h2.home {
+	padding-bottom: 30px;
+}
+
+.reportSection {
+	margin-bottom: 27px;
+	padding-bottom: 10px;
+	background-color: #CBCED3;
+}
+
+.sectionTitle {
+	background: #aabcc6;
+	padding: 4px;
+	height: 35px;
+	font-size: 18px;
+	border-top-left-radius: 4px 4px;
+    border-top-left-radius: 4px 4px;
+    border-top-right-radius: 4px 4px;
+    border-top-right-radius: 4px 4px;
+}
+
+h4.eoTitle {
+	background: #d2cfac;
+	padding: 4px;
+}
+div.cell {
+	display: table-cell;
+}
+
+div.attributeContent, div.attributeName {
+	vertical-align: top;
+	border-top: 1px #E2E6EA solid;
+    line-height: 27px;
+    padding: 4px;
+}
+div.attributeContent {
+    width: 1320px; 
+}
+
+div.attributeName {
+	font-weight: bold;
+    width: 130px;
+}
+
+div.row {
+	display: table-row;
+}
+
+.row.approval {
+	display: table;
+    width: 600px;
+}
+
+div.approved div.reportSection {
+    width: 600px;
+}
+
+.cell.name {
+	width: 150px;
+}
+
+.cell.version {
+	width: 100px;
+}
+
+div.attribute {
+	height: 20px;
+	background-color: #CBCED3;;
+}
+
+div.table {
+	display: table;
+}
+
+div.eo {
+	top: 0;
+	right: 0;
+	width: 1450px;
+	margin: 0;
+	padding: 0;
+}
+
+h2.rapportTitle {
+	margin-bottom : 20px;
+	font-weight: normal;
+}
+
+span.licenseZip {
+    margin-left: 30px;
+}
+
+tr.nagraSW {
+	background-color: #D2CFAC;
+	font-size: 16px;
+}
+
+table.nagraSW {
+	background-color: #e0e6ea;
+}
+
+table.listPage {
+    table-layout: fixed;
+    width: 1000px;
+}
+
+table.listRepetition {
+    width: 1000px;
+}
+tr.listRepetitionColumnHeader {
+	background-color: white;
+}
+td.listRepetitionColumnHeader {
+	padding-top: 20px;
+}
+span.listRepetitionColumnHeader {
+	font-size: 10pt;
+	font-family: Arial, sans-serif;
+	font-weight: bold;
+}
+
+tr.listHeader {
+    vertical-align : middle;
+    width: 240px;
+    background: #aabbcc;
+}
+
+td.listHeaderEntityName {
+    text-align : left;
+    width: 140px;
+}
+td.listHeaderReturnButton {
+    vertical-align : baseline;
+    white-space: nowrap;
+    width: auto;
+    padding: 5px;
+}
+
+td.buttonsbar
+{
+  font-family: Arial, sans-serif;
+  color: #0c1830;
+  /*background-color: #aabbcc;*/
+  font-size: 10pt;
+}
+div.liner {
+	margin-bottom: 3px;
+}
+div.banner {
+	margin-bottom: 3px;
+	margin-top: 15px;
+}
+
+div.d2wPage {
+  margin-left: 15px;
+}
+
+span.attribute {
+	font-weight: bold;
+	vertical-align: top;
+}
+span.beforeFirstButton {
+	width: 250px;
+}
+
+span.buttonOfBar {
+	padding-right: 4px;
+	padding-left: 13px;
+}
+
+
+
+span.buttonsbar {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+div.buttonsbar
+{
+  font-family: Arial, sans-serif;
+  color: #0c1830;
+  background-color: #aabbcc;
+  font-size: 10pt;
+  padding: 7px;
+  vertical-align: middle;
+}
+
+div.repetition {
+	margin-bottom: 15px;
+	margin-top: 15px;
+}
+
+table.query {
+    border-collapse: separate;
+    border-spacing: 2px;
+    /*width :="100%";*/
+}
+
+th.propertyName {
+    white-space: nowrap;
+    text-align: right;
+    vertical-align: top;
+    border-style: none;
+    border-width: 0;
+}
+
+th.query
+{
+  background-color: #dbdee3; font-weight: bold; text-align: right;
+  color: #000000;
+}
+
+tr.attribute {
+    border: 0;
+    padding-left: 4px;
+    width : 100%;
+    border-style: none;
+    border-width: 0;
+}
+
+td.d2wAttributeValueCell {
+	width: 100%;
+	text-align: left;
+	vertical-align: top;
+}
+
