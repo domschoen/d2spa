@@ -7,6 +7,7 @@ It uses:
   - Diode
 
 ## Usage
-> sbt
-> run
+`> sbt
+> run`
+
 open you browser with this url: http://localhost:9000/#task/query/entity/ChipsetSecurityType
