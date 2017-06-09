@@ -13,7 +13,7 @@ import example.D2SPAMain.{TaskAppPage}
 import example.MegaContent
 import example.QueryProperty
 import example.UpdateQueryProperty
-import spatutorial.shared.{ StringValue, EOKeyValueQualifier}
+import d2spa.shared.{ StringValue, EOKeyValueQualifier}
 
 object ERD2WQueryStringOperator {
   //@inline private def bss = GlobalStyles.bootstrapStyles
