@@ -1,4 +1,4 @@
-package spatutorial.shared
+package d2spa.shared
 
 import boopickle.Default._
 
