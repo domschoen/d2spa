@@ -3,7 +3,7 @@ package example
 import diode._
 import diode.data._
 import diode.util._
-import spatutorial.shared._
+import d2spa.shared._
 /**
   * Created by dschoen on 01.05.17.
   */
