@@ -8,7 +8,7 @@ import scalacss.ScalaCssReact._
 
 import example.D2SPAMain.{ListPage, TaskAppPage}
 import example.components.ERD2WQueryStringOperator
-import spatutorial.shared.{EOKeyValueQualifier}
+import d2spa.shared.{EOKeyValueQualifier}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
