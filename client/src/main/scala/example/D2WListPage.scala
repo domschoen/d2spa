@@ -13,7 +13,7 @@ import example.css.GlobalStyle
 
 import example.D2SPAMain.{TaskAppPage}
 import example.components.ERD2WQueryStringOperator
-import spatutorial.shared.EOKeyValueQualifier
+import d2spa.shared.EOKeyValueQualifier
 
 object D2WListPage {
 
