@@ -7,7 +7,7 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import spatutorial.shared.{TodoItem, Api, EOKeyValueQualifier}
+import d2spa.shared.{TodoItem, Api, EOKeyValueQualifier}
 import example.services.AjaxClient
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
