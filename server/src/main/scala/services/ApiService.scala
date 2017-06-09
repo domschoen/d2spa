@@ -2,7 +2,7 @@ package services
 
 import java.util.{UUID, Date}
 
-import spatutorial.shared._
+import d2spa.shared._
 import play.api.libs.ws._
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play.current
