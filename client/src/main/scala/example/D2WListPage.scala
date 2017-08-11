@@ -83,8 +83,10 @@ object D2WListPage {
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) =
+  def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) = {
+    println("ctl " + ctl.hashCode())
     component(Props(ctl, entity, proxy))
+  }
 }
 
 

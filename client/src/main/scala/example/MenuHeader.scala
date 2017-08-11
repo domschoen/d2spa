@@ -14,10 +14,11 @@ object MenuHeader {
 
   class Backend($: BackendScope[Props, Unit]) {
 
-    def selectMenu(router: RouterCtl[TaskAppPage],entity: String) = {
+    def selectMenu(entity: String) = {
+      println("selectMenu")
 
       Callback.log(s"Menu selected: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(SelectMenu(entity,router)))
+        $.props >>= (_.proxy.dispatchCB(SelectMenu(entity)))
     }
 
     def render(P: Props) = {
@@ -33,7 +34,7 @@ object MenuHeader {
             <.li(mainMenu.title,
               <.ul(^.className := "action", mainMenu.children.map(
                 menu =>
-                  <.li(^.onClick --> selectMenu(P.router,menu.entity),menu.entity)
+                  <.li(^.onClick --> selectMenu(menu.entity),menu.entity)
                   //<.li(P.router.link(QueryPage(menu.entity))(menu.entity))
               )
               )

@@ -43,10 +43,16 @@ object D2SPAMain extends JSApp {
       (emptyRule
         | staticRoute(root, TaskRoot) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "TOTORO", proxy)))
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
-                    (m, ctl) => menusConnection(p => D2WPage(ctl,m.entity,p))
+                    (m, ctl) => {
+                      AfterEffectRouter.setCtl(ctl)
+                      menusConnection(p => D2WPage(ctl,m.entity,p))
+                    }
                 )
         | dynamicRouteCT("#task/list/entity" / string(".*").caseClass[ListPage]) ~> dynRenderR(
-                    (m, ctl) => menusConnection(p => D2WListPage(ctl,m.entity,p))
+                    (m, ctl) => {
+                      AfterEffectRouter.setCtl(ctl)
+                      menusConnection(p => D2WListPage(ctl, m.entity, p))
+                    }
                  )
         )
     }

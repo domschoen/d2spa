@@ -70,6 +70,7 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
         case Some(erw) => {
           println("erw " + erw)
           val rwForListTask = erw.zoomRW(_.listTask)((m,v) => m.copy(listTask = v))
+          // Modify the mode the execute action ShowPage (see MenuHandler below)
           ModelUpdateEffect(rwForListTask.updated(rwForListTask.value.copy(eos = Ready(eoses))),Effect.action(ShowPage(entity,"list")))
         }
         case None     => {
@@ -104,7 +105,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) 
     case DickChange(nosay) =>
       println("DickChange" + nosay)
       noChange
-    case SelectMenu(selectedEntity, router: RouterCtl[TaskAppPage]) =>
+    case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
 
       // Example of a model update followed by an effect
@@ -116,16 +117,20 @@ class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) 
 
       updated(
         value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "query")),
-        Effect( AfterEffectRouter.setQueryPageForEntityAsFuture(router, selectedEntity))
+        Effect( AfterEffectRouter.setQueryPageForEntity( selectedEntity))
       )
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity)
+      // Call the server to get the result +  then execute action Search Result (see above datahandler)
       effectOnly(Effect(AjaxClient[Api].search(qualifiers.head).call().map(SearchResult)))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
         //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
         //
     case ShowPage(selectedEntity, selectedTask) =>
-      updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = selectedTask)))
+      updated(
+        value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = selectedTask)),
+        Effect( AfterEffectRouter.setListPageForEntity(selectedEntity))
+      )
   }
 }

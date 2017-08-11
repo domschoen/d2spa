@@ -4,8 +4,6 @@ import diode._
 import diode.data._
 import diode.util._
 import d2spa.shared._
-import japgolly.scalajs.react.extra.router.RouterCtl
-import example.D2SPAMain.TaskAppPage
 /**
   * Created by dschoen on 01.05.17.
   */
@@ -54,7 +52,7 @@ case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
 
-case class SelectMenu(entity: String, router: RouterCtl[TaskAppPage]) extends Action
+case class SelectMenu(entity: String) extends Action
 
 case class UpdateQueryProperty(entity: String, property: QueryProperty, value: StringValue) extends Action
 
