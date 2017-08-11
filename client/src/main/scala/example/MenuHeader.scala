@@ -34,7 +34,7 @@ object MenuHeader {
               <.ul(^.className := "action", mainMenu.children.map(
                 menu =>
                   //<.li(^.onClick --> selectMenu(P.router,menu.entity),menu.entity)
-                  <.li(^.onClick --> selectMenu(P.router,menu.entity),menu.entity)
+                  <.li(P.router.link(QueryPage(menu.entity))(menu.entity))
               )
               )
             )

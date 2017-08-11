@@ -31,7 +31,7 @@ object D2WPage {
     }
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.d2wContext.entity
+      val entity = p.entity
       val entityMetaData = p.proxy.value.metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
       val task = entityMetaData.queryTask
       val displayPropertyKeys = task.displayPropertyKeys
@@ -44,7 +44,10 @@ object D2WPage {
             <.div(^.className :="liner d2wPage",<.img(^.src := "/assets/images/Line.gif")),
           <.div(^.className :="buttonsbar d2wPage",
              <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
-             <.span(^.className :="buttonsbar",<.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys))))
+             <.span(^.className :="buttonsbar",
+               //<.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys)))
+               p.router.link(ListPage(p.entity))("Search")
+             )
           ),
           <.div(^.className :="repetition d2wPage",
             <.table(^.className :="query",
