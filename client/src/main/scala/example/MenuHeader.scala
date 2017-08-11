@@ -16,8 +16,8 @@ object MenuHeader {
 
     def selectMenu(router: RouterCtl[TaskAppPage],entity: String) = {
 
-      Callback.log(s"Menu selected: $entity") >> router.set(QueryPage(entity)) >>
-        $.props >>= (_.proxy.dispatchCB(SelectMenu(entity)))
+      Callback.log(s"Menu selected: $entity") >>
+        $.props >>= (_.proxy.dispatchCB(SelectMenu(entity,router)))
     }
 
     def render(P: Props) = {
@@ -33,8 +33,8 @@ object MenuHeader {
             <.li(mainMenu.title,
               <.ul(^.className := "action", mainMenu.children.map(
                 menu =>
-                  //<.li(^.onClick --> selectMenu(P.router,menu.entity),menu.entity)
-                  <.li(P.router.link(QueryPage(menu.entity))(menu.entity))
+                  <.li(^.onClick --> selectMenu(P.router,menu.entity),menu.entity)
+                  //<.li(P.router.link(QueryPage(menu.entity))(menu.entity))
               )
               )
             )

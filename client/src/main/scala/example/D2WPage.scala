@@ -22,7 +22,7 @@ object D2WPage {
     val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
 
     def search(router: RouterCtl[TaskAppPage],entity: String,qualifiers: List[EOKeyValueQualifier]) = {
-      Callback.log(s"Search: $entity") >> router.set(ListPage(entity)) >>
+      Callback.log(s"Search: $entity") >>
         $.props >>= (_.proxy.dispatchCB(Search(entity,qualifiers)))
     }
 
@@ -45,8 +45,8 @@ object D2WPage {
           <.div(^.className :="buttonsbar d2wPage",
              <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
              <.span(^.className :="buttonsbar",
-               //<.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys)))
-               p.router.link(ListPage(p.entity))("Search")
+               <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys)))
+               //p.router.link(ListPage(p.entity))("Search")
              )
           ),
           <.div(^.className :="repetition d2wPage",
@@ -74,7 +74,7 @@ object D2WPage {
 
   private val component = ReactComponentB[Props]("D2WPage")
     .renderBackend[Backend]
-    .componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
+    //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) =

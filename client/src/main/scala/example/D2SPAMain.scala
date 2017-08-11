@@ -39,15 +39,15 @@ object D2SPAMain extends JSApp {
 
       val menusConnection = AppCircuit.connect(_.content)
 
+
       (emptyRule
         | staticRoute(root, TaskRoot) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "TOTORO", proxy)))
-        | staticRoute("#task/query/entity/DTEChipset", QueryPage("DTEChipset")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "DTEChipset", proxy)))
-        | staticRoute("#task/query/entity/DTEEMI", QueryPage("DTEEMI")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "DTEEMI", proxy)))
-        | staticRoute("#task/query/entity/ChipsetSecurityType", QueryPage("ChipsetSecurityType")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "ChipsetSecurityType", proxy)))
-
-        | staticRoute("#task/list/entity/DTEChipset", ListPage("DTEChipset")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WListPage(ctl, "DTEChipset", proxy)))
-        | staticRoute("#task/list/entity/DTEEMI", ListPage("DTEEMI")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WListPage(ctl, "DTEEMI", proxy)))
-        | staticRoute("#task/list/entity/ChipsetSecurityType", ListPage("ChipsetSecurityType")) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WListPage(ctl, "ChipsetSecurityType", proxy)))
+        | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
+                    (m, ctl) => menusConnection(p => D2WPage(ctl,m.entity,p))
+                )
+        | dynamicRouteCT("#task/list/entity" / string(".*").caseClass[ListPage]) ~> dynRenderR(
+                    (m, ctl) => menusConnection(p => D2WListPage(ctl,m.entity,p))
+                 )
         )
     }
 

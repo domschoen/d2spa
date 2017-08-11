@@ -80,7 +80,7 @@ object D2WListPage {
 
   private val component = ReactComponentB[Props]("D2WListPage")
     .renderBackend[Backend]
-    .componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
+    //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) =

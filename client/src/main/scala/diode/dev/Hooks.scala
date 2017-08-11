@@ -4,6 +4,7 @@ import diode.Dispatcher
 import org.scalajs.dom
 import org.scalajs.dom.raw.KeyboardEvent
 
+
 object Hooks {
   def hookPersistState(id: String, dispatch: Dispatcher) = {
     def keyDown(event: KeyboardEvent) = {
@@ -22,4 +23,6 @@ object Hooks {
     }
     dom.window.addEventListener("keydown", keyDown _)
   }
+
+
 }

@@ -11,6 +11,12 @@ import d2spa.shared.{TodoItem, Api, EOKeyValueQualifier}
 import example.services.AjaxClient
 import boopickle.Default._
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import japgolly.scalajs.react.extra.router.RouterCtl
+import example.D2SPAMain.TaskAppPage
+
+/*import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import japgolly.scalajs.react.extra.router._*/
 
 object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
@@ -20,6 +26,8 @@ object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.metaDatas))
   )
+
+
 }
 
 /*
@@ -83,6 +91,8 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
 }
 
 
+
+
 //       updated(value.copy(d2wContext = value.d2wContext.copy(entity = entity, task = "list")), )
 
 class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) {
@@ -94,9 +104,20 @@ class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) 
     case DickChange(nosay) =>
       println("DickChange" + nosay)
       noChange
-    case SelectMenu(selectedEntity) =>
+    case SelectMenu(selectedEntity, router: RouterCtl[TaskAppPage]) =>
       println("selectedEntity " + selectedEntity)
-      updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "query")))
+
+      // Example of a model update followed by an effect
+      // An effect has to call an action. Here it is "UpdateAllTodos"
+      //       updated(
+      //          value.map(_.updated(item)),
+      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
+      //       )
+
+      updated(
+        value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "query")),
+        Effect( AfterEffectRouter.setQueryPageForEntityAsFuture(router, selectedEntity))
+      )
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity)
       effectOnly(Effect(AjaxClient[Api].search(qualifiers.head).call().map(SearchResult)))
