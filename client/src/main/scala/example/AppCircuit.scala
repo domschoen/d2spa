@@ -7,9 +7,10 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import d2spa.shared.{TodoItem, Api, EOKeyValueQualifier}
+import d2spa.shared.{Api, EOKeyValueQualifier, TodoItem}
 import example.services.AjaxClient
 import boopickle.Default._
+
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
 import example.D2SPAMain.TaskAppPage
@@ -18,13 +19,19 @@ import example.D2SPAMain.TaskAppPage
 import scala.concurrent.ExecutionContext.Implicits.global
 import japgolly.scalajs.react.extra.router._*/
 
+import d2spa.shared.{Menus}
+
 object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
   override protected def initialModel = AppModel.bootingModel
 
+
+  //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
+
   override val actionHandler = composeHandlers(
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.metaDatas))
+    //new MegaDataHandler(zoomTo(_.content))
   )
 
 
@@ -38,6 +45,18 @@ class AppModelHandler[M](modelRW: ModelRW[M, AppModel]) extends ActionHandler(mo
       updated(initialModel)
   }
 }*/
+
+
+/*
+class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case BootingModel =>
+      effectOnly(Effect(AjaxClient[Api].getBootingModel().call().map(x => SetBootingModel(MegaContent(Ready(x.menuModel),x.metaDatas)))))
+    case SetBootingModel(megaModel) =>
+      updated(megaModel)
+  }
+}
+*/
 
 class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(modelRW) {
 
@@ -61,6 +80,9 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
           m.copy(displayPropertyKeys = (m.displayPropertyKeys.take(idx) :+ v) ++ m.displayPropertyKeys.drop(idx + 1))))
     }
   }
+
+
+  // handle actions
   override def handle = {
     case SearchResult(eoses) =>
       val entity = "DTEEMI"
@@ -96,12 +118,17 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
 
 //       updated(value.copy(d2wContext = value.d2wContext.copy(entity = entity, task = "list")), )
 
-class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) {
+class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case InitMenuSelection =>
+    case InitMenu =>
+      println("InitMenu ")
+      effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
+    case SetMenus(menus) =>
+      updated(Ready(menus))
+    /*case InitMenuSelection =>
       println("Initializing Menus")
-      updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))
+      updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
     case DickChange(nosay) =>
       println("DickChange" + nosay)
       noChange
@@ -116,7 +143,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) 
       //       )
 
       updated(
-        value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "query")),
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
         Effect( AfterEffectRouter.setQueryPageForEntity( selectedEntity))
       )
     case Search(selectedEntity, qualifiers) =>
@@ -129,7 +156,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Menus]) extends ActionHandler(modelRW) 
         //
     case ShowPage(selectedEntity, selectedTask) =>
       updated(
-        value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = selectedTask)),
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = selectedTask))),
         Effect( AfterEffectRouter.setListPageForEntity(selectedEntity))
       )
   }

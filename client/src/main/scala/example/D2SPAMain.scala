@@ -41,11 +41,11 @@ object D2SPAMain extends JSApp {
 
 
       (emptyRule
-        | staticRoute(root, TaskRoot) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WPage(ctl, "TOTORO", proxy)))
+        | staticRoute(root, TaskRoot) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, "TOTORO", proxy)))
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
                     (m, ctl) => {
                       AfterEffectRouter.setCtl(ctl)
-                      menusConnection(p => D2WPage(ctl,m.entity,p))
+                      menusConnection(p => D2WQueryPage(ctl,m.entity,p))
                     }
                 )
         | dynamicRouteCT("#task/list/entity" / string(".*").caseClass[ListPage]) ~> dynRenderR(

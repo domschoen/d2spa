@@ -5,4 +5,7 @@ trait Api {
   def welcomeMsg(name: String): String
   
   def search(qualifier: EOKeyValueQualifier): Seq[EO]
+
+  def getMenus(): Menus
+
 }

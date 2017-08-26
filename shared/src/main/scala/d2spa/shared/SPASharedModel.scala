@@ -29,3 +29,13 @@ sealed abstract class EOValue
 case class StringValue(value: String) extends EOValue
 case class IntValue(value: Integer) extends EOValue
 case class DateValue(value: java.util.Date) extends EOValue
+
+
+
+case class Menus(menus: List[MainMenu], d2wContext: D2WContext)
+case class MainMenu(id: Int, title: String,  children: List[Menu])
+case class Menu(id:Int, title: String, entity: String)
+
+
+case class D2WContext(entity: String, task: String, propertyKey: String)
+

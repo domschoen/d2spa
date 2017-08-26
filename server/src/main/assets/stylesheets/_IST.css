@@ -125,6 +125,11 @@ ul, ol {
 	list-style-type: none;
 }
 
+li.menu {
+}
+li.menuSelected {
+    background : #D4D4D4;
+}
 span.required {
 	color: red;
 }

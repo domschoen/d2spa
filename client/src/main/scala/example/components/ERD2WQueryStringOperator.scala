@@ -24,7 +24,7 @@ object ERD2WQueryStringOperator {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.d2wContext.entity
+      val entity = p.proxy.value.menuModel.get.d2wContext.entity
       <.div(
         <.input(^.id := "description", ^.value := p.property.value.value,
           ^.placeholder := "write description", ^.onChange ==> { e: ReactEventI => p.proxy.dispatch(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )

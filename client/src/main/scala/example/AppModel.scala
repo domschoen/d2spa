@@ -12,23 +12,42 @@ case class AppModel (content: MegaContent)
 
 // , genericPart: GenericData, customPart: CustomData
 
-case class MegaContent(menuModel: Menus, metaDatas: MetaDatas)
 
 case class CustomData()
 
-case class D2WContext(entity: String, task: String, propertyKey: String)
 
 
-case class Menus(menus: List[MainMenu], d2wContext: D2WContext)
-case class MainMenu(id: Integer, title: String,  children: List[Menu])
-case class Menu(id: Integer, title: String, entity: String)
+case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas)
 
 
 // Generic Part
 
 
+
+// define actions
+
+case object InitMenu extends Action
+case class SetMenus(menus: Menus) extends Action
+case object InitMenuSelection extends Action
+
+case object InitAppModel extends Action
+
+case class SelectMenu(entity: String) extends Action
+
+case class UpdateQueryProperty(entity: String, property: QueryProperty, value: StringValue) extends Action
+
+case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
+//case class SearchResult(entity: String, eos: Seq[EO]) extends Action
+case class SearchResult( eos: Seq[EO]) extends Action
+// similar to:
+//case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
+
+
+// Kind of cache of entity task d2w rules
+// Allows to change the menu without haveing to fetch the display property keys
 case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 case class EntityMetaData(entityName: String, displayName: String, queryTask: QueryTask, listTask: ListTask, inspectTask: InspectTask, editTask: EditTask)
+
 
 // Task
 abstract class MetaTask {def displayPropertyKeys: List[MetaProperty]}
@@ -46,32 +65,13 @@ case class InspectProperty(key: String, displayName: String, componentName: Stri
 case class EditProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
 
 
-// define actions
-
-case object InitMenuSelection extends Action
-
-case object InitAppModel extends Action
-
-case class SelectMenu(entity: String) extends Action
-
-case class UpdateQueryProperty(entity: String, property: QueryProperty, value: StringValue) extends Action
-
-case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
-//case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult( eos: Seq[EO]) extends Action
-// similar to:
-//case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
-
-
 
 case class DickChange(nosay: String) extends Action
 
 case class ShowPage(entity: String, task: String) extends Action
 
-object AppModel {
-  val bootingModel = AppModel(
-    MegaContent(
-      Menus(
+
+/*      Menus(
         List(
           MainMenu(1, "MCU",
             List(
@@ -83,6 +83,13 @@ object AppModel {
         ),
         D2WContext("DTEEMI", "query", null)
       ),
+*/
+
+
+object AppModel {
+  val bootingModel = AppModel(
+    MegaContent(
+      Empty,
       MetaDatas(
         List(
           EntityMetaData("DTEChipset", "DTE Chipset",

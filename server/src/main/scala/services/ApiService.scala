@@ -58,8 +58,30 @@ class ApiService extends Api {
     )(CountryItem.apply _)
 
 
-  // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
   override def search(qualifier: EOKeyValueQualifier): Seq[EO] = {
+    searchOnOnlineCountryWs(qualifier)
+  }
+
+
+  override def getMenus(): Menus = {
+    println("get Menus")
+    Menus(
+      List(
+        MainMenu(1, "MCU",
+          List(
+            Menu(2, "Nagra MCU", "DTEChipset"),
+            Menu(3, "EMI", "DTEEMI"),
+            Menu(4, "Chipset Security Type", "ChipsetSecurityType")
+          )
+        )
+      ),
+      D2WContext("DTEEMI", "query", null)
+    )
+  }
+
+
+  // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
+  def searchOnOnlineCountryWs(qualifier: EOKeyValueQualifier): Seq[EO] = {
     val url = "http://services.groupkt.com/country/search?text=" + qualifier.value;
     val response = wsGetSync(url).asInstanceOf[WSResponse]
     val resultBody = response.json \ "RestResponse" \ "result"
