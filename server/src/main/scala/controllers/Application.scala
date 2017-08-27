@@ -28,7 +28,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
       println(s"Request path: $path")
       println("time to try some rest call")
 
-      // get the request body as ByteString
+      // get the request body as ByteStringthenApply
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route

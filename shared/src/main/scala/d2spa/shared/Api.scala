@@ -1,4 +1,5 @@
 package d2spa.shared
+import scala.concurrent.Future
 
 trait Api {
   // message of the day
@@ -6,6 +7,6 @@ trait Api {
   
   def search(qualifier: EOKeyValueQualifier): Seq[EO]
 
-  def getMenus(): Menus
+  def getMenus(): Future[Menus]
 
 }

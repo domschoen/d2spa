@@ -21,8 +21,15 @@ case class CountryItem(
                         name : String,
                         alpha2_code: String,
                         alpha3_code: String
-                                 )
+                      )
 
+case class MenuItem (
+                        id : Int,
+                        `type`: String,
+                        title: String,
+                        entity: Option[String],
+                        parent: Option[MenuItem]
+                      )
 
 class ApiService extends Api {
   var todos = Seq(
@@ -57,15 +64,61 @@ class ApiService extends Api {
       (JsPath \ "alpha3_code").read[String]
     )(CountryItem.apply _)
 
+  implicit lazy val menuItemReads: Reads[MenuItem] = (
+    (JsPath \ "id").read[Int] and
+      (JsPath \ "type").read[String] and
+      (JsPath \ "title").read[String] and
+      (JsPath \ "entity").readNullable[String] and
+      (JsPath \ "parent").lazyReadNullable(menuItemReads)
+    )(MenuItem.apply _)
 
   override def search(qualifier: EOKeyValueQualifier): Seq[EO] = {
     searchOnOnlineCountryWs(qualifier)
   }
 
 
-  override def getMenus(): Menus = {
+  override def getMenus(): Future[Menus] = {
     println("get Menus")
-    Menus(
+
+    val url = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Menu.json";
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.get()
+    futureResponse.map { response =>
+      val resultBody = response.json
+      val array = resultBody.asInstanceOf[JsArray]
+      var menus = List[MenuItem]()
+      for (menuRaw <- array.value) {
+        //println(menuRaw)
+        val obj = menuRaw.validate[MenuItem]
+        obj match {
+          case s: JsSuccess[MenuItem] => {
+            val wiObj = s.get
+            menus = wiObj :: menus
+          }
+          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+        }
+      }
+      val children = menus.filter(_.parent.isDefined)
+      val childrenByParent = children.groupBy(_.parent.get)
+
+      val mainMenus = childrenByParent.map{
+        case (mm, cs) =>
+          val childMenus = cs.map(cm => Menu(cm.id,cm.title,cm.entity.getOrElse(null)))
+          MainMenu(mm.id,mm.title,childMenus)
+      }
+      if (mainMenus.isEmpty) {
+        // TOTO Menus containing D2WContext is not a good choice because better to have
+        // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
+        // D2WContext(null,null,null)
+
+        Menus(List(),D2WContext(null,null,null))
+      } else {
+        val firstChildEntity = mainMenus.head.children.head.entity
+        Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null))
+      }
+    }
+
+    /*Menus(
       List(
         MainMenu(1, "MCU",
           List(
@@ -76,7 +129,7 @@ class ApiService extends Api {
         )
       ),
       D2WContext("DTEEMI", "query", null)
-    )
+    )*/
   }
 
 
