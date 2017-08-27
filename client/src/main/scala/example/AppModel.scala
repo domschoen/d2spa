@@ -17,7 +17,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas)
+case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas], eos: Pot[Seq[EO]])
 
 
 // Generic Part
@@ -28,6 +28,11 @@ case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas)
 
 case object InitMenu extends Action
 case class SetMenus(menus: Menus) extends Action
+
+case object InitMetaData extends Action
+case class SetMetaData(metaData: MetaDatas) extends Action
+
+
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
@@ -43,30 +48,8 @@ case class SearchResult( eos: Seq[EO]) extends Action
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
 
-// Kind of cache of entity task d2w rules
-// Allows to change the menu without haveing to fetch the display property keys
-case class MetaDatas(entityMetaDatas: List[EntityMetaData])
-case class EntityMetaData(entityName: String, displayName: String, queryTask: QueryTask, listTask: ListTask, inspectTask: InspectTask, editTask: EditTask)
 
 
-// Task
-abstract class MetaTask {def displayPropertyKeys: List[MetaProperty]}
-case class QueryTask(displayPropertyKeys: List[QueryProperty]) extends MetaTask
-case class ListTask(displayPropertyKeys: List[ListProperty], eos: Pot[Seq[EO]]) extends MetaTask
-case class InspectTask(displayPropertyKeys: List[InspectProperty]) extends MetaTask
-case class EditTask(displayPropertyKeys: List[EditProperty]) extends MetaTask
-
-// Property
-abstract class MetaProperty {def key: String; def displayName: String; def componentName: String}
-// Query property must evolve to be more like a EOQualifier, currently storing the string to search in value
-case class QueryProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
-case class ListProperty(key: String, displayName: String, componentName: String) extends MetaProperty
-case class InspectProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
-case class EditProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
-
-
-
-case class DickChange(nosay: String) extends Action
 
 case class ShowPage(entity: String, task: String) extends Action
 
@@ -90,6 +73,15 @@ object AppModel {
   val bootingModel = AppModel(
     MegaContent(
       Empty,
+      Empty,
+      Empty
+    )
+  )
+}
+
+
+
+/*
       MetaDatas(
         List(
           EntityMetaData("DTEChipset", "DTE Chipset",
@@ -175,6 +167,5 @@ object AppModel {
           )
         )
       )
-    )
-  )
-}
+
+ */

@@ -27,7 +27,7 @@ object Settings {
     val scalajsReact = "0.11.3"
     val scalaCSS = "0.5.0"
     val log4js = "1.4.10"
-    val autowire = "0.2.5"
+    val autowire = "0.2.6"
     val booPickle = "1.2.5"
     val diode = "1.1.0"
     val uTest = "0.4.4"

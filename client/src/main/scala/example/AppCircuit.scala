@@ -19,7 +19,7 @@ import example.D2SPAMain.TaskAppPage
 import scala.concurrent.ExecutionContext.Implicits.global
 import japgolly.scalajs.react.extra.router._*/
 
-import d2spa.shared.{Menus}
+import d2spa.shared.{Menus, MetaDatas, EntityMetaData, QueryProperty, QueryTask, EO, StringValue}
 
 object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
@@ -30,7 +30,8 @@ object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
 
   override val actionHandler = composeHandlers(
     new MenuHandler(zoomTo(_.content.menuModel)),
-    new DataHandler(zoomTo(_.content.metaDatas))
+    new DataHandler(zoomTo(_.content.metaDatas)),
+    new EOsHandler(zoomTo(_.content.eos))
     //new MegaDataHandler(zoomTo(_.content))
   )
 
@@ -58,7 +59,7 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 }
 */
 
-class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(modelRW) {
+class DataHandler[M](modelRW: ModelRW[M, Pot[MetaDatas]]) extends ActionHandler(modelRW) {
 
   private def zoomToEntity(entityMetaData: String, rw: ModelRW[M, MetaDatas]): Option[ModelRW[M, EntityMetaData]] = {
       rw.value.entityMetaDatas.indexWhere(n => n.entityName == entityMetaData) match {
@@ -84,25 +85,16 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
 
   // handle actions
   override def handle = {
-    case SearchResult(eoses) =>
-      val entity = "DTEEMI"
-      println("SearchResult: for entity " + entity + " eos: " + eoses)
-      val entityWriter = zoomToEntity(entity,modelRW)
-      entityWriter match {
-        case Some(erw) => {
-          println("erw " + erw)
-          val rwForListTask = erw.zoomRW(_.listTask)((m,v) => m.copy(listTask = v))
-          // Modify the mode the execute action ShowPage (see MenuHandler below)
-          ModelUpdateEffect(rwForListTask.updated(rwForListTask.value.copy(eos = Ready(eoses))),Effect.action(ShowPage(entity,"list")))
-        }
-        case None     => {
-          println("no changes ")
-          noChange
-        }
-      }
+    case InitMetaData =>
+      println("InitMetaData ")
+      effectOnly(Effect(AjaxClient[Api].getMetaData().call().map(SetMetaData)))
+    case SetMetaData(metaData) =>
+      updated(Ready(metaData))
+
     case UpdateQueryProperty(entity, property, newEOValue) =>
       println("UpdateProperty: for entity " + entity + " property: " + property)
-      val entityWriter = zoomToEntity(entity,modelRW)
+      val modelMetaDatas = modelRW.zoomRW(_.get)((m,v) => m)
+      val entityWriter = zoomToEntity(entity,modelMetaDatas)
       entityWriter match {
         case Some(erw) => zoomToProperty(property, erw.zoomRW(_.queryTask)((qt, v) => qt.copy(queryTask = v))) match {
           case Some(prw) => ModelUpdate(prw.updated(prw.value.copy(value = newEOValue)))
@@ -113,8 +105,13 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
   }
 }
 
+class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(modelRW) {
 
-
+  override def handle = {
+    case SearchResult(eoses) =>
+      updated(Ready(eoses))
+  }
+}
 
 //       updated(value.copy(d2wContext = value.d2wContext.copy(entity = entity, task = "list")), )
 
@@ -125,13 +122,10 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       println("InitMenu ")
       effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
     case SetMenus(menus) =>
-      updated(Ready(menus))
+      updated(Ready(menus),Effect.action(InitMetaData) )
     /*case InitMenuSelection =>
       println("Initializing Menus")
       updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
-    case DickChange(nosay) =>
-      println("DickChange" + nosay)
-      noChange
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
 

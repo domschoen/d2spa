@@ -9,4 +9,6 @@ trait Api {
 
   def getMenus(): Future[Menus]
 
+  def getMetaData(): MetaDatas
+
 }

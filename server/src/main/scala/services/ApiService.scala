@@ -132,6 +132,65 @@ class ApiService extends Api {
     )*/
   }
 
+  def getMetaData(): MetaDatas =
+    MetaDatas(
+      List(
+        EntityMetaData("Customer", "Customer",
+          QueryTask(
+            List(
+              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
+              QueryProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          ),
+          ListTask(
+            List(
+              ListProperty("name", "Name","ERD2WQueryStringOperator"),
+              ListProperty("operator", "Operator","ERD2WQueryStringOperator")
+            )
+          ),
+          InspectTask(
+            List(
+              InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
+              InspectProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          ),
+          EditTask(
+            List(
+              EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
+              EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          )
+        ),
+        EntityMetaData("Project", "Project",
+          QueryTask(
+            List(
+              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("fr"))//,
+              //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          ),
+          ListTask(
+            List(
+              ListProperty("name", "Name","ERD2WQueryStringOperator")//,
+              //ListProperty("csad", "CSAD","ERD2WQueryStringOperator")
+            )
+          ),
+          InspectTask(
+            List(
+              InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
+              InspectProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          ),
+          EditTask(
+            List(
+              EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
+              EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          )
+        )
+      )
+    )
+
+
 
   // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
   def searchOnOnlineCountryWs(qualifier: EOKeyValueQualifier): Seq[EO] = {

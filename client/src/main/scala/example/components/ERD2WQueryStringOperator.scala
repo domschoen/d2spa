@@ -11,9 +11,8 @@ import example.css.GlobalStyle
 
 import example.D2SPAMain.{TaskAppPage}
 import example.MegaContent
-import example.QueryProperty
 import example.UpdateQueryProperty
-import d2spa.shared.{ StringValue, EOKeyValueQualifier}
+import d2spa.shared.{ StringValue, EOKeyValueQualifier, QueryProperty}
 
 object ERD2WQueryStringOperator {
   //@inline private def bss = GlobalStyles.bootstrapStyles
@@ -27,7 +26,7 @@ object ERD2WQueryStringOperator {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       <.div(
         <.input(^.id := "description", ^.value := p.property.value.value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventI => p.proxy.dispatch(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventI => p.proxy.dispatchCB(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )
       )
     }
   }

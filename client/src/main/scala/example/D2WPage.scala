@@ -8,7 +8,7 @@ import scalacss.ScalaCssReact._
 
 import example.D2SPAMain.{ListPage, TaskAppPage}
 import example.components.ERD2WQueryStringOperator
-import d2spa.shared.{EOKeyValueQualifier}
+import d2spa.shared.{EOKeyValueQualifier, QueryProperty}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -33,7 +33,7 @@ object D2WPage {
     def render(p: Props) = {
       val entity = p.entity
       println("Render Query page for entity: " + entity)
-      val entityMetaData = p.proxy.value.metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+      val entityMetaData = p.proxy.value.metaDatas.get.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
       val task = entityMetaData.queryTask
       val displayPropertyKeys = task.displayPropertyKeys
       <.div(

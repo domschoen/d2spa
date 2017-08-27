@@ -13,9 +13,10 @@ object MenuHeader {
   case class Props(router: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent])
 
   class Backend($: BackendScope[Props, Unit]) {
-    def mounted(props: Props) =
-    // dispatch a message to the initial D2WData from the server
+    /*def mounted(props: Props) = {
+      // dispatch a message to the initial D2WData from the server
       Callback.when(props.proxy().menuModel.isEmpty)(props.proxy.dispatchCB(InitMenu))
+    }*/
 
     def selectMenu(entity: String) = {
       println("selectMenu")
@@ -57,7 +58,7 @@ object MenuHeader {
 
   private val component = ReactComponentB[Props]("MenuHeader")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) =
