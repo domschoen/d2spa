@@ -10,6 +10,8 @@ It uses:
 Description above gives the goal of the project. Current state is far from that. It's a working SPA app but with limited features compare to the goal.
 
 ## Usage
+d2spa has been build to work with D2SPAServer but if you want to try it without you can do it by changing the property usesD2SPAServer in Application.conf
+
 Go to the project directory and issue those commands:
 ```
 > sbt

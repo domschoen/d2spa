@@ -1,13 +1,16 @@
 package services
 
-import java.util.{UUID, Date}
+import java.util.{Date, UUID}
 
 import d2spa.shared._
+import play.api.Configuration
 import play.api.libs.ws._
-import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.Play.current
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.ws.WSAuthScheme
 import play.api.libs.ws._
+
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.util._
@@ -31,7 +34,10 @@ case class MenuItem (
                         parent: Option[MenuItem]
                       )
 
-class ApiService extends Api {
+class ApiService(config: Configuration) extends Api {
+  val usesD2SPAServer = config.getBoolean("usesD2SPAServer").getOrElse(true)
+
+
   var todos = Seq(
     TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
     TodoItem("2", 0x61626364, "Make vanilla pudding. Put in mayo jar. Eat in public.", TodoNormal, completed = false),
@@ -50,13 +56,8 @@ class ApiService extends Api {
 
   val safeUrl = "http://galactica.hq.k.grp:1445/cgi-bin/WebObjects/D2SPAServer.woa/ra/User?qualifier=firstname='Mike'"
 
-  def wsGetSync(url: String): Any = Await.result(WS.url(url).get(), scala.concurrent.duration.Duration(120000, MILLISECONDS))
+  //def wsGetSync(url: String): Any = Await.result(WS.url(url).get(), scala.concurrent.duration.Duration(120000, MILLISECONDS))
 
-  override def welcomeMsg(name: String): String = {
-    val result = wsGetSync(safeUrl)
-    println(result)
-    s"Welcome to SPA, $name! Time is now ${new Date}"
-  }
 
   implicit val CountryReads: Reads[CountryItem] = (
     (JsPath \ "name").read[String] and
@@ -72,64 +73,64 @@ class ApiService extends Api {
       (JsPath \ "parent").lazyReadNullable(menuItemReads)
     )(MenuItem.apply _)
 
-  override def search(qualifier: EOKeyValueQualifier): Seq[EO] = {
-    searchOnOnlineCountryWs(qualifier)
-  }
-
 
   override def getMenus(): Future[Menus] = {
     println("get Menus")
 
-    val url = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Menu.json";
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-    val futureResponse: Future[WSResponse] = request.get()
-    futureResponse.map { response =>
-      val resultBody = response.json
-      val array = resultBody.asInstanceOf[JsArray]
-      var menus = List[MenuItem]()
-      for (menuRaw <- array.value) {
-        //println(menuRaw)
-        val obj = menuRaw.validate[MenuItem]
-        obj match {
-          case s: JsSuccess[MenuItem] => {
-            val wiObj = s.get
-            menus = wiObj :: menus
+    if (usesD2SPAServer) {
+      val url = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Menu.json";
+      val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+      val futureResponse: Future[WSResponse] = request.get()
+      futureResponse.map { response =>
+        val resultBody = response.json
+        val array = resultBody.asInstanceOf[JsArray]
+        var menus = List[MenuItem]()
+        for (menuRaw <- array.value) {
+          //println(menuRaw)
+          val obj = menuRaw.validate[MenuItem]
+          obj match {
+            case s: JsSuccess[MenuItem] => {
+              val wiObj = s.get
+              menus = wiObj :: menus
+            }
+            case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
           }
-          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+        }
+        val children = menus.filter(_.parent.isDefined)
+        val childrenByParent = children.groupBy(_.parent.get)
+
+        val mainMenus = childrenByParent.map{
+          case (mm, cs) =>
+            val childMenus = cs.map(cm => Menu(cm.id,cm.title,cm.entity.getOrElse(null)))
+            MainMenu(mm.id,mm.title,childMenus)
+        }
+        if (mainMenus.isEmpty) {
+          // TOTO Menus containing D2WContext is not a good choice because better to have
+          // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
+          // D2WContext(null,null,null)
+
+          Menus(List(),D2WContext(null,null,null))
+        } else {
+          val firstChildEntity = mainMenus.head.children.head.entity
+          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null))
         }
       }
-      val children = menus.filter(_.parent.isDefined)
-      val childrenByParent = children.groupBy(_.parent.get)
 
-      val mainMenus = childrenByParent.map{
-        case (mm, cs) =>
-          val childMenus = cs.map(cm => Menu(cm.id,cm.title,cm.entity.getOrElse(null)))
-          MainMenu(mm.id,mm.title,childMenus)
-      }
-      if (mainMenus.isEmpty) {
-        // TOTO Menus containing D2WContext is not a good choice because better to have
-        // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
-        // D2WContext(null,null,null)
+    } else {
 
-        Menus(List(),D2WContext(null,null,null))
-      } else {
-        val firstChildEntity = mainMenus.head.children.head.entity
-        Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null))
-      }
-    }
-
-    /*Menus(
-      List(
-        MainMenu(1, "MCU",
-          List(
-            Menu(2, "Nagra MCU", "DTEChipset"),
-            Menu(3, "EMI", "DTEEMI"),
-            Menu(4, "Chipset Security Type", "ChipsetSecurityType")
+      val data = Menus(
+        List(
+          MainMenu(1, "Project Management",
+            List(
+              Menu(2, "Project", "Project"),
+              Menu(3, "Customer", "Customer")
+            )
           )
-        )
-      ),
-      D2WContext("DTEEMI", "query", null)
-    )*/
+        ),
+        D2WContext("Project", "query", null)
+      )
+      Future(data)
+    }
   }
 
   def getMetaData(): MetaDatas =
@@ -190,30 +191,38 @@ class ApiService extends Api {
       )
     )
 
+  override def search(qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
+    searchOnOnlineCountryWs(qualifier)
+  }
+
 
 
   // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
-  def searchOnOnlineCountryWs(qualifier: EOKeyValueQualifier): Seq[EO] = {
+  def searchOnOnlineCountryWs(qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
     val url = "http://services.groupkt.com/country/search?text=" + qualifier.value;
-    val response = wsGetSync(url).asInstanceOf[WSResponse]
-    val resultBody = response.json \ "RestResponse" \ "result"
-    val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
-    var eos = List[EO]()
-    for (country <- array.value) {
-      val obj = country.validate[CountryItem]
-      obj match {
-        case s: JsSuccess[CountryItem] => {
-          val wiObj = s.get
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.get()
+    futureResponse.map { response =>
 
-          eos ::= EO(Map(
-            "name" -> StringValue(wiObj.name),
-            "alpha2_code" -> StringValue(wiObj.alpha2_code),
-            "alpha3_code" -> StringValue(wiObj.alpha3_code)))
+      val resultBody = response.json \ "RestResponse" \ "result"
+      val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
+      var eos = List[EO]()
+      for (country <- array.value) {
+        val obj = country.validate[CountryItem]
+        obj match {
+          case s: JsSuccess[CountryItem] => {
+            val wiObj = s.get
+
+            eos ::= EO(Map(
+              "name" -> StringValue(wiObj.name),
+              "alpha2_code" -> StringValue(wiObj.alpha2_code),
+              "alpha3_code" -> StringValue(wiObj.alpha3_code)))
+          }
+          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
         }
-        case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
       }
+      eos.toSeq
     }
-    eos.toSeq
   }
 
 
