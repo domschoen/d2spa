@@ -36,6 +36,7 @@ case class MenuItem (
 
 class ApiService(config: Configuration) extends Api {
   val usesD2SPAServer = config.getBoolean("usesD2SPAServer").getOrElse(true)
+  val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
 
   var todos = Seq(
@@ -78,7 +79,7 @@ class ApiService(config: Configuration) extends Api {
     println("get Menus")
 
     if (usesD2SPAServer) {
-      val url = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Menu.json";
+      val url = d2spaServerBaseUrl + "/Menu.json";
       val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
       val futureResponse: Future[WSResponse] = request.get()
       futureResponse.map { response =>
@@ -191,10 +192,50 @@ class ApiService(config: Configuration) extends Api {
       )
     )
 
-  override def search(qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
-    searchOnOnlineCountryWs(qualifier)
+  override def search(entity: String, qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
+    if (usesD2SPAServer) {
+      searchOnD2SPAServer(entity, qualifier)
+    } else {
+      searchOnOnlineCountryWs(qualifier)
+    }
   }
 
+  def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
+    return "qualifier=" + qualifier.key + " like '*" + qualifier.value + "*'"
+  }
+
+
+  def searchOnD2SPAServer(entity: String, qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
+    val qualifierSuffix = if (qualifier == null) "" else "?" + qualifierUrlPart(qualifier)
+    val url = d2spaServerBaseUrl + "/" + entity + ".json" + qualifierSuffix
+
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.get()
+    futureResponse.map { response =>
+
+      val resultBody = response.json \ "RestResponse" \ "result"
+      val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
+      var eos = List[EO]()
+      for (item <- array.value) {
+
+        println("item " + item)
+        //val obj = country.validate[CountryItem]
+        /*obj match {
+          case s: JsSuccess[CountryItem] => {
+            val wiObj = s.get
+
+            eos ::= EO(Map(
+              "name" -> StringValue(wiObj.name),
+              "alpha2_code" -> StringValue(wiObj.alpha2_code),
+              "alpha3_code" -> StringValue(wiObj.alpha3_code)))
+          }
+          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+        }*/
+      }
+      //eos.toSeq
+      Seq()
+    }
+  }
 
 
   // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm

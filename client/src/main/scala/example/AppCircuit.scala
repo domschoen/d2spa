@@ -146,7 +146,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(qualifiers.head).call().map(SearchResult)))
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers.head).call().map(SearchResult)))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
         //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
