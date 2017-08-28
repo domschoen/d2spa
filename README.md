@@ -16,7 +16,7 @@ Go to the project directory and issue those commands:
 > run
 ```
 
-open you browser with this url: http://localhost:9000/#task/query/entity/ChipsetSecurityType
+open you browser with this url: http://localhost:9000/#task/query/entity/Project
 ## Difficulties
 ### No location with Dynamic route
 #### Difficulty

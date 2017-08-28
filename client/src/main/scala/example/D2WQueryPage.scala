@@ -24,7 +24,6 @@ object D2WQueryPage {
     }
 
 
-
     val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
 
     def search(router: RouterCtl[TaskAppPage],entity: String,qualifiers: List[EOKeyValueQualifier]) = {
@@ -40,8 +39,8 @@ object D2WQueryPage {
       val entity = p.entity
       println("Render Query page for entity: " + entity)
       val metaDatas = p.proxy.value.metaDatas
-      if  (metaDatas.isReady) {
-        val entityMetaData = metaDatas.get.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+      if  (!metaDatas.isEmpty) {
+        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
         val task = entityMetaData.queryTask
         val displayPropertyKeys = task.displayPropertyKeys
         <.div(
@@ -58,7 +57,6 @@ object D2WQueryPage {
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),
-            if (!p.proxy.value.metaDatas.isEmpty) {
               <.div(^.className :="repetition d2wPage",
                 <.table(^.className :="query",
                   <.tbody(
@@ -78,12 +76,11 @@ object D2WQueryPage {
                         )
                           )
                       )
-                    ))
+                    )
+                    )
                   )
                 )
               )
-            } else
-              Seq.empty[ReactElement]
           )
         )
       } else {

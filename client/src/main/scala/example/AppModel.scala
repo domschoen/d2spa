@@ -17,7 +17,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas], eos: Pot[Seq[EO]])
+case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]])
 
 
 // Generic Part
@@ -73,7 +73,7 @@ object AppModel {
   val bootingModel = AppModel(
     MegaContent(
       Empty,
-      Empty,
+      MetaDatas(List()),
       Empty
     )
   )

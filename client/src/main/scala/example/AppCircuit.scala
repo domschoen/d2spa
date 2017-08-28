@@ -59,7 +59,7 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 }
 */
 
-class DataHandler[M](modelRW: ModelRW[M, Pot[MetaDatas]]) extends ActionHandler(modelRW) {
+class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(modelRW) {
 
   private def zoomToEntity(entityMetaData: String, rw: ModelRW[M, MetaDatas]): Option[ModelRW[M, EntityMetaData]] = {
       rw.value.entityMetaDatas.indexWhere(n => n.entityName == entityMetaData) match {
@@ -89,15 +89,18 @@ class DataHandler[M](modelRW: ModelRW[M, Pot[MetaDatas]]) extends ActionHandler(
       println("InitMetaData ")
       effectOnly(Effect(AjaxClient[Api].getMetaData().call().map(SetMetaData)))
     case SetMetaData(metaData) =>
-      updated(Ready(metaData))
+      updated(metaData)
 
     case UpdateQueryProperty(entity, property, newEOValue) =>
-      println("UpdateProperty: for entity " + entity + " property: " + property)
-      val modelMetaDatas = modelRW.zoomRW(_.get)((m,v) => m)
-      val entityWriter = zoomToEntity(entity,modelMetaDatas)
+      println("UpdateProperty: for entity " + entity + " property: " + property + " " + newEOValue)
+      val entityWriter = zoomToEntity(entity,modelRW)
       entityWriter match {
         case Some(erw) => zoomToProperty(property, erw.zoomRW(_.queryTask)((qt, v) => qt.copy(queryTask = v))) match {
-          case Some(prw) => ModelUpdate(prw.updated(prw.value.copy(value = newEOValue)))
+          case Some(prw) => {
+            println("newEOValue " + newEOValue)
+            println("prw " + prw)
+            ModelUpdate(prw.updated(prw.value.copy(value = newEOValue)))
+          }
           case None     => noChange
         }
         case None     => noChange

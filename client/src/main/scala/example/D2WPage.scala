@@ -33,7 +33,7 @@ object D2WPage {
     def render(p: Props) = {
       val entity = p.entity
       println("Render Query page for entity: " + entity)
-      val entityMetaData = p.proxy.value.metaDatas.get.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+      val entityMetaData = p.proxy.value.metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
       val task = entityMetaData.queryTask
       val displayPropertyKeys = task.displayPropertyKeys
       <.div(

@@ -39,7 +39,11 @@ case class D2WContext(entity: String, task: String, propertyKey: String)
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
-case class MetaDatas(entityMetaDatas: List[EntityMetaData])
+case class MetaDatas(entityMetaDatas: List[EntityMetaData]) {
+  def isEmpty() = {
+    entityMetaDatas.isEmpty
+  }
+}
 case class EntityMetaData(entityName: String, displayName: String, queryTask: QueryTask, listTask: ListTask, inspectTask: InspectTask, editTask: EditTask)
 //case class EntityMetaData(entityName: String, displayName: String)
 

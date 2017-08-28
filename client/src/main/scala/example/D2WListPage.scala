@@ -32,7 +32,7 @@ object D2WListPage {
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val entityMetaData = p.proxy.value.metaDatas.get.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+      val entityMetaData = p.proxy.value.metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
       val task = entityMetaData.listTask
       //val eos = if (task.eos.isReady) task.eos.get else Vector()
       val eos = p.proxy.value.eos.get
