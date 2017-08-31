@@ -53,14 +53,13 @@ abstract class MetaTask {def displayPropertyKeys: List[MetaProperty]}
 case class QueryTask(displayPropertyKeys: List[QueryProperty]) extends MetaTask
 //case class ListTask(displayPropertyKeys: List[ListProperty], eos: Seq[EO]) extends MetaTask
 case class ListTask(displayPropertyKeys: List[ListProperty]) extends MetaTask
-case class InspectTask(displayPropertyKeys: List[InspectProperty]) extends MetaTask
-case class EditTask(displayPropertyKeys: List[EditProperty]) extends MetaTask
+case class InspectTask(displayPropertyKeys: List[EditInspectProperty]) extends MetaTask
+case class EditTask(displayPropertyKeys: List[EditInspectProperty]) extends MetaTask
 
 // Property
 abstract class MetaProperty {def key: String; def displayName: String; def componentName: String}
 // Query property must evolve to be more like a EOQualifier, currently storing the string to search in value
 case class QueryProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
 case class ListProperty(key: String, displayName: String, componentName: String) extends MetaProperty
-case class InspectProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
-case class EditProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
+case class EditInspectProperty(key: String, displayName: String, componentName: String) extends MetaProperty
 

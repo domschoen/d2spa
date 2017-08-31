@@ -17,7 +17,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]])
+case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]], eo: EO)
 
 
 // Generic Part
@@ -32,14 +32,18 @@ case class SetMenus(menus: Menus) extends Action
 case object InitMetaData extends Action
 case class SetMetaData(metaData: MetaDatas) extends Action
 
+case class InstallEditPage(entity: String) extends Action
+case class InstallInspectPage(eo:EO) extends Action
 
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
 
 case class SelectMenu(entity: String) extends Action
+case class Save(entity: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entity: String, property: QueryProperty, value: StringValue) extends Action
+case class UpdateEOValueForProperty(entity: String, property: EditInspectProperty, value: StringValue) extends Action
 
 case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
@@ -47,7 +51,7 @@ case class SearchResult( eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
-
+case class UpdatedEO(eo: EO) extends Action
 
 
 
@@ -74,7 +78,8 @@ object AppModel {
     MegaContent(
       Empty,
       MetaDatas(List()),
-      Empty
+      Empty,
+      EO(Map())
     )
   )
 }

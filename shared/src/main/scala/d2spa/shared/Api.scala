@@ -9,4 +9,6 @@ trait Api {
 
   def getMetaData(): MetaDatas
 
+  def updateEO(entity: String, eo: EO): Future[EO]
+
 }

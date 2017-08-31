@@ -14,7 +14,7 @@ import example.MegaContent
 import example.UpdateQueryProperty
 import d2spa.shared.{ StringValue, EOKeyValueQualifier, QueryProperty}
 
-object ERD2WQueryStringOperator {
+object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
 //bss.formControl,
   case class Props(router: RouterCtl[TaskAppPage], property: QueryProperty, proxy: ModelProxy[MegaContent])

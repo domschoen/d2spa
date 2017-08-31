@@ -152,14 +152,14 @@ class ApiService(config: Configuration) extends Api {
           ),
           InspectTask(
             List(
-              InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-              InspectProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
+              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
             )
           ),
           EditTask(
             List(
-              EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-              EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
+              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
             )
           )
         ),
@@ -178,14 +178,13 @@ class ApiService(config: Configuration) extends Api {
           ),
           InspectTask(
             List(
-              InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-              InspectProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
+              EditInspectProperty("name", "Name","ERD2WQueryStringOperator")
             )
           ),
           EditTask(
             List(
-              EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-              EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
+              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
             )
           )
         )
@@ -213,8 +212,8 @@ class ApiService(config: Configuration) extends Api {
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
-      val resultBody = response.json \ "RestResponse" \ "result"
-      val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
+      val resultBody = response.json
+      val array = resultBody.asInstanceOf[JsArray]
       var eos = List[EO]()
       for (item <- array.value) {
 
@@ -266,5 +265,21 @@ class ApiService(config: Configuration) extends Api {
     }
   }
 
+  def updateEO(entity: String, eo: EO): Future[EO] = {
+    val url = d2spaServerBaseUrl + "/" + entity + ".json"
+
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val eoValues = eo.values map {case (key,valContainer) => (key, valContainer.value)}
+    val data = Json.toJson(eoValues)
+
+
+    val futureResponse: Future[WSResponse] = request.post(data)
+    futureResponse.map { response =>
+
+      val resultBody = response.json
+      val array = resultBody.asInstanceOf[JsObject]
+      eo
+    }
+  }
 
 }

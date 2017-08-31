@@ -31,7 +31,8 @@ object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   override val actionHandler = composeHandlers(
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.metaDatas)),
-    new EOsHandler(zoomTo(_.content.eos))
+    new EOsHandler(zoomTo(_.content.eos)),
+    new EOHandler(zoomTo(_.content.eo))
     //new MegaDataHandler(zoomTo(_.content))
   )
 
@@ -105,6 +106,8 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
         }
         case None     => noChange
       }
+
+
   }
 }
 
@@ -113,6 +116,13 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
   override def handle = {
     case SearchResult(eoses) =>
       updated(Ready(eoses))
+  }
+}
+class EOHandler[M](modelRW: ModelRW[M, EO]) extends ActionHandler(modelRW) {
+
+  override def handle = {
+    case UpdatedEO(eo) =>
+      effectOnly(Effect.action(InstallInspectPage(eo)))
   }
 }
 
@@ -143,6 +153,39 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
         Effect( AfterEffectRouter.setQueryPageForEntity( selectedEntity))
       )
+    case Save(selectedEntity,eo) =>
+      updated(
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+        Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(UpdatedEO))
+      )
+
+    case InstallEditPage(selectedEntity) =>
+      println("edit page for entity " + selectedEntity)
+
+      // Example of a model update followed by an effect
+      // An effect has to call an action. Here it is "UpdateAllTodos"
+      //       updated(
+      //          value.map(_.updated(item)),
+      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
+      //       )
+
+      updated(
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "edit"))),
+        Effect( AfterEffectRouter.setEditPageForEntity( selectedEntity))
+      )
+    case InstallInspectPage(eo) =>
+      println("Inspect page for entity " + eo)
+
+      // Example of a model update followed by an effect
+      // An effect has to call an action. Here it is "UpdateAllTodos"
+      //       updated(
+      //          value.map(_.updated(item)),
+      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
+      //       )
+
+        effectOnly( Effect(AfterEffectRouter.setInspectPageForEntity( value.get.d2wContext.entity)))
+
+
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)

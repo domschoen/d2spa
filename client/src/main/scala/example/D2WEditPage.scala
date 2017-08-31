@@ -1,21 +1,17 @@
 package example
 
+import d2spa.shared.{EOKeyValueQualifier, EditInspectProperty, QueryProperty}
 import diode.react.ModelProxy
-import diode.Action
-import org.scalajs.dom.ext.KeyCode
-import example.css.GlobalStyle
-
-import scalacss.ScalaCssReact._
-import example.D2SPAMain.{ListPage, TaskAppPage}
-import example.components.{ERD2WQueryStringOperator, QueryComponent}
-import d2spa.shared.{EOKeyValueQualifier, QueryProperty}
+import example.D2SPAMain.TaskAppPage
+import example.components.{ERD2WQueryStringOperator, ERD2WEditNumber, ERD2WEditString, EditInspectComponent}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
+import d2spa.shared.EO
 
-object D2WQueryPage {
+object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -23,16 +19,19 @@ object D2WQueryPage {
       Callback.when(props.proxy().metaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
     }
 
+    val componentByName = Map(
+      "EditInspectProperty" -> EditInspectProperty,
+      "ERD2WEditNumber" -> ERD2WEditNumber
+    )
 
-    val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
-
-    def search(router: RouterCtl[TaskAppPage],entity: String,qualifiers: List[EOKeyValueQualifier]) = {
-      Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entity,qualifiers)))
+    def save(router: RouterCtl[TaskAppPage],entity: String,eo: EO) = {
+      Callback.log(s"Save: $entity") >>
+        $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
     }
 
-    def qualifiers(propertyKeys: List[QueryProperty]): List[EOKeyValueQualifier] = {
-       propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
+    def eo(propertyKeys: List[EditInspectProperty]): EO = {
+       //propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
+      EO(Map())
     }
 
     def render(p: Props) = {
@@ -41,19 +40,20 @@ object D2WQueryPage {
       val metaDatas = p.proxy.value.metaDatas
       if  (!metaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
-        val task = entityMetaData.queryTask
+        val task = entityMetaData.editTask
         val displayPropertyKeys = task.displayPropertyKeys
+        val banImage = if (task.equals("edit")) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
           <.div(^.id:="a",
             <.div(^.className := "banner d2wPage",
-              <.span(<.img(^.src := "/assets/images/SearchBan.gif"))
+              <.span(<.img(^.src := banImage))
             ),
             <.div(^.className :="liner d2wPage",<.img(^.src := "/assets/images/Line.gif")),
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys)))
+                <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,eo(displayPropertyKeys)))
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),
@@ -70,7 +70,8 @@ object D2WQueryPage {
                               property.displayName
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
-                              ERD2WQueryStringOperator(p.router,property,p.proxy)
+                              //componentByName(property.componentName).asInstanceOf[EditInspectComponent](p.router,property,p.proxy)
+                              ERD2WEditString(p.router,property,p.proxy)
                             )
                           )
                         )
@@ -89,18 +90,14 @@ object D2WQueryPage {
     }
   }
 
-
-  //                               //componentByName(property.componentName).asInstanceOf[QueryComponent](p.router,property,p.proxy)
-
-
-  private val component = ReactComponentB[Props]("D2WPage")
+  private val component = ReactComponentB[Props]("D2WEditPage")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, entity, proxy))
+    component(Props(ctl, entity, task, proxy))
   }
 }

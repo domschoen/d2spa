@@ -31,6 +31,8 @@ object D2SPAMain extends JSApp {
   case object TaskRoot extends TaskAppPage
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
+  case class EditPage(entity: String) extends TaskAppPage
+  case class InspectPage(entity: String) extends TaskAppPage
 
   object TaskAppPage {
 
@@ -54,6 +56,18 @@ object D2SPAMain extends JSApp {
                       menusConnection(p => D2WListPage(ctl, m.entity, p))
                     }
                  )
+        | dynamicRouteCT("#task/edit/entity" / string(".*").caseClass[EditPage]) ~> dynRenderR(
+                (m, ctl) => {
+                    AfterEffectRouter.setCtl(ctl)
+                    menusConnection(p => D2WEditPage(ctl, m.entity,"edit", p ))
+                 }
+             )
+        | dynamicRouteCT("#task/inspect/entity" / string(".*").caseClass[EditPage]) ~> dynRenderR(
+                (m, ctl) => {
+                   AfterEffectRouter.setCtl(ctl)
+                   menusConnection(p => D2WEditPage(ctl, m.entity,"inspect", p))
+                 }
+             )
         )
     }
 
