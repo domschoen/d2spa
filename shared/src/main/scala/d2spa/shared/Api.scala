@@ -11,4 +11,6 @@ trait Api {
 
   def updateEO(entity: String, eo: EO): Future[EO]
 
+  def newEO(entity:String) : Future[EO]
+
 }

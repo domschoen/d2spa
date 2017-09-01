@@ -17,7 +17,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]], eo: EO)
+case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]], eo: Pot[EO])
 
 
 // Generic Part
@@ -32,8 +32,10 @@ case class SetMenus(menus: Menus) extends Action
 case object InitMetaData extends Action
 case class SetMetaData(metaData: MetaDatas) extends Action
 
+case class NewEOPage(entity: String) extends Action
 case class InstallEditPage(entity: String) extends Action
 case class InstallInspectPage(eo:EO) extends Action
+case class EOCreated(eo:EO) extends Action
 
 case object InitMenuSelection extends Action
 
@@ -79,98 +81,10 @@ object AppModel {
       Empty,
       MetaDatas(List()),
       Empty,
-      EO(Map())
+      Empty
     )
   )
 }
 
 
 
-/*
-      MetaDatas(
-        List(
-          EntityMetaData("DTEChipset", "DTE Chipset",
-            QueryTask(
-              List(
-                QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                QueryProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            ListTask(
-              List(
-                ListProperty("name", "Name","ERD2WQueryStringOperator"),
-                ListProperty("operator", "Operator","ERD2WQueryStringOperator")
-              ),
-              Pot.empty[List[EO]]
-            ),
-            InspectTask(
-              List(
-                InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                InspectProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            EditTask(
-              List(
-                EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            )
-          ),
-          EntityMetaData("DTEEMI", "EMI",
-            QueryTask(
-              List(
-                QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("fr"))//,
-                //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            ListTask(
-              List(
-                ListProperty("name", "Name","ERD2WQueryStringOperator")//,
-                //ListProperty("csad", "CSAD","ERD2WQueryStringOperator")
-              ),
-              Pot.empty[List[EO]]
-            ),
-            InspectTask(
-              List(
-                InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                InspectProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            EditTask(
-              List(
-                EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            )
-          ),
-          EntityMetaData("ChipsetSecurityType", "Chipset Security Type",
-            QueryTask(
-              List(
-                QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                QueryProperty("sec", "sec","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            ListTask(
-              List(
-                ListProperty("name", "Name","ERD2WQueryStringOperator"),
-                ListProperty("sec", "sec","ERD2WQueryStringOperator")
-              ),
-              Pot.empty[List[EO]]
-            ),
-            InspectTask(
-              List(
-                InspectProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                InspectProperty("sec", "sec","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            ),
-            EditTask(
-              List(
-                EditProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-                EditProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
-              )
-            )
-          )
-        )
-      )
-
- */

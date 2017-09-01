@@ -118,11 +118,27 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
       updated(Ready(eoses))
   }
 }
-class EOHandler[M](modelRW: ModelRW[M, EO]) extends ActionHandler(modelRW) {
+class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
 
   override def handle = {
+    case EOCreated(eo) =>
+      updated(
+        Ready(eo),
+        Effect(AfterEffectRouter.setEditPageForEntity(eo.entity))
+      )
     case UpdatedEO(eo) =>
       effectOnly(Effect.action(InstallInspectPage(eo)))
+    case NewEOPage(selectedEntity) =>
+      println("edit page for entity " + selectedEntity)
+
+      // Example of a model update followed by an effect
+      // An effect has to call an action. Here it is "UpdateAllTodos"
+      //       updated(
+      //          value.map(_.updated(item)),
+      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
+      //       )
+      effectOnly(Effect(AjaxClient[Api].newEO(selectedEntity).call().map(EOCreated)))
+
   }
 }
 
@@ -159,20 +175,6 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(UpdatedEO))
       )
 
-    case InstallEditPage(selectedEntity) =>
-      println("edit page for entity " + selectedEntity)
-
-      // Example of a model update followed by an effect
-      // An effect has to call an action. Here it is "UpdateAllTodos"
-      //       updated(
-      //          value.map(_.updated(item)),
-      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
-      //       )
-
-      updated(
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "edit"))),
-        Effect( AfterEffectRouter.setEditPageForEntity( selectedEntity))
-      )
     case InstallInspectPage(eo) =>
       println("Inspect page for entity " + eo)
 

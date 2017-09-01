@@ -29,20 +29,20 @@ object D2WEditPage {
         $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
     }
 
-    def eo(propertyKeys: List[EditInspectProperty]): EO = {
+    /*def eo(propertyKeys: List[EditInspectProperty]): EO = {
        //propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
       EO(Map())
-    }
+    }*/
 
     def render(p: Props) = {
       val entity = p.entity
-      println("Render Query page for entity: " + entity)
+      println("Render Edit page for entity: " + entity + " and task " + p.task)
       val metaDatas = p.proxy.value.metaDatas
       if  (!metaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
-        val task = entityMetaData.editTask
-        val displayPropertyKeys = task.displayPropertyKeys
-        val banImage = if (task.equals("edit")) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
+        val edittask = entityMetaData.editTask
+        val displayPropertyKeys = edittask.displayPropertyKeys
+        val banImage = if (p.task.equals("edit")) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
           <.div(^.id:="a",
@@ -53,7 +53,7 @@ object D2WEditPage {
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,eo(displayPropertyKeys)))
+                <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,p.proxy.value.eo.get))
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),

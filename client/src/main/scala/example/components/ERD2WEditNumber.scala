@@ -25,7 +25,7 @@ object ERD2WEditNumber extends EditInspectComponent {
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val eo = p.proxy.value.eo
+      val eo = p.proxy.value.eo.get
       val eoValue = eo.values(p.property.key)
       <.div(
         <.input(^.id := "description", ^.value := eoValue.value,

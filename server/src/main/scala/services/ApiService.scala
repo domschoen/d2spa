@@ -47,7 +47,7 @@ class ApiService(config: Configuration) extends Api {
   )
 
   var eos = Seq(
-    EO(Map(
+    EO("Project", Map(
       "name" -> StringValue("Brunei Darussalam"),
       "alpha2_code" -> StringValue("BN"),
       "alpha3_code" -> StringValue("BRN")
@@ -253,7 +253,7 @@ class ApiService(config: Configuration) extends Api {
           case s: JsSuccess[CountryItem] => {
             val wiObj = s.get
 
-            eos ::= EO(Map(
+            eos ::= EO("Project", Map(
               "name" -> StringValue(wiObj.name),
               "alpha2_code" -> StringValue(wiObj.alpha2_code),
               "alpha3_code" -> StringValue(wiObj.alpha3_code)))
@@ -281,5 +281,13 @@ class ApiService(config: Configuration) extends Api {
       eo
     }
   }
+
+  def newEO(entity:String) : Future[EO] = {
+    Future(EO("Project",Map (
+      "name" -> StringValue("a"),
+      "operator" -> StringValue("b")
+    )))
+  }
+
 
 }

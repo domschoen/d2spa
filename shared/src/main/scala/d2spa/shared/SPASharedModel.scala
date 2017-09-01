@@ -25,7 +25,7 @@ case class IntValue(value: Int) extends EOValue
 
 sealed abstract class GenericData
 case class EOE(values: String) extends GenericData
-case class EO(values: scala.collection.Map[String,StringValue]) extends GenericData
+case class EO(entity: String, values: scala.collection.Map[String,StringValue]) extends GenericData
 case class EOs(eos: List[EO]) extends GenericData
 case object NoData extends GenericData
 

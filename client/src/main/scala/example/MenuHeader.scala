@@ -25,6 +25,14 @@ object MenuHeader {
         $.props >>= (_.proxy.dispatchCB(SelectMenu(entity)))
     }
 
+    def newEO(entity: String) = {
+      println("new EO for entity " + entity)
+
+      Callback.log(s"New EO for: $entity") >>
+        $.props >>= (_.proxy.dispatchCB(NewEOPage(entity)))
+    }
+
+
     def render(p: Props) = {
       //val callbacks = Callbacks(P)
       // + P.proxy.value.menuModel.d2wContext.entity
@@ -49,7 +57,7 @@ object MenuHeader {
           )
         } else
           Seq.empty[ReactElement],
-        <.img(^.src := "/assets/images/New.gif",^.onClick --> selectMenu(p.entity))
+        <.img(^.src := "/assets/images/New.gif",^.onClick --> newEO(p.entity))
 
 
       )
