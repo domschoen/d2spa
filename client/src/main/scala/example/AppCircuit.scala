@@ -114,8 +114,12 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
 class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case SearchResult(eoses) =>
-      updated(Ready(eoses))
+    case SearchResult(entity, eoses) =>
+        println("length " + eoses.length)
+        updated(
+          Ready(eoses),
+          Effect(AfterEffectRouter.setListPageForEntity(entity))
+      )
   }
 }
 class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
@@ -127,7 +131,10 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Effect(AfterEffectRouter.setEditPageForEntity(eo.entity))
       )
     case UpdatedEO(eo) =>
-      effectOnly(Effect.action(InstallInspectPage(eo)))
+      updated(
+        Ready(eo),
+        Effect(AfterEffectRouter.setInspectPageForEntity(eo.entity))
+      )
     case NewEOPage(selectedEntity) =>
       println("edit page for entity " + selectedEntity)
 
@@ -171,7 +178,9 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       )
     case Save(selectedEntity,eo) =>
       updated(
+        // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+        // Update the DB and dispatch the result withing UpdatedEO action
         Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(UpdatedEO))
       )
 
@@ -187,11 +196,11 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
         effectOnly( Effect(AfterEffectRouter.setInspectPageForEntity( value.get.d2wContext.entity)))
 
-
+    // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers.head).call().map(SearchResult)))
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers.head).call().map(SearchResult(selectedEntity,_))))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
         //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))

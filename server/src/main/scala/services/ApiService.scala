@@ -166,25 +166,26 @@ class ApiService(config: Configuration) extends Api {
         EntityMetaData("Project", "Project",
           QueryTask(
             List(
-              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("fr"))//,
+              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue("fr"))//,
               //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
             )
           ),
           ListTask(
             List(
-              ListProperty("name", "Name","ERD2WQueryStringOperator")//,
-              //ListProperty("csad", "CSAD","ERD2WQueryStringOperator")
+              ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
+              //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
             )
           ),
           InspectTask(
             List(
-              EditInspectProperty("name", "Name","ERD2WQueryStringOperator")
+              EditInspectProperty("descr", "Description","ERD2WQueryStringOperator"),
+              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
             )
           ),
           EditTask(
             List(
-              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
-              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
+              EditInspectProperty("descr", "Description","ERD2WEditString"),
+              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
             )
           )
         )
@@ -216,23 +217,28 @@ class ApiService(config: Configuration) extends Api {
       val array = resultBody.asInstanceOf[JsArray]
       var eos = List[EO]()
       for (item <- array.value) {
+        val obj = item.asInstanceOf[JsObject]
+        var valuesMap = Map[String, StringValue]()
+        for ((key, value) <- obj.fields) {
+          println("value class " + value.getClass.getName)
+          value match {
+            case s: play.api.libs.json.JsString =>
+              valuesMap += (key -> StringValue(s.value))
+            case n: play.api.libs.json.JsNumber =>
+              val bigDecimal = n.value
+              // TBD use a BigDecimal container
+              valuesMap += (key -> StringValue(bigDecimal.toString()))
+            case play.api.libs.json.JsNull =>
+              // TBD use a kind of Null ?
+              valuesMap += (key -> StringValue(""))
+            case _ =>
+              valuesMap += (key -> StringValue("not supported"))
 
-        println("item " + item)
-        //val obj = country.validate[CountryItem]
-        /*obj match {
-          case s: JsSuccess[CountryItem] => {
-            val wiObj = s.get
-
-            eos ::= EO(Map(
-              "name" -> StringValue(wiObj.name),
-              "alpha2_code" -> StringValue(wiObj.alpha2_code),
-              "alpha3_code" -> StringValue(wiObj.alpha3_code)))
           }
-          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
-        }*/
+        }
+        eos ::= EO(entity,valuesMap)
       }
-      //eos.toSeq
-      Seq()
+      eos.toSeq
     }
   }
 
@@ -282,10 +288,11 @@ class ApiService(config: Configuration) extends Api {
     }
   }
 
+  // New EO has to be created by the server because it needs to contain all attribute even those not directly displayed
   def newEO(entity:String) : Future[EO] = {
     Future(EO("Project",Map (
-      "name" -> StringValue("a"),
-      "operator" -> StringValue("b")
+      "descr" -> StringValue("a"),
+      "projectNumber" -> StringValue("1")
     )))
   }
 

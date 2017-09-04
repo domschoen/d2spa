@@ -6,12 +6,12 @@ import diode.data._
 import diode.util._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.prefix_<^.{<, _}
 import org.scalajs.dom.ext.KeyCode
+
 import scalacss.ScalaCssReact._
 import example.css.GlobalStyle
-
-import example.D2SPAMain.{TaskAppPage}
+import example.D2SPAMain.TaskAppPage
 import example.components.ERD2WQueryStringOperator
 import d2spa.shared.EOKeyValueQualifier
 
@@ -48,30 +48,42 @@ object D2WListPage {
                   <.span(^.className := "attribute",eos.size + " " + entityMetaData.displayName)
                 ),
                 <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif")))
-              ),
-                 <.table(^.className :="listRepetition",
-                   <.tbody(
-                       <.tr(^.className :="listRepetitionColumnHeader",
-                         displayPropertyKeys.map(property =>
-                           <.td(^.className :="listRepetitionColumnHeader",
+              )
+            ),
+            <.tbody(
+              <.tr(
+                <.td(
+                  <.table(^.className :="listRepetition",
+                    <.tbody(
+                      <.tr(^.className :="listRepetitionColumnHeader",
+                        <.td(),
+                        displayPropertyKeys.map(property =>
+                          <.td(^.className :="listRepetitionColumnHeader",
                             <.span(^.className :="listRepetitionColumnHeader",property.displayName)
-                         )
-                       )
-                     )
-                   ),
-                   <.tbody(
-                    eos.map(eo =>
-                     <.tr(displayPropertyKeys.map(
-                       property =>
-                         <.td(
-                           eo.values(property.key).value
-                         )
-                       )
-                     )
+                          )
+                        )
+                      )
+                    ),
+                    <.tbody(
+                      eos.map(eo =>
+                        <.tr(
+                          <.td(
+                            <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif"),
+                            <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif"),
+                            <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
+                          ),
+                          displayPropertyKeys.map(
+                          property =>
+                            <.td(^.className := "list1",
+                              eo.values(property.key).value
+                            )
+                          )
+                        )
+                      )
                     )
-                   )
-                 )
-
+                  )
+                )
+              )
             )
           )
         )

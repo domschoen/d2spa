@@ -49,7 +49,7 @@ case class UpdateEOValueForProperty(entity: String, property: EditInspectPropert
 
 case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult( eos: Seq[EO]) extends Action
+case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
