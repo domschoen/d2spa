@@ -62,7 +62,7 @@ object D2SPAMain extends JSApp {
                     menusConnection(p => D2WEditPage(ctl, m.entity,"edit", p ))
                  }
              )
-        | dynamicRouteCT("#task/inspect/entity" / string(".*").caseClass[EditPage]) ~> dynRenderR(
+        | dynamicRouteCT("#task/inspect/entity" / string(".*").caseClass[InspectPage]) ~> dynRenderR(
                 (m, ctl) => {
                    AfterEffectRouter.setCtl(ctl)
                    menusConnection(p => D2WEditPage(ctl, m.entity,"inspect", p))

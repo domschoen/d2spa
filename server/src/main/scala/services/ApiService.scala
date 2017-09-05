@@ -110,10 +110,10 @@ class ApiService(config: Configuration) extends Api {
           // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
           // D2WContext(null,null,null)
 
-          Menus(List(),D2WContext(null,null,null))
+          Menus(List(),D2WContext(null,null,null,null))
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null))
+          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null,null))
         }
       }
 
@@ -128,7 +128,7 @@ class ApiService(config: Configuration) extends Api {
             )
           )
         ),
-        D2WContext("Project", "query", null)
+        D2WContext("Project", "query", null, null)
       )
       Future(data)
     }
@@ -140,8 +140,8 @@ class ApiService(config: Configuration) extends Api {
         EntityMetaData("Customer", "Customer",
           QueryTask(
             List(
-              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("toto")),
-              QueryProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue("toto"))
+              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("")),
+              QueryProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue(""))
             )
           ),
           ListTask(
@@ -152,8 +152,8 @@ class ApiService(config: Configuration) extends Api {
           ),
           InspectTask(
             List(
-              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
-              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
+              EditInspectProperty("name", "Name","ERD2WDisplayString"),
+              EditInspectProperty("operator", "Operator","ERD2WDisplayString")
             )
           ),
           EditTask(
@@ -166,7 +166,7 @@ class ApiService(config: Configuration) extends Api {
         EntityMetaData("Project", "Project",
           QueryTask(
             List(
-              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue("fr"))//,
+              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
               //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
             )
           ),
@@ -178,8 +178,8 @@ class ApiService(config: Configuration) extends Api {
           ),
           InspectTask(
             List(
-              EditInspectProperty("descr", "Description","ERD2WQueryStringOperator"),
-              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
+              EditInspectProperty("descr", "Description","ERD2WDisplayString"),
+              EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
             )
           ),
           EditTask(
@@ -192,12 +192,20 @@ class ApiService(config: Configuration) extends Api {
       )
     )
 
-  override def search(entity: String, qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
+  override def search(entity: String, qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
+    println("Search for entity: " + entity + " qualifiers " + qualifiers)
     if (usesD2SPAServer) {
-      searchOnD2SPAServer(entity, qualifier)
+      searchOnD2SPAServer(entity, qualifiers)
     } else {
-      searchOnOnlineCountryWs(qualifier)
+      searchOnOnlineCountryWs(qualifiers)
     }
+  }
+
+  // TBD Sorting parameter
+  // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
+  def qualifiersUrlPart(qualifiers: List[EOKeyValueQualifier]) : String = {
+    val qualifiersStrings = qualifiers.map(qualifierUrlPart(_))
+    return qualifiersStrings.mkString(" and ")
   }
 
   def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
@@ -205,10 +213,10 @@ class ApiService(config: Configuration) extends Api {
   }
 
 
-  def searchOnD2SPAServer(entity: String, qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
-    val qualifierSuffix = if (qualifier == null) "" else "?" + qualifierUrlPart(qualifier)
+  def searchOnD2SPAServer(entity: String, qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
+    val qualifierSuffix = if (qualifiers == null || qualifiers.isEmpty) "" else "?" + qualifiersUrlPart(qualifiers)
     val url = d2spaServerBaseUrl + "/" + entity + ".json" + qualifierSuffix
-
+    println("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
@@ -220,7 +228,7 @@ class ApiService(config: Configuration) extends Api {
         val obj = item.asInstanceOf[JsObject]
         var valuesMap = Map[String, StringValue]()
         for ((key, value) <- obj.fields) {
-          println("value class " + value.getClass.getName)
+          //println("value class " + value.getClass.getName)
           value match {
             case s: play.api.libs.json.JsString =>
               valuesMap += (key -> StringValue(s.value))
@@ -244,8 +252,8 @@ class ApiService(config: Configuration) extends Api {
 
 
   // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
-  def searchOnOnlineCountryWs(qualifier: EOKeyValueQualifier): Future[Seq[EO]] = {
-    val url = "http://services.groupkt.com/country/search?text=" + qualifier.value;
+  def searchOnOnlineCountryWs(qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
+    val url = "http://services.groupkt.com/country/search?text=" + qualifiers.head.value;
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>

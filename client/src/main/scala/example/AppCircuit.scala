@@ -7,7 +7,7 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import d2spa.shared.{Api, EOKeyValueQualifier, TodoItem}
+import d2spa.shared.{Api, EOKeyValueQualifier, EditInspectProperty, TodoItem}
 import example.services.AjaxClient
 import boopickle.Default._
 
@@ -130,10 +130,10 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect(AfterEffectRouter.setEditPageForEntity(eo.entity))
       )
-    case UpdatedEO(eo) =>
+    case InspectEO(fromTask, eo) =>
       updated(
         Ready(eo),
-        Effect(AfterEffectRouter.setInspectPageForEntity(eo.entity))
+        Effect.action(InstallInspectPage(fromTask,eo))
       )
     case NewEOPage(selectedEntity) =>
       println("edit page for entity " + selectedEntity)
@@ -145,7 +145,12 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
       //       )
       effectOnly(Effect(AjaxClient[Api].newEO(selectedEntity).call().map(EOCreated)))
-
+    case UpdateEOValueForProperty(entity, property, newEOValue) =>
+      println("Update EO Property: for entity " + entity + " property: " + property + " " + newEOValue)
+      //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
+      //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
+      val eo = value.get
+      updated(Ready(value.get.copy(values = (eo.values - property.key) + (property.key -> newEOValue))))
   }
 }
 
@@ -176,15 +181,26 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
         Effect( AfterEffectRouter.setQueryPageForEntity( selectedEntity))
       )
+    case SetPreviousPage(selectedEntity) =>
+      val previousTask = value.get.d2wContext.previousTask
+      updated(
+        // change context to inspect
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = previousTask))),
+        Effect( AfterEffectRouter.setPageForTaskAndEntity(previousTask, selectedEntity))
+      )
+
     case Save(selectedEntity,eo) =>
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(UpdatedEO))
+        Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(InspectEO("edit",_)))
       )
+    case InstallQueryPage(entity) =>
+      println("Query page for entity " + entity)
 
-    case InstallInspectPage(eo) =>
+      effectOnly( Effect(AfterEffectRouter.setQueryPageForEntity(entity)))
+    case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
 
       // Example of a model update followed by an effect
@@ -193,14 +209,17 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       //          value.map(_.updated(item)),
       //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
       //       )
-
-        effectOnly( Effect(AfterEffectRouter.setInspectPageForEntity( value.get.d2wContext.entity)))
+      updated(
+        // change context to inspect
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "inspect"))),
+        Effect(AfterEffectRouter.setInspectPageForEntity( value.get.d2wContext.entity))
+      )
 
     // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity, qualifiers) =>
-      println("Search: for entity " + selectedEntity)
+      println("Search: for entity " + selectedEntity + " qualifier " + qualifiers)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers.head).call().map(SearchResult(selectedEntity,_))))
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers).call().map(SearchResult(selectedEntity,_))))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
       //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
         //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))

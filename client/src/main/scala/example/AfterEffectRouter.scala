@@ -8,6 +8,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
+  def setPageForTaskAndEntity( task: String, entity:String) : Future[diode.NoAction.type] =
+    task match {
+      case "query" => setRouterToPage(QueryPage(entity))
+      case "list" => setRouterToPage(ListPage(entity))
+      case "edit" => setRouterToPage(EditPage(entity))
+      case "inspect" => setRouterToPage(InspectPage(entity))
+      case _ => setRouterToPage(QueryPage(entity))
+    }
+
   def setQueryPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(QueryPage(entity))
   def setListPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(ListPage(entity))
   def setEditPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(EditPage(entity))

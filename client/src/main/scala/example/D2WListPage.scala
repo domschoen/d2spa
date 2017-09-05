@@ -1,19 +1,18 @@
 package example
 
 import diode.react.ModelProxy
-import diode._
-import diode.data._
-import diode.util._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^.{<, _}
+import diode.Action
 import org.scalajs.dom.ext.KeyCode
+import example.css.GlobalStyle
 
 import scalacss.ScalaCssReact._
-import example.css.GlobalStyle
-import example.D2SPAMain.TaskAppPage
+import example.D2SPAMain.{ListPage, TaskAppPage}
 import example.components.ERD2WQueryStringOperator
-import d2spa.shared.EOKeyValueQualifier
+import d2spa.shared.{EO}
+
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.prefix_<^._
 
 object D2WListPage {
 
@@ -23,12 +22,15 @@ object D2WListPage {
   class Backend($ : BackendScope[Props, Unit]) {
     val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
 
-    /*def search(router: RouterCtl[TaskAppPage],entity: String) = {
 
+    def returnAction (router: RouterCtl[TaskAppPage],entity: String) = {
       Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entity)))
-    }*/
-
+        $.props >>= (_.proxy.dispatchCB(InstallQueryPage(entity)))
+    }
+    def inspectEO (eo: EO) = {
+      Callback.log(s"Inspect: $eo") >>
+        $.props >>= (_.proxy.dispatchCB(InspectEO("list", eo)))
+    }
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
@@ -47,7 +49,7 @@ object D2WListPage {
                 <.td(^.className := "listHeaderEntityName",
                   <.span(^.className := "attribute",eos.size + " " + entityMetaData.displayName)
                 ),
-                <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif")))
+                <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,p.entity))))
               )
             ),
             <.tbody(
@@ -68,7 +70,7 @@ object D2WListPage {
                       eos.map(eo =>
                         <.tr(
                           <.td(
-                            <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif"),
+                            <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
                             <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif"),
                             <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
                           ),

@@ -3,7 +3,7 @@ package example
 import d2spa.shared.{EOKeyValueQualifier, EditInspectProperty, QueryProperty}
 import diode.react.ModelProxy
 import example.D2SPAMain.TaskAppPage
-import example.components.{ERD2WQueryStringOperator, ERD2WEditNumber, ERD2WEditString, EditInspectComponent}
+import example.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WDisplayString, ERD2WEditString, EditInspectComponent}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.prefix_<^._
@@ -19,14 +19,14 @@ object D2WEditPage {
       Callback.when(props.proxy().metaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
     }
 
-    val componentByName = Map(
-      "EditInspectProperty" -> EditInspectProperty,
-      "ERD2WEditNumber" -> ERD2WEditNumber
-    )
 
     def save(router: RouterCtl[TaskAppPage],entity: String,eo: EO) = {
       Callback.log(s"Save: $entity") >>
         $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
+    }
+    def returnAction (router: RouterCtl[TaskAppPage],entity: String) = {
+      Callback.log(s"Search: $entity") >>
+        $.props >>= (_.proxy.dispatchCB(SetPreviousPage(entity)))
     }
 
     /*def eo(propertyKeys: List[EditInspectProperty]): EO = {
@@ -40,9 +40,10 @@ object D2WEditPage {
       val metaDatas = p.proxy.value.metaDatas
       if  (!metaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
-        val edittask = entityMetaData.editTask
+        val isEdit = p.task.equals("edit")
+        val edittask = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
         val displayPropertyKeys = edittask.displayPropertyKeys
-        val banImage = if (p.task.equals("edit")) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
+        val banImage = if (isEdit) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
           <.div(^.id:="a",
@@ -53,8 +54,16 @@ object D2WEditPage {
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,p.proxy.value.eo.get))
-                //p.router.link(ListPage(p.entity))("Search")
+                if (isEdit) {
+                  <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,p.proxy.value.eo.get))
+                } else {
+                  " "
+                },
+                if (isEdit) {
+                  " "
+                } else {
+                  <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,p.entity))
+                }
               )
             ),
               <.div(^.className :="repetition d2wPage",
@@ -70,8 +79,12 @@ object D2WEditPage {
                               property.displayName
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
-                              //componentByName(property.componentName).asInstanceOf[EditInspectComponent](p.router,property,p.proxy)
-                              ERD2WEditString(p.router,property,p.proxy)
+                              property.componentName match {
+                                case "ERD2WEditString" => ERD2WEditString(p.router,property,p.proxy)
+                                case "ERD2WEditNumber" => ERD2WEditNumber(p.router,property,p.proxy)
+                                case "ERD2WDisplayString" => ERD2WDisplayString(p.router,property,p.proxy)
+                                case _ => ERD2WEditString(p.router,property,p.proxy)
+                              }
                             )
                           )
                         )

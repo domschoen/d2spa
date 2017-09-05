@@ -34,7 +34,10 @@ case class SetMetaData(metaData: MetaDatas) extends Action
 
 case class NewEOPage(entity: String) extends Action
 case class InstallEditPage(entity: String) extends Action
-case class InstallInspectPage(eo:EO) extends Action
+case class InstallInspectPage(fromTask: String, eo:EO) extends Action
+case class InstallQueryPage(entity:String) extends Action
+case class SetPreviousPage(entity:String) extends Action
+
 case class EOCreated(eo:EO) extends Action
 
 case object InitMenuSelection extends Action
@@ -53,7 +56,7 @@ case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
-case class UpdatedEO(eo: EO) extends Action
+case class InspectEO(fromTask: String, eo: EO) extends Action
 
 
 

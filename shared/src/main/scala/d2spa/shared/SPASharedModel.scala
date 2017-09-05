@@ -35,7 +35,7 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: String)
 
 
-case class D2WContext(entity: String, task: String, propertyKey: String)
+case class D2WContext(entity: String, task: String, previousTask: String, propertyKey: String)
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
