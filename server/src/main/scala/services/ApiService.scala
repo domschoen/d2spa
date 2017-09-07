@@ -134,10 +134,9 @@ class ApiService(config: Configuration) extends Api {
     }
   }
 
-  def getMetaData(): MetaDatas =
-    MetaDatas(
-      List(
-        EntityMetaData("Customer", "Customer",
+  def getMetaData(entity: String): Future[EntityMetaData] = {
+    if (entity.equals("Customer")) {
+        Future(EntityMetaData("Customer", "Customer",
           QueryTask(
             List(
               QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("")),
@@ -162,35 +161,37 @@ class ApiService(config: Configuration) extends Api {
               EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
             )
           )
+        ))
+    } else
+      Future(EntityMetaData("Project", "Project",
+        QueryTask(
+          List(
+            QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
+            //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
+          )
         ),
-        EntityMetaData("Project", "Project",
-          QueryTask(
-            List(
-              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
-              //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
-            )
-          ),
-          ListTask(
-            List(
-              ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
-              //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
-            )
-          ),
-          InspectTask(
-            List(
-              EditInspectProperty("descr", "Description","ERD2WDisplayString"),
-              EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
-            )
-          ),
-          EditTask(
-            List(
-              EditInspectProperty("descr", "Description","ERD2WEditString"),
-              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
-            )
+        ListTask(
+          List(
+            ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
+            //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
+          )
+        ),
+        InspectTask(
+          List(
+            EditInspectProperty("descr", "Description","ERD2WDisplayString"),
+            EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
+          )
+        ),
+        EditTask(
+          List(
+            EditInspectProperty("descr", "Description","ERD2WEditString"),
+            EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
           )
         )
       )
-    )
+      )
+  }
+
 
   override def search(entity: String, qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
     println("Search for entity: " + entity + " qualifiers " + qualifiers)

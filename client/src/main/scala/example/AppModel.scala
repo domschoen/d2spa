@@ -29,8 +29,11 @@ case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq
 case object InitMenu extends Action
 case class SetMenus(menus: Menus) extends Action
 
-case object InitMetaData extends Action
-case class SetMetaData(metaData: MetaDatas) extends Action
+case class InitMetaData(entity: String) extends Action
+case class FetchMetaDataForMenu(entity: String) extends Action
+
+case class SetMetaData(entity: String, metaData: EntityMetaData) extends Action
+case class SetMetaDataForMenu(entity: String, metaData: EntityMetaData) extends Action
 
 case class NewEOPage(entity: String) extends Action
 case class InstallEditPage(entity: String) extends Action

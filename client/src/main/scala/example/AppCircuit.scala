@@ -86,11 +86,23 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
 
   // handle actions
   override def handle = {
-    case InitMetaData =>
+    case FetchMetaDataForMenu(entity: String) =>
       println("InitMetaData ")
-      effectOnly(Effect(AjaxClient[Api].getMetaData().call().map(SetMetaData)))
-    case SetMetaData(metaData) =>
-      updated(metaData)
+      value.entityMetaDatas.indexWhere(n => n.entityName == entity) match {
+        case -1 =>
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaDataForMenu(entity, _))))
+        case _ =>
+          effectOnly(Effect.action(InstallQueryPage(entity)))
+      }
+
+    case SetMetaDataForMenu(entity: String, entityMetaData) =>
+      updated(value.copy(entityMetaDatas = entityMetaData :: value.entityMetaDatas),Effect.action(InstallQueryPage(entity)))
+
+    case InitMetaData(entity: String) =>
+      println("InitMetaData ")
+      effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(entity, _))))
+    case SetMetaData(entity: String, entityMetaData) =>
+      updated(value.copy(entityMetaDatas = entityMetaData :: value.entityMetaDatas),Effect.action(InitMenu))
 
     case UpdateQueryProperty(entity, property, newEOValue) =>
       println("UpdateProperty: for entity " + entity + " property: " + property + " " + newEOValue)
@@ -161,9 +173,12 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
   override def handle = {
     case InitMenu =>
       println("InitMenu ")
-      effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
+      if (value.isEmpty) {
+        effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
+      } else
+        noChange
     case SetMenus(menus) =>
-      updated(Ready(menus),Effect.action(InitMetaData) )
+      updated(Ready(menus) ) // ,Effect.action(InitMetaData)
     /*case InitMenuSelection =>
       println("Initializing Menus")
       updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
@@ -179,7 +194,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
-        Effect( AfterEffectRouter.setQueryPageForEntity( selectedEntity))
+        Effect.action(FetchMetaDataForMenu(selectedEntity))
       )
     case SetPreviousPage(selectedEntity) =>
       val previousTask = value.get.d2wContext.previousTask

@@ -47,7 +47,8 @@ object MenuHeader {
               <.li(mainMenu.title,
                 <.ul(^.className := "action", mainMenu.children.map(
                   menu => {
-                    val menuCss = if (p.proxy.value.menuModel.get.d2wContext.entity.equals(menu.entity)) "menuSelected" else "menu"
+                    //val menuCss = if (p.proxy.value.menuModel.get.d2wContext.entity.equals(menu.entity)) "menuSelected" else "menu"
+                    val menuCss = if (p.entity.equals(menu.entity)) "menuSelected" else "menu"
                     <.li(^.className := menuCss, ^.onClick --> selectMenu(menu.entity), menu.entity)
                   }
                 )

@@ -20,7 +20,10 @@ object D2WQueryPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      Callback.when(props.proxy().metaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
+      println("entity " + props.entity)
+      val entityMetaDataNotFetched = props.proxy().metaDatas.entityMetaDatas.indexWhere(n => n.entityName == props.entity) < 0
+      println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(props.entity)))
     }
 
 
