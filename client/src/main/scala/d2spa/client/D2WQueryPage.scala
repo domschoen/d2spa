@@ -1,17 +1,20 @@
-package example
+package d2spa.client
+
+
+import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
+import d2spa.client.components.Bootstrap.{CommonStyle, Button}
+import scalacss.ScalaCssReact._
+import org.scalajs.dom.ext.KeyCode
+
+
+import diode.Action
 
 import diode.react.ModelProxy
-import diode.Action
-import org.scalajs.dom.ext.KeyCode
-import example.css.GlobalStyle
-
-import scalacss.ScalaCssReact._
-import example.D2SPAMain.{ListPage, TaskAppPage}
-import example.components.{ERD2WQueryStringOperator, QueryComponent}
+import d2spa.client.SPAMain.{ListPage, TaskAppPage}
+import d2spa.client.components.{ERD2WQueryStringOperator, QueryComponent}
 import d2spa.shared.{EOKeyValueQualifier, QueryProperty}
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
 
 object D2WQueryPage {
 
@@ -67,7 +70,7 @@ object D2WQueryPage {
                       <.td(
                         <.table(
                           <.tbody(
-                        displayPropertyKeys.map(property =>
+                        displayPropertyKeys toTagMod (property =>
                           <.tr(^.className :="attribute",
                             <.th(^.className :="propertyName query",
                               property.displayName
@@ -96,7 +99,7 @@ object D2WQueryPage {
   //                               //componentByName(property.componentName).asInstanceOf[QueryComponent](p.router,property,p.proxy)
 
 
-  private val component = ReactComponentB[Props]("D2WPage")
+  private val component = ScalaComponent.builder[Props]("D2WQueryPage")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))

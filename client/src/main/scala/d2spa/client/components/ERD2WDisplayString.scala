@@ -1,20 +1,20 @@
-package example.components
+package d2spa.client.components
 
 
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
 import scalacss.ScalaCssReact._
-import example.css.GlobalStyle
+//import d2spa.client.css.GlobalStyle
 
-import example.D2SPAMain.{TaskAppPage}
-import example.MegaContent
-import example.UpdateQueryProperty
+import d2spa.client.SPAMain.{TaskAppPage}
+import d2spa.client.MegaContent
+import d2spa.client.UpdateQueryProperty
 import d2spa.shared.{EditInspectProperty, QueryProperty, StringValue}
-import example.{MegaContent, UpdateEOValueForProperty}
+import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 
 
@@ -36,7 +36,7 @@ object ERD2WDisplayString  {
     }
   }
 
-  private val component = ReactComponentB[Props]("ERD2WEditString")
+  private val component = ScalaComponent.builder[Props]("ERD2WEditString")
     .renderBackend[Backend]
     .build
 

@@ -1,18 +1,18 @@
-package example
+package d2spa.client
 
 import diode.react.ModelProxy
 import diode.Action
 import org.scalajs.dom.ext.KeyCode
-import example.css.GlobalStyle
+//import d2spa.client.css.GlobalStyle
 
 import scalacss.ScalaCssReact._
-import example.D2SPAMain.{ListPage, TaskAppPage}
-import example.components.ERD2WQueryStringOperator
+import d2spa.client.SPAMain.{ListPage, TaskAppPage}
+import d2spa.client.components.ERD2WQueryStringOperator
 import d2spa.shared.{EO}
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 
 object D2WListPage {
 
@@ -59,7 +59,7 @@ object D2WListPage {
                     <.tbody(
                       <.tr(^.className :="listRepetitionColumnHeader",
                         <.td(),
-                        displayPropertyKeys.map(property =>
+                        displayPropertyKeys toTagMod (property =>
                           <.td(^.className :="listRepetitionColumnHeader",
                             <.span(^.className :="listRepetitionColumnHeader",property.displayName)
                           )
@@ -67,14 +67,14 @@ object D2WListPage {
                       )
                     ),
                     <.tbody(
-                      eos.map(eo =>
+                      eos toTagMod (eo =>
                         <.tr(
                           <.td(
                             <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
                             <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif"),
                             <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
                           ),
-                          displayPropertyKeys.map(
+                          displayPropertyKeys toTagMod (
                           property =>
                             <.td(^.className := "list1",
                               eo.values(property.key).value
@@ -93,7 +93,7 @@ object D2WListPage {
     }
   }
 
-  private val component = ReactComponentB[Props]("D2WListPage")
+  private val component = ScalaComponent.builder[Props]("D2WListPage")
     .renderBackend[Backend]
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build

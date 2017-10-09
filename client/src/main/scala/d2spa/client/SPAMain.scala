@@ -1,26 +1,23 @@
-package example
+package d2spa.client
 
-import boopickle.Default._
-import diode.dev.{Hooks, PersistStateIDB}
+import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
-import dom.ext._
-import util._
+import d2spa.client.components.GlobalStyles
+import d2spa.client.logger._
+//import d2spa.client.modules._
+import d2spa.client.services.SPACircuit
 
 import scala.scalajs.js
-import scala.scalajs.js._
-import scala.scalajs.js.annotation.JSExport
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.extra.router._
+import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import CssSettings._
 
-import scala.scalajs.js.typedarray.TypedArrayBufferOps._
-import scala.scalajs.js.typedarray._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import scalacss.ScalaCssReact._
 
-import example.css.AppCSS
 
-@JSExport("D2SPA")
-object D2SPAMain extends JSApp {
+@JSExportTopLevel("D2SPA")
+object SPAMain extends js.JSApp {
   sealed trait AppPage
   case object Home extends AppPage
   case object DashboardAppPage extends AppPage
@@ -39,11 +36,11 @@ object D2SPAMain extends JSApp {
     val routes = RouterConfigDsl[TaskAppPage].buildRule { dsl =>
       import dsl._
 
-      val menusConnection = AppCircuit.connect(_.content)
+      val menusConnection = SPACircuit.connect(_.content)
 
 
       (emptyRule
-        | staticRoute(root, TaskRoot) ~> renderR(ctl => AppCircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, "TOTORO", proxy)))
+        | staticRoute(root, TaskRoot) ~> renderR(ctl => SPACircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, "TOTORO", proxy)))
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
                     (m, ctl) => {
                       AfterEffectRouter.setCtl(ctl)
@@ -78,7 +75,7 @@ object D2SPAMain extends JSApp {
     TaskAppPage.routes.pmap[AppPage](NestedTaskAppPage){ case NestedTaskAppPage(m) => m }
 
 
-  val subComp = ReactComponentB[Unit]("printer")
+  val subComp = ScalaComponent.builder[Unit]("printer")
     .render(P => {
       <.div("world")
     }).build
@@ -98,10 +95,10 @@ object D2SPAMain extends JSApp {
 
   @JSExport
   override def main(): Unit = {
-    AppCSS.load
+    //AppCSS.load
 
     //AppCircuit.dispatch(InitAppModel)
-    ReactDOM.render(router(), dom.document.getElementById("root"))
+    router().renderIntoDOM(dom.document.getElementById("root"))
   }
 
 

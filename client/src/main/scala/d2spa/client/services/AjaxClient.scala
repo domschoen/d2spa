@@ -1,4 +1,4 @@
-package example.services
+package d2spa.client.services
 
 import java.nio.ByteBuffer
 

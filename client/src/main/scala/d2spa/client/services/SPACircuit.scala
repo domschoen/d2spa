@@ -1,4 +1,4 @@
-package example
+package d2spa.client.services
 
 import autowire._
 import diode._
@@ -8,20 +8,43 @@ import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
 import d2spa.shared.{Api, EOKeyValueQualifier, EditInspectProperty, TodoItem}
-import example.services.AjaxClient
 import boopickle.Default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
-import example.D2SPAMain.TaskAppPage
+import d2spa.client.SPAMain.TaskAppPage
+import d2spa.client.{
+  FetchMetaDataForMenu,
+  InstallQueryPage,
+  SetMetaDataForMenu,
+  InitMetaData,
+  SetMetaData,
+  InitMenu,
+  UpdateQueryProperty,
+  SearchResult,
+  SetPreviousPage,
+  AfterEffectRouter,
+EOCreated,
+InspectEO,
+NewEOPage,
+UpdateEOValueForProperty,
+SetMenus,
+SelectMenu,
+Save,
+InstallInspectPage,
+Search,
+ShowPage
+}
 
 /*import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import japgolly.scalajs.react.extra.router._*/
 
+import d2spa.client.AppModel
+
 import d2spa.shared.{Menus, MetaDatas, EntityMetaData, QueryProperty, QueryTask, EO, StringValue}
 
-object AppCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
+object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
   override protected def initialModel = AppModel.bootingModel
 
@@ -150,7 +173,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
     case NewEOPage(selectedEntity) =>
       println("edit page for entity " + selectedEntity)
 
-      // Example of a model update followed by an effect
+      // d2spa.client of a model update followed by an effect
       // An effect has to call an action. Here it is "UpdateAllTodos"
       //       updated(
       //          value.map(_.updated(item)),
@@ -185,7 +208,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
 
-      // Example of a model update followed by an effect
+      // d2spa.client of a model update followed by an effect
       // An effect has to call an action. Here it is "UpdateAllTodos"
       //       updated(
       //          value.map(_.updated(item)),
@@ -218,7 +241,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
 
-      // Example of a model update followed by an effect
+      // d2spa.client of a model update followed by an effect
       // An effect has to call an action. Here it is "UpdateAllTodos"
       //       updated(
       //          value.map(_.updated(item)),

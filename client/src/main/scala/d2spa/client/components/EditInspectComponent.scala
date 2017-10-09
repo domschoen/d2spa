@@ -1,9 +1,9 @@
-package example.components
+package d2spa.client.components
 
 import d2spa.shared.EditInspectProperty
 import diode.react.ModelProxy
-import example.D2SPAMain.TaskAppPage
-import example.MegaContent
+import d2spa.client.SPAMain.TaskAppPage
+import d2spa.client.MegaContent
 import japgolly.scalajs.react.extra.router.RouterCtl
 
 trait EditInspectComponent {

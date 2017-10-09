@@ -1,12 +1,12 @@
-package example
+package d2spa.client
 
 import d2spa.shared.{EOKeyValueQualifier, EditInspectProperty, QueryProperty}
 import diode.react.ModelProxy
-import example.D2SPAMain.TaskAppPage
-import example.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WDisplayString, ERD2WEditString, EditInspectComponent}
+import d2spa.client.SPAMain.TaskAppPage
+import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WDisplayString, ERD2WEditString, EditInspectComponent}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import d2spa.shared.EO
 
 object D2WEditPage {
@@ -73,7 +73,7 @@ object D2WEditPage {
                       <.td(
                         <.table(
                           <.tbody(
-                        displayPropertyKeys.map(property =>
+                        displayPropertyKeys toTagMod (property =>
                           <.tr(^.className :="attribute",
                             <.th(^.className :="propertyName query",
                               property.displayName
@@ -103,7 +103,7 @@ object D2WEditPage {
     }
   }
 
-  private val component = ReactComponentB[Props]("D2WEditPage")
+  private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))

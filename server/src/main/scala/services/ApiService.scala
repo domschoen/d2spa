@@ -35,7 +35,7 @@ case class MenuItem (
                       )
 
 class ApiService(config: Configuration) extends Api {
-  val usesD2SPAServer = config.getBoolean("usesD2SPAServer").getOrElse(true)
+  val usesD2SPAServer = config.getBoolean("d2spa.usesD2SPAServer").getOrElse(true)
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
 

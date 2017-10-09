@@ -10,7 +10,7 @@ object Settings {
   val name = "scalajs-spa"
 
   /** The version of your application */
-  val version = "1.1.4"
+  val version = "1.1.5"
 
   /** Options for the scala compiler */
   val scalacOptions = Seq(
@@ -22,17 +22,17 @@ object Settings {
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
-    val scala = "2.11.8"
-    val scalaDom = "0.9.1"
-    val scalajsReact = "0.11.3"
-    val scalaCSS = "0.5.0"
+    val scala = "2.11.11"
+    val scalaDom = "0.9.3"
+    val scalajsReact = "1.1.0"
+    val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
-    val booPickle = "1.2.5"
-    val diode = "1.1.0"
-    val uTest = "0.4.4"
+    val booPickle = "1.2.6"
+    val diode = "1.1.2"
+    val uTest = "0.4.7"
 
-    val react = "15.3.1"
+    val react = "15.6.1"
     val jQuery = "1.11.1"
     val bootstrap = "3.3.6"
     val chartjs = "2.1.3"
@@ -46,8 +46,7 @@ object Settings {
    */
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % versions.autowire,
-    "me.chrons" %%% "boopickle" % versions.booPickle,
-    "io.suzaku" %%% "diode" % "1.1.1"
+    "io.suzaku" %%% "boopickle" % versions.booPickle
   ))
 
   /** Dependencies only used by the JVM project */
@@ -63,9 +62,8 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    "com.lihaoyi"                       %%% "upickle" % "0.4.1",
-    "io.suzaku" %%% "diode" % "1.1.1",
-    "io.suzaku" %%% "diode-react" % "1.1.1",
+    "io.suzaku" %%% "diode" % versions.diode,
+    "io.suzaku" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
   ))

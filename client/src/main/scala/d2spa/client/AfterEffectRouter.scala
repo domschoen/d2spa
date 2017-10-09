@@ -1,8 +1,8 @@
-package example
+package d2spa.client
 
 import scala.concurrent.Future
 import japgolly.scalajs.react.extra.router._
-import example.D2SPAMain.{QueryPage,ListPage,EditPage,InspectPage, TaskAppPage}
+import d2spa.client.SPAMain.{QueryPage,ListPage,EditPage,InspectPage, TaskAppPage}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object AfterEffectRouter {

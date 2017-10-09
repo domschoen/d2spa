@@ -1,24 +1,21 @@
-package example.components
-
+package d2spa.client.components
 
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
 import scalacss.ScalaCssReact._
-import example.css.GlobalStyle
+//import d2spa.client.css.GlobalStyle
 
-import example.D2SPAMain.{TaskAppPage}
-import example.MegaContent
-import example.UpdateQueryProperty
+import d2spa.client.SPAMain.{TaskAppPage}
+import d2spa.client.MegaContent
+import d2spa.client.UpdateQueryProperty
 import d2spa.shared.{EditInspectProperty, QueryProperty, StringValue}
-import example.{MegaContent, UpdateEOValueForProperty}
+import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
-
-
-object ERD2WEditString  {
+object ERD2WEditNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
   case class Props(router: RouterCtl[TaskAppPage], property: EditInspectProperty, proxy: ModelProxy[MegaContent])
@@ -32,15 +29,16 @@ object ERD2WEditString  {
       val eoValue = eo.values(p.property.key)
       <.div(
         <.input(^.id := "description", ^.value := eoValue.value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventI => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))} )
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))} )
       )
     }
   }
 
-  private val component = ReactComponentB[Props]("ERD2WEditString")
+  private val component = ScalaComponent.builder[Props]("ERD2WEditNumber")
     .renderBackend[Backend]
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], property: EditInspectProperty, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
 
 }
+

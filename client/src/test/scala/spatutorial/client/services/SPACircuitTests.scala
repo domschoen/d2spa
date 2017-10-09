@@ -1,4 +1,4 @@
-package spatutorial.client.services
+package example.services
 
 import diode.ActionResult._
 import diode.RootModelRW

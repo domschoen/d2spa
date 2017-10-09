@@ -1,4 +1,4 @@
-package example
+package d2spa.client
 
 import diode._
 import diode.data._

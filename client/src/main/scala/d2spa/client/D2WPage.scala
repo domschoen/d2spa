@@ -1,17 +1,17 @@
-package example
+package d2spa.client
 
 import diode.react.ModelProxy
 import diode.Action
 import org.scalajs.dom.ext.KeyCode
-import example.css.GlobalStyle
+//import d2spa.client.css.GlobalStyle
 import scalacss.ScalaCssReact._
 
-import example.D2SPAMain.{ListPage, TaskAppPage}
-import example.components.ERD2WQueryStringOperator
+import d2spa.client.SPAMain.{ListPage, TaskAppPage}
+import d2spa.client.components.ERD2WQueryStringOperator
 import d2spa.shared.{EOKeyValueQualifier, QueryProperty}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 
 object D2WPage {
 
@@ -54,7 +54,7 @@ object D2WPage {
             <.table(^.className :="query",
               <.tbody(<.tr(^.className :="attribute customer",
                 <.table(
-                displayPropertyKeys.map(property =>
+                displayPropertyKeys toTagMod (property =>
                     <.tr(^.className :="attribute",
                       <.th(^.className :="propertyName query",
                         property.displayName
@@ -73,7 +73,7 @@ object D2WPage {
     }
   }
 
-  private val component = ReactComponentB[Props]("D2WPage")
+  private val component = ScalaComponent.builder[Props]("D2WPage")
     .renderBackend[Backend]
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build

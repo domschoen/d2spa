@@ -1,17 +1,18 @@
-package example.components
+package d2spa.client.components
 
 import diode.react.ModelProxy
 import diode.Action
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{ReactEventFromInput, _}
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.prefix_<^._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-import scalacss.ScalaCssReact._
-import example.css.GlobalStyle
 
-import example.D2SPAMain.{TaskAppPage}
-import example.MegaContent
-import example.UpdateQueryProperty
+import scalacss.ScalaCssReact._
+//import d2spa.client.css.GlobalStyle
+
+import d2spa.client.SPAMain.{TaskAppPage}
+import d2spa.client.MegaContent
+import d2spa.client.UpdateQueryProperty
 import d2spa.shared.{ StringValue, EOKeyValueQualifier, QueryProperty}
 
 object ERD2WQueryStringOperator  {
@@ -26,12 +27,12 @@ object ERD2WQueryStringOperator  {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       <.div(
         <.input(^.id := "description", ^.value := p.property.value.value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventI => p.proxy.dispatchCB(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )
+          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )
       )
     }
   }
 
-  private val component = ReactComponentB[Props]("ERD2WQueryStringOperator")
+  private val component = ScalaComponent.builder[Props]("ERD2WQueryStringOperator")
     .renderBackend[Backend]
     .build
 
