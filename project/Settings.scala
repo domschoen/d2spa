@@ -34,6 +34,8 @@ object Settings {
 
     val react = "15.6.1"
     val jQuery = "1.11.1"
+    //val bootstrap = "4.0.0-beta"
+    //val bootstrap = "3.3.7" : doesn't compile less files not found
     val bootstrap = "3.3.6"
     val chartjs = "2.1.3"
 
@@ -68,7 +70,9 @@ object Settings {
     "com.lihaoyi" %%% "utest" % versions.uTest % Test
   ))
 
-  /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
+  /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
+      "org.webjars.bower" % "popper.js" % "1.12.5" / "popper.js" minified "popper.min.js",
+ */
   val jsDependencies = Def.setting(Seq(
     "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
     "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",

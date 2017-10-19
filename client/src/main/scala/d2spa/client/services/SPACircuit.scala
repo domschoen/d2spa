@@ -23,7 +23,7 @@ import d2spa.client.{
   UpdateQueryProperty,
   SearchResult,
   SetPreviousPage,
-  AfterEffectRouter,
+AfterEffectRouter,
 EOCreated,
 InspectEO,
 NewEOPage,
@@ -43,6 +43,7 @@ import japgolly.scalajs.react.extra.router._*/
 import d2spa.client.AppModel
 
 import d2spa.shared.{Menus, MetaDatas, EntityMetaData, QueryProperty, QueryTask, EO, StringValue}
+
 
 object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
@@ -86,14 +87,14 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(modelRW) {
 
   private def zoomToEntity(entityMetaData: String, rw: ModelRW[M, MetaDatas]): Option[ModelRW[M, EntityMetaData]] = {
-      rw.value.entityMetaDatas.indexWhere(n => n.entityName == entityMetaData) match {
-        case -1 =>
-          // should not happen!
-          None
-        case idx =>
-            Some(rw.zoomRW(_.entityMetaDatas(idx))((m, v) =>
-              m.copy(entityMetaDatas = (m.entityMetaDatas.take(idx) :+ v) ++ m.entityMetaDatas.drop(idx + 1))))
-      }
+    rw.value.entityMetaDatas.indexWhere(n => n.entityName == entityMetaData) match {
+      case -1 =>
+        // should not happen!
+        None
+      case idx =>
+        Some(rw.zoomRW(_.entityMetaDatas(idx))((m, v) =>
+          m.copy(entityMetaDatas = (m.entityMetaDatas.take(idx) :+ v) ++ m.entityMetaDatas.drop(idx + 1))))
+    }
   }
   private def zoomToProperty(property: QueryProperty, rw: ModelRW[M, QueryTask]): Option[ModelRW[M, QueryProperty]] = {
     rw.value.displayPropertyKeys.indexWhere(n => n.key == property.key) match {
@@ -150,10 +151,10 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
 
   override def handle = {
     case SearchResult(entity, eoses) =>
-        println("length " + eoses.length)
-        updated(
-          Ready(eoses),
-          Effect(AfterEffectRouter.setListPageForEntity(entity))
+      println("length " + eoses.length)
+      updated(
+        Ready(eoses),
+        Effect(AfterEffectRouter.setListPageForEntity(entity))
       )
   }
 }
@@ -258,10 +259,10 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       println("Search: for entity " + selectedEntity + " qualifier " + qualifiers)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
       effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers).call().map(SearchResult(selectedEntity,_))))
-      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
-      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
-        //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
-        //
+    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
+    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
+    //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
+    //
     case ShowPage(selectedEntity, selectedTask) =>
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = selectedTask))),

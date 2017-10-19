@@ -52,12 +52,14 @@ class BootstrapStyles(implicit r: mutable.Register) extends StyleSheet.Inline()(
     val footer = styleWrap("modal-footer")
   }
 
+
   val _modal = modal
 
   object listGroup {
     val listGroup = styleWrap("list-group")
     val item = styleWrap("list-group-item")
     val itemOpt = commonStyle(contextDomain, "list-group-item")
+    val active = styleWrap("active")
   }
 
   val _listGroup = listGroup
@@ -71,4 +73,7 @@ class BootstrapStyles(implicit r: mutable.Register) extends StyleSheet.Inline()(
 
   val formGroup = styleWrap("form-group")
   val formControl = styleWrap("form-control")
+
+  val ariahidden = styleWrap("nav", "navbar-nav")
+
 }

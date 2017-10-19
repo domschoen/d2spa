@@ -1,26 +1,26 @@
 package d2spa.client
 
 
-import japgolly.scalajs.react.extra.router._
+import diode.data.Pot
+import diode.react._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import d2spa.client.components.Bootstrap.{CommonStyle, Button}
-import scalacss.ScalaCssReact._
-import japgolly.scalajs.react.vdom.Exports
 
-import diode.react.ModelProxy
-import diode.Action
-import org.scalajs.dom.ext.KeyCode
-import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
 import d2spa.client.components.GlobalStyles
-import d2spa.client.components.Icon._
-import d2spa.client.components._
+import scalacss.ScalaCssReact._
+
+import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
+
 
 
 object MenuHeader {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class Props(router: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent])
+
+
+  case class State(motdWrapper: ReactConnectProxy[Pot[String]])
 
   class Backend($: BackendScope[Props, Unit]) {
     /*def mounted(props: Props) = {
@@ -44,34 +44,25 @@ object MenuHeader {
 
 
     def render(p: Props) = {
-      //val callbacks = Callbacks(P)
-      // + P.proxy.value.menuModel.d2wContext.entity
+      val style = bss.listGroup
       <.div(
-        <.img(^.src := "/assets/images/LogoIST.gif"),
-        <.h2(^.id := "version", <.span("FOSS-it 1.2.2")),
-        <.h3(^.className := "section", "Entities:"),
-        //<.span(bss.labelOpt(CommonStyle.danger), bss.labelAsBadge, 1),
-        //<.p(P.proxy.value.toString()),
         if (!p.proxy.value.menuModel.isEmpty) {
-          <.ul(
+          <.ul(style.listGroup,^.className := "menu",
             p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
-              <.li(mainMenu.title,
-                <.ul(^.className := "action", mainMenu.children toTagMod (
-                  menu => {
-                    //val menuCss = if (p.proxy.value.menuModel.get.d2wContext.entity.equals(menu.entity)) "menuSelected" else "menu"
-                    val menuCss = if (p.entity.equals(menu.entity)) "menuSelected" else "menu"
-                    <.li(^.className := menuCss, ^.onClick --> selectMenu(menu.entity), menu.entity)
-                  }
-                )
+              mainMenu.children toTagMod (
+                menu => {
+                  <.li(style.item,(^.className := "active").when(p.entity.equals(menu.entity)),
+                    <.div(^.className := "input-group",
+                      <.span(menu.entity, ^.onClick --> selectMenu(menu.entity)),
+                      <.div(GlobalStyles.menuAddon,<.i(^.className := "fa fa-plus"),^.onClick --> newEO(menu.entity))
+                    )
+                  )
+                }
                 )
               )
-            )
           )
         } else
-          EmptyVdom,
-        <.img(^.src := "/assets/images/New.gif",^.onClick --> newEO(p.entity))
-
-
+          EmptyVdom
       )
     }
   }
@@ -80,6 +71,7 @@ object MenuHeader {
     .renderBackend[Backend]
     //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
+
 
   def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) =
     component(Props(ctl, entity, proxy))

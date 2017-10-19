@@ -4,13 +4,11 @@ package d2spa.client
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import d2spa.client.components.Bootstrap.{CommonStyle, Button}
+import d2spa.client.components.Bootstrap.{Button, CommonStyle}
+
 import scalacss.ScalaCssReact._
 import org.scalajs.dom.ext.KeyCode
-
-
 import diode.Action
-
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{ERD2WQueryStringOperator, QueryComponent}
@@ -63,30 +61,30 @@ object D2WQueryPage {
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),
-              <.div(^.className :="repetition d2wPage",
-                <.table(^.className :="query",
-                  <.tbody(
-                    <.tr(^.className :="attribute customer",
-                      <.td(
-                        <.table(
-                          <.tbody(
-                        displayPropertyKeys toTagMod (property =>
-                          <.tr(^.className :="attribute",
-                            <.th(^.className :="propertyName query",
-                              property.displayName
-                            ),
-                            <.td(^.className :="query d2wAttributeValueCell",
-                              ERD2WQueryStringOperator(p.router,property,p.proxy)
+            <.div(^.className :="repetition d2wPage",
+              <.table(^.className :="query",
+                <.tbody(
+                  <.tr(^.className :="attribute customer",
+                    <.td(
+                      <.table(
+                        <.tbody(
+                          displayPropertyKeys toTagMod (property =>
+                            <.tr(^.className :="attribute",
+                              <.th(^.className :="propertyName query",
+                                property.displayName
+                              ),
+                              <.td(^.className :="query d2wAttributeValueCell",
+                                ERD2WQueryStringOperator(p.router,property,p.proxy)
+                              )
                             )
-                          )
+                            )
                         )
-                          )
                       )
-                    )
                     )
                   )
                 )
               )
+            )
           )
         )
       } else {
@@ -102,7 +100,6 @@ object D2WQueryPage {
   private val component = ScalaComponent.builder[Props]("D2WQueryPage")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
-    //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) = {
