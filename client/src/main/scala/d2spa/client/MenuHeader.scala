@@ -51,9 +51,9 @@ object MenuHeader {
             p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
               mainMenu.children toTagMod (
                 menu => {
-                  <.li(style.item,(^.className := "active").when(p.entity.equals(menu.entity)),
-                    <.div(^.className := "input-group",
-                      <.span(menu.entity, ^.onClick --> selectMenu(menu.entity)),
+                  <.li(style.item,GlobalStyles.menuItem,(style.active).when(p.entity.equals(menu.entity)),
+                    <.div(GlobalStyles.menuInputGroup,
+                      <.div(GlobalStyles.menuLabel, menu.entity, ^.onClick --> selectMenu(menu.entity)),
                       <.div(GlobalStyles.menuAddon,<.i(^.className := "fa fa-plus"),^.onClick --> newEO(menu.entity))
                     )
                   )

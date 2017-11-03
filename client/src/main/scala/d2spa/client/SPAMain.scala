@@ -99,6 +99,9 @@ object SPAMain extends js.JSApp {
 
     // create stylesheet
     GlobalStyles.addToDocument()
+
+    //println( GlobalStyles.render[String] )
+
     // create the router
     val router = Router(BaseUrl.until_#, config)
     // tell React to render the router in the document body

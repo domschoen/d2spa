@@ -60,6 +60,7 @@ class BootstrapStyles(implicit r: mutable.Register) extends StyleSheet.Inline()(
     val item = styleWrap("list-group-item")
     val itemOpt = commonStyle(contextDomain, "list-group-item")
     val active = styleWrap("active")
+    val inputGroup = styleWrap("input-group")
   }
 
   val _listGroup = listGroup

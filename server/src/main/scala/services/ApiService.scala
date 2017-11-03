@@ -140,25 +140,28 @@ class ApiService(config: Configuration) extends Api {
           QueryTask(
             List(
               QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("")),
-              QueryProperty("operator", "Operator","ERD2WQueryStringOperator",StringValue(""))
+              QueryProperty("acronym", "Acronym","ERD2WQueryStringOperator",StringValue("")),
+              QueryProperty("address", "Address","ERD2WQueryStringOperator",StringValue(""))
             )
           ),
           ListTask(
             List(
               ListProperty("name", "Name","ERD2WQueryStringOperator"),
-              ListProperty("operator", "Operator","ERD2WQueryStringOperator")
+              ListProperty("acronym", "Acronym","ERD2WQueryStringOperator")
             )
           ),
           InspectTask(
             List(
               EditInspectProperty("name", "Name","ERD2WDisplayString"),
-              EditInspectProperty("operator", "Operator","ERD2WDisplayString")
+              EditInspectProperty("acronym", "Acronym","ERD2WDisplayString"),
+              EditInspectProperty("address", "Address","ERD2WDisplayString")
             )
           ),
           EditTask(
             List(
               EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
-              EditInspectProperty("operator", "Operator","ERD2WQueryStringOperator")
+              EditInspectProperty("acronym", "Acronym","ERD2WQueryStringOperator"),
+              EditInspectProperty("address", "Address","ERD2WQueryStringOperator")
             )
           )
         ))
@@ -299,10 +302,20 @@ class ApiService(config: Configuration) extends Api {
 
   // New EO has to be created by the server because it needs to contain all attribute even those not directly displayed
   def newEO(entity:String) : Future[EO] = {
-    Future(EO("Project",Map (
-      "descr" -> StringValue("a"),
-      "projectNumber" -> StringValue("1")
-    )))
+    println("New EO for entity: " + entity)
+    if (entity.equals("Project")) {
+      Future(EO(entity,Map (
+        "descr" -> StringValue("a"),
+        "projectNumber" -> StringValue("1")
+      )))
+
+    } else {
+      Future(EO(entity,Map (
+        "name" -> StringValue("a"),
+        "acronym" -> StringValue("1"),
+        "address" -> StringValue("Av. de France")
+      )))
+    }
   }
 
 

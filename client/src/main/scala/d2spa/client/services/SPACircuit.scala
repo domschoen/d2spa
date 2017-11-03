@@ -162,6 +162,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
 
   override def handle = {
     case EOCreated(eo) =>
+      println("eo created " + eo)
       updated(
         Ready(eo),
         Effect(AfterEffectRouter.setEditPageForEntity(eo.entity))
@@ -171,16 +172,6 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallInspectPage(fromTask,eo))
       )
-    case NewEOPage(selectedEntity) =>
-      println("edit page for entity " + selectedEntity)
-
-      // d2spa.client of a model update followed by an effect
-      // An effect has to call an action. Here it is "UpdateAllTodos"
-      //       updated(
-      //          value.map(_.updated(item)),
-      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
-      //       )
-      effectOnly(Effect(AjaxClient[Api].newEO(selectedEntity).call().map(EOCreated)))
     case UpdateEOValueForProperty(entity, property, newEOValue) =>
       println("Update EO Property: for entity " + entity + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
@@ -206,6 +197,19 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     /*case InitMenuSelection =>
       println("Initializing Menus")
       updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
+    case NewEOPage(selectedEntity) =>
+      println("edit page for entity " + selectedEntity)
+
+      // d2spa.client of a model update followed by an effect
+      // An effect has to call an action. Here it is "UpdateAllTodos"
+      //       updated(
+      //          value.map(_.updated(item)),
+      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
+      //       )
+      updated(
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "edit"))),
+        Effect(AjaxClient[Api].newEO(selectedEntity).call().map(EOCreated))
+      )
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
 
