@@ -44,7 +44,11 @@ import d2spa.client.AppModel
 
 import d2spa.shared.{Menus, MetaDatas, EntityMetaData, QueryProperty, QueryTask, EO, StringValue}
 
-
+// The First page displayed is the Query page. When the query page is mounted, it calls the server for the entities to be displayed.
+// This is done with an action "InitMetaData" which trigger "" on the server "getMetaData"
+// When data get back from server, SetMetaData is called, followed by an action "InitMenu" which goes to server and trigger a Menu.json on D2SPAServer
+// D2SPAServer return a list of entities
+//
 object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
   override protected def initialModel = AppModel.bootingModel

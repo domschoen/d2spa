@@ -8,6 +8,8 @@ import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.ApiService
 import d2spa.shared.Api
+import play.api.libs.ws._
+
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -16,8 +18,8 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
 
-class Application @Inject() (implicit val config: Configuration, env: Environment) extends Controller {
-  val apiService = new ApiService(config)
+class Application @Inject() (implicit val config: Configuration, env: Environment, ws: WSClient) extends Controller {
+  val apiService = new ApiService(config,ws)
 
   def index = Action {
     Ok(views.html.index("D2SPA"))

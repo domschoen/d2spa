@@ -34,7 +34,7 @@ case class MenuItem (
                         parent: Option[MenuItem]
                       )
 
-class ApiService(config: Configuration) extends Api {
+class ApiService(config: Configuration, ws: WSClient) extends Api {
   val usesD2SPAServer = config.getBoolean("d2spa.usesD2SPAServer").getOrElse(true)
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
@@ -135,7 +135,51 @@ class ApiService(config: Configuration) extends Api {
   }
 
   def getMetaData(entity: String): Future[EntityMetaData] = {
-    if (entity.equals("Customer")) {
+    val finished = false //usesD2SPAServer
+    if (finished) {
+      val url = d2spaServerBaseUrl + "/EntityMetaData.json";
+      val request: WSRequest = ws.url(url)
+      request.withQueryString(("entity",entity)).withRequestTimeout(10000.millis)
+      val futureResponse: Future[WSResponse] = request.get()
+      futureResponse.map { response =>
+        val resultBody = response.json
+        val array = resultBody.asInstanceOf[JsArray]
+        var menus = List[MenuItem]()
+        for (menuRaw <- array.value) {
+          //println(menuRaw)
+          val obj = menuRaw.validate[MenuItem]
+          obj match {
+            case s: JsSuccess[MenuItem] => {
+              val wiObj = s.get
+              menus = wiObj :: menus
+            }
+            case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+          }
+        }
+        val children = menus.filter(_.parent.isDefined)
+        val childrenByParent = children.groupBy(_.parent.get)
+
+        val mainMenus = childrenByParent.map {
+          case (mm, cs) =>
+            val childMenus = cs.map(cm => Menu(cm.id, cm.title, cm.entity.getOrElse(null)))
+            MainMenu(mm.id, mm.title, childMenus)
+        }
+        if (mainMenus.isEmpty) {
+          // TOTO Menus containing D2WContext is not a good choice because better to have
+          // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
+          // D2WContext(null,null,null)
+
+          EntityMetaData(null,null,null,null,null,null)
+        } else {
+          val firstChildEntity = mainMenus.head.children.head.entity
+          //EntityMetaData(mainMenus.toList, D2WContext(firstChildEntity, "query", null, null))
+          EntityMetaData(null,null,null,null,null,null)
+
+        }
+      }
+    }
+    else {
+      if (entity.equals("Customer")) {
         Future(EntityMetaData("Customer", "Customer",
           QueryTask(
             List(
@@ -165,34 +209,35 @@ class ApiService(config: Configuration) extends Api {
             )
           )
         ))
-    } else
-      Future(EntityMetaData("Project", "Project",
-        QueryTask(
-          List(
-            QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
-            //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
-          )
-        ),
-        ListTask(
-          List(
-            ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
-            //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
-          )
-        ),
-        InspectTask(
-          List(
-            EditInspectProperty("descr", "Description","ERD2WDisplayString"),
-            EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
-          )
-        ),
-        EditTask(
-          List(
-            EditInspectProperty("descr", "Description","ERD2WEditString"),
-            EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
+      } else
+        Future(EntityMetaData("Project", "Project",
+          QueryTask(
+            List(
+              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
+              //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
+            )
+          ),
+          ListTask(
+            List(
+              ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
+              //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
+            )
+          ),
+          InspectTask(
+            List(
+              EditInspectProperty("descr", "Description","ERD2WDisplayString"),
+              EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
+            )
+          ),
+          EditTask(
+            List(
+              EditInspectProperty("descr", "Description","ERD2WEditString"),
+              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
+            )
           )
         )
-      )
-      )
+        )
+    }
   }
 
 
