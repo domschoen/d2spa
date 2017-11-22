@@ -11,3 +11,9 @@ val rangeTuples = sumUntil zip sumUntil.tail
 // List((0,3), (3,7), (7,12), (12,19))
 
 val result = rangeTuples.map(x => x._1 until x._2)
+
+val fireRuleArguments = List("entity","task","propertyKey","key")
+val fireRuleValues = List(Some("entity"),Some("task"),None,Some("key"))
+
+val zipe = fireRuleArguments zip fireRuleValues
+val zipee = zipe.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))

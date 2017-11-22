@@ -134,49 +134,87 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
   }
 
+  def fireRuleFuture(entity: String, task: String, key: String) : Future[WSResponse] = {
+    fireRuleFuture(Some(entity),Some(task),None,Some(key))
+  }
+  def fireRuleFuture(entity: String, task: String, propertyKey: String, key: String) : Future[WSResponse] = {
+    fireRuleFuture(Some(entity),Some(task),Some(propertyKey),Some(key))
+  }
+
+
+
+  val fireRuleArguments = List("entity","task","propertyKey","key")
+
+  def fireRuleFuture(entity: Option[String], task: Option[String], propertyKey: Option[String], key: Option[String]) : Future[WSResponse] = {
+    val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
+    val fireRuleValues = List(entity,task,propertyKey,key)
+    val nonNullArguments = fireRuleArguments zip fireRuleValues
+    val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
+
+    val request: WSRequest = ws.url(url)
+      .withQueryString(arguments.toArray: _*)
+      .withRequestTimeout(10000.millis)
+    request.get()
+  }
+
+
+  private def lift[T](futures: Seq[Future[T]]) =
+    futures.map(_.map { Success(_) }.recover { case t => Failure(t) })
+
+
+  def waitAll[T](futures: Seq[Future[T]]) =
+    Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
+
+
+  // To create the result, it needs to issue multiple query on the D2W rule system
+  // 1) get entity display name for edit, inspect, query, list
+  // D2WContext: task=edit, entity=..
+  // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayNameForEntity
+  // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(entity: String): Future[EntityMetaData] = {
-    val finished = false //usesD2SPAServer
+    val finished = true //usesD2SPAServer
     if (finished) {
-      val url = d2spaServerBaseUrl + "/EntityMetaData.json";
-      val request: WSRequest = ws.url(url)
-      request.withQueryString(("entity",entity)).withRequestTimeout(10000.millis)
-      val futureResponse: Future[WSResponse] = request.get()
-      futureResponse.map { response =>
-        val resultBody = response.json
-        val array = resultBody.asInstanceOf[JsArray]
-        var menus = List[MenuItem]()
-        for (menuRaw <- array.value) {
-          //println(menuRaw)
-          val obj = menuRaw.validate[MenuItem]
-          obj match {
-            case s: JsSuccess[MenuItem] => {
-              val wiObj = s.get
-              menus = wiObj :: menus
-            }
-            case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+      val entityDisplayNameFuture = fireRuleFuture(entity, "edit", "displayNameForEntity")
+      val queryDisplayPropertyKeysFuture = fireRuleFuture(entity, "query", "displayPropertyKeys")
+      val editDisplayPropertyKeysFuture = fireRuleFuture(entity, "edit", "displayPropertyKeys")
+      val listDisplayPropertyKeysFuture = fireRuleFuture(entity, "list", "displayPropertyKeys")
+      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entity, "inspect", "displayPropertyKeys")
+
+      val result = for {
+        r1 <- entityDisplayNameFuture
+        r2 <- queryDisplayPropertyKeysFuture
+        r3 <- editDisplayPropertyKeysFuture
+        r4 <- listDisplayPropertyKeysFuture
+        r5 <- inspectDisplayPropertyKeysFuture
+      } yield {
+        val entityDisplayName = r1.body
+        val queryDisplayPropertyKeysJson = r2.json
+        val array = queryDisplayPropertyKeysJson.asInstanceOf[JsArray]
+        var queryProperties = array.value.map( x => {
+          val propertyKey = x.asOpt[String].get
+          val propertyDisplayNameFuture = fireRuleFuture(entity, "query", propertyKey, "displayNameForProperty")
+          val componentNameFuture = fireRuleFuture(entity, "query", propertyKey, "componentName")
+
+          val subResult = for {
+            pDisplayName <- propertyDisplayNameFuture
+            pComponentName <- componentNameFuture
+          } yield {
+            val propertyDisplayName = pDisplayName.body
+            val propertyComponentName = pComponentName.body
+
+            QueryProperty(propertyKey,propertyDisplayName,propertyComponentName,StringValue(""))
           }
-        }
-        val children = menus.filter(_.parent.isDefined)
-        val childrenByParent = children.groupBy(_.parent.get)
+          subResult
+        }).toList
 
-        val mainMenus = childrenByParent.map {
-          case (mm, cs) =>
-            val childMenus = cs.map(cm => Menu(cm.id, cm.title, cm.entity.getOrElse(null)))
-            MainMenu(mm.id, mm.title, childMenus)
-        }
-        if (mainMenus.isEmpty) {
-          // TOTO Menus containing D2WContext is not a good choice because better to have
-          // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
-          // D2WContext(null,null,null)
+        val futureOfList = Future sequence queryProperties
+        val queryPs = Await result (futureOfList, 2 seconds)
 
-          EntityMetaData(null,null,null,null,null,null)
-        } else {
-          val firstChildEntity = mainMenus.head.children.head.entity
-          //EntityMetaData(mainMenus.toList, D2WContext(firstChildEntity, "query", null, null))
-          EntityMetaData(null,null,null,null,null,null)
-
-        }
+        val emd = EntityMetaData(entity, entityDisplayName, QueryTask(queryPs), null, null, null)
+        println("emd" + emd)
+        emd
       }
+      result
     }
     else {
       if (entity.equals("Customer")) {
