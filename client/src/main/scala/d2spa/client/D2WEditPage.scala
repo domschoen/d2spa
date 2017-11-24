@@ -1,6 +1,6 @@
 package d2spa.client
 
-import d2spa.shared.{EOKeyValueQualifier, EditInspectProperty, QueryProperty}
+import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo}
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WDisplayString, ERD2WEditString, EditInspectComponent}
@@ -83,7 +83,7 @@ object D2WEditPage {
                                 case "ERD2WEditString" => ERD2WEditString(p.router,property,p.proxy)
                                 case "ERD2WEditNumber" => ERD2WEditNumber(p.router,property,p.proxy)
                                 case "ERD2WDisplayString" => ERD2WDisplayString(p.router,property,p.proxy)
-                                case _ => ERD2WEditString(p.router,property,p.proxy)
+                                case _ => "Component not found: " + property.componentName
                               }
                             )
                           )

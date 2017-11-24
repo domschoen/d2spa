@@ -11,8 +11,8 @@ import org.scalajs.dom.ext.KeyCode
 import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
-import d2spa.client.components.{ERD2WQueryStringOperator, QueryComponent}
-import d2spa.shared.{EOKeyValueQualifier, QueryProperty}
+import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WQueryToOneField}
+import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo}
 
 object D2WQueryPage {
 
@@ -35,7 +35,7 @@ object D2WQueryPage {
         $.props >>= (_.proxy.dispatchCB(Search(entity,qualifiers)))
     }
 
-    def qualifiers(propertyKeys: List[QueryProperty]): List[EOKeyValueQualifier] = {
+    def qualifiers(propertyKeys: List[PropertyMetaInfo]): List[EOKeyValueQualifier] = {
        propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
     }
 
@@ -74,7 +74,11 @@ object D2WQueryPage {
                                 property.displayName
                               ),
                               <.td(^.className :="query d2wAttributeValueCell",
-                                ERD2WQueryStringOperator(p.router,property,p.proxy)
+                                property.componentName match {
+                                  case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator(p.router,property,p.proxy)
+                                  case "ERD2WQueryToOneField" => ERD2WQueryToOneField(p.router,property,p.proxy)
+                                  case _ => "Component not found: " + property.componentName
+                                }
                               )
                             )
                             )

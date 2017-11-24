@@ -1,24 +1,26 @@
 package d2spa.client.components
 
+import d2spa.shared.PropertyMetaInfo
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
+
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 
 import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{EditInspectProperty, QueryProperty, StringValue}
+import d2spa.shared.{PropertyMetaInfo, StringValue}
 import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERD2WEditNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: EditInspectProperty, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -38,7 +40,7 @@ object ERD2WEditNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: EditInspectProperty, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
 
 }
 

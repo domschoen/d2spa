@@ -1,5 +1,6 @@
 package d2spa.client.components
 
+import d2spa.shared.PropertyMetaInfo
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react.{ReactEventFromInput, _}
@@ -13,12 +14,12 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{ StringValue, EOKeyValueQualifier, QueryProperty}
+import d2spa.shared.{ StringValue, EOKeyValueQualifier, PropertyMetaInfo}
 
 object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
 //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: QueryProperty, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -36,5 +37,5 @@ object ERD2WQueryStringOperator  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: QueryProperty, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
 }

@@ -2,7 +2,7 @@ package services
 
 import java.util.{Date, UUID}
 
-import d2spa.shared._
+import d2spa.shared.{PropertyMetaInfo, _}
 import play.api.Configuration
 import play.api.libs.ws._
 import play.api.Play.current
@@ -166,6 +166,34 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
 
 
+  def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: String, task: String) = {
+    val propertiesFutures = displayPropertyKeys.value.map( x => {
+      val propertyKey = x.asOpt[String].get
+      val propertyDisplayNameFuture = fireRuleFuture(entity, task, propertyKey, "displayNameForProperty")
+      val componentNameFuture = fireRuleFuture(entity, task, propertyKey, "componentName")
+
+      val subResult = for {
+        pDisplayName <- propertyDisplayNameFuture
+        pComponentName <- componentNameFuture
+      } yield {
+        val propertyDisplayName = pDisplayName.body
+        val propertyComponentName = pComponentName.body
+
+        PropertyMetaInfo(propertyKey,propertyDisplayName,propertyComponentName,StringValue(""))
+      }
+      subResult
+    }).toList
+    val futureOfList = Future sequence propertiesFutures
+    val properties = Await result (futureOfList, 2 seconds)
+    properties
+  }
+
+  def fromResponseToMetaInfo(response: WSResponse, entity: String, task: String) = {
+    val queryDisplayPropertyKeysJson = response.json
+    val array = queryDisplayPropertyKeysJson.asInstanceOf[JsArray]
+    propertyMetaInfosForTask(array, entity, task)
+  }
+
   // To create the result, it needs to issue multiple query on the D2W rule system
   // 1) get entity display name for edit, inspect, query, list
   // D2WContext: task=edit, entity=..
@@ -183,34 +211,19 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       val result = for {
         r1 <- entityDisplayNameFuture
         r2 <- queryDisplayPropertyKeysFuture
-        r3 <- editDisplayPropertyKeysFuture
-        r4 <- listDisplayPropertyKeysFuture
-        r5 <- inspectDisplayPropertyKeysFuture
+        r3 <- listDisplayPropertyKeysFuture
+        r4 <- inspectDisplayPropertyKeysFuture
+        r5 <- editDisplayPropertyKeysFuture
       } yield {
         val entityDisplayName = r1.body
-        val queryDisplayPropertyKeysJson = r2.json
-        val array = queryDisplayPropertyKeysJson.asInstanceOf[JsArray]
-        var queryProperties = array.value.map( x => {
-          val propertyKey = x.asOpt[String].get
-          val propertyDisplayNameFuture = fireRuleFuture(entity, "query", propertyKey, "displayNameForProperty")
-          val componentNameFuture = fireRuleFuture(entity, "query", propertyKey, "componentName")
 
-          val subResult = for {
-            pDisplayName <- propertyDisplayNameFuture
-            pComponentName <- componentNameFuture
-          } yield {
-            val propertyDisplayName = pDisplayName.body
-            val propertyComponentName = pComponentName.body
+        val queryProperties = fromResponseToMetaInfo(r2,entity,"query")
+        val listProperties = fromResponseToMetaInfo(r2,entity,"list")
+        val inspectProperties = fromResponseToMetaInfo(r2,entity,"inspect")
+        val editProperties = fromResponseToMetaInfo(r2,entity,"edit")
 
-            QueryProperty(propertyKey,propertyDisplayName,propertyComponentName,StringValue(""))
-          }
-          subResult
-        }).toList
 
-        val futureOfList = Future sequence queryProperties
-        val queryPs = Await result (futureOfList, 2 seconds)
-
-        val emd = EntityMetaData(entity, entityDisplayName, QueryTask(queryPs), null, null, null)
+        val emd = EntityMetaData(entity, entityDisplayName, QueryTask(queryProperties), ListTask(listProperties), InspectTask(inspectProperties), EditTask(editProperties))
         println("emd" + emd)
         emd
       }
@@ -221,29 +234,29 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         Future(EntityMetaData("Customer", "Customer",
           QueryTask(
             List(
-              QueryProperty("name", "Name","ERD2WQueryStringOperator",StringValue("")),
-              QueryProperty("acronym", "Acronym","ERD2WQueryStringOperator",StringValue("")),
-              QueryProperty("address", "Address","ERD2WQueryStringOperator",StringValue(""))
+              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",StringValue("")),
+              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",StringValue("")),
+              PropertyMetaInfo("address", "Address","ERD2WQueryStringOperator",StringValue(""))
             )
           ),
           ListTask(
             List(
-              ListProperty("name", "Name","ERD2WQueryStringOperator"),
-              ListProperty("acronym", "Acronym","ERD2WQueryStringOperator")
+              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",null),
+              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",null)
             )
           ),
           InspectTask(
             List(
-              EditInspectProperty("name", "Name","ERD2WDisplayString"),
-              EditInspectProperty("acronym", "Acronym","ERD2WDisplayString"),
-              EditInspectProperty("address", "Address","ERD2WDisplayString")
+              PropertyMetaInfo("name", "Name","ERD2WDisplayString",null),
+              PropertyMetaInfo("acronym", "Acronym","ERD2WDisplayString",null),
+              PropertyMetaInfo("address", "Address","ERD2WDisplayString",null)
             )
           ),
           EditTask(
             List(
-              EditInspectProperty("name", "Name","ERD2WQueryStringOperator"),
-              EditInspectProperty("acronym", "Acronym","ERD2WQueryStringOperator"),
-              EditInspectProperty("address", "Address","ERD2WQueryStringOperator")
+              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",null),
+              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",null),
+              PropertyMetaInfo("address", "Address","ERD2WQueryStringOperator",null)
             )
           )
         ))
@@ -251,26 +264,26 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         Future(EntityMetaData("Project", "Project",
           QueryTask(
             List(
-              QueryProperty("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
+              PropertyMetaInfo("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
               //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
             )
           ),
           ListTask(
             List(
-              ListProperty("descr", "Description","ERD2WQueryStringOperator")//,
+              PropertyMetaInfo("descr", "Description","ERD2WQueryStringOperator",null)//,
               //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
             )
           ),
           InspectTask(
             List(
-              EditInspectProperty("descr", "Description","ERD2WDisplayString"),
-              EditInspectProperty("projectNumber", "Project Number","ERD2WDisplayString")
+              PropertyMetaInfo("descr", "Description","ERD2WDisplayString",null),
+              PropertyMetaInfo("projectNumber", "Project Number","ERD2WDisplayString",null)
             )
           ),
           EditTask(
             List(
-              EditInspectProperty("descr", "Description","ERD2WEditString"),
-              EditInspectProperty("projectNumber", "Project Number","ERD2WEditString")
+              PropertyMetaInfo("descr", "Description","ERD2WEditString",null),
+              PropertyMetaInfo("projectNumber", "Project Number","ERD2WEditString",null)
             )
           )
         )

@@ -7,7 +7,7 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import d2spa.shared.{Api, EOKeyValueQualifier, EditInspectProperty, TodoItem}
+import d2spa.shared.{Api, EOKeyValueQualifier, PropertyMetaInfo, TodoItem}
 import boopickle.Default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -42,7 +42,7 @@ import japgolly.scalajs.react.extra.router._*/
 
 import d2spa.client.AppModel
 
-import d2spa.shared.{Menus, MetaDatas, EntityMetaData, QueryProperty, QueryTask, EO, StringValue}
+import d2spa.shared.{Menus, MetaDatas, EntityMetaData, PropertyMetaInfo, QueryTask, EO, StringValue}
 
 // The First page displayed is the Query page. When the query page is mounted, it calls the server for the entities to be displayed.
 // This is done with an action "InitMetaData" which trigger "" on the server "getMetaData"
@@ -100,7 +100,7 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
           m.copy(entityMetaDatas = (m.entityMetaDatas.take(idx) :+ v) ++ m.entityMetaDatas.drop(idx + 1))))
     }
   }
-  private def zoomToProperty(property: QueryProperty, rw: ModelRW[M, QueryTask]): Option[ModelRW[M, QueryProperty]] = {
+  private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, QueryTask]): Option[ModelRW[M, PropertyMetaInfo]] = {
     rw.value.displayPropertyKeys.indexWhere(n => n.key == property.key) match {
       case -1 =>
         // should not happen!

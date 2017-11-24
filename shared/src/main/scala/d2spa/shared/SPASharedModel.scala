@@ -48,18 +48,16 @@ case class EntityMetaData(entityName: String, displayName: String, queryTask: Qu
 //case class EntityMetaData(entityName: String, displayName: String)
 
 
+
+
 // Task
-abstract class MetaTask {def displayPropertyKeys: List[MetaProperty]}
-case class QueryTask(displayPropertyKeys: List[QueryProperty]) extends MetaTask
+abstract class MetaTask {def displayPropertyKeys: List[PropertyMetaInfo]}
+case class QueryTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
 //case class ListTask(displayPropertyKeys: List[ListProperty], eos: Seq[EO]) extends MetaTask
-case class ListTask(displayPropertyKeys: List[ListProperty]) extends MetaTask
-case class InspectTask(displayPropertyKeys: List[EditInspectProperty]) extends MetaTask
-case class EditTask(displayPropertyKeys: List[EditInspectProperty]) extends MetaTask
+case class ListTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
+case class InspectTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
+case class EditTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
 
 // Property
-abstract class MetaProperty {def key: String; def displayName: String; def componentName: String}
-// Query property must evolve to be more like a EOQualifier, currently storing the string to search in value
-case class QueryProperty(key: String, displayName: String, componentName: String, value: StringValue) extends MetaProperty
-case class ListProperty(key: String, displayName: String, componentName: String) extends MetaProperty
-case class EditInspectProperty(key: String, displayName: String, componentName: String) extends MetaProperty
+case class PropertyMetaInfo(key: String, displayName: String, componentName: String, value: StringValue)
 

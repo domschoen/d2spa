@@ -50,8 +50,8 @@ case object InitAppModel extends Action
 case class SelectMenu(entity: String) extends Action
 case class Save(entity: String, eo: EO) extends Action
 
-case class UpdateQueryProperty(entity: String, property: QueryProperty, value: StringValue) extends Action
-case class UpdateEOValueForProperty(entity: String, property: EditInspectProperty, value: StringValue) extends Action
+case class UpdateQueryProperty(entity: String, property: PropertyMetaInfo, value: StringValue) extends Action
+case class UpdateEOValueForProperty(entity: String, property: PropertyMetaInfo, value: StringValue) extends Action
 
 case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
