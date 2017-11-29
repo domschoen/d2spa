@@ -17,3 +17,19 @@ val fireRuleValues = List(Some("entity"),Some("task"),None,Some("key"))
 
 val zipe = fireRuleArguments zip fireRuleValues
 val zipee = zipe.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
+
+val componentName = "ERD2WQueryToOneField"
+
+componentName match {
+  case "ERD2WQueryStringOperator" => "A"
+  case "ERD2WQueryToOneField" => "B"
+  case _ => "Component not found: " + componentName
+}
+
+val map = Map ("x" -> 2, "y" -> 3)
+val map2 = Map ("z" -> 2, "y" -> 4)
+val res = map ++ map2
+
+case class Task(task: String, name: String)
+val tasks = List(Task("edit", "Edit"), Task("list", "List")).toSeq
+val editTask = tasks.filter(t => t.task.equals("edit")).head

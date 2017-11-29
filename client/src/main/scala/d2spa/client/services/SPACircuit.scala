@@ -7,34 +7,13 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import d2spa.shared.{Api, EOKeyValueQualifier, PropertyMetaInfo, TodoItem}
+import d2spa.shared._
 import boopickle.Default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
 import d2spa.client.SPAMain.TaskAppPage
-import d2spa.client.{
-  FetchMetaDataForMenu,
-  InstallQueryPage,
-  SetMetaDataForMenu,
-  InitMetaData,
-  SetMetaData,
-  InitMenu,
-  UpdateQueryProperty,
-  SearchResult,
-  SetPreviousPage,
-AfterEffectRouter,
-EOCreated,
-InspectEO,
-NewEOPage,
-UpdateEOValueForProperty,
-SetMenus,
-SelectMenu,
-Save,
-InstallInspectPage,
-Search,
-ShowPage
-}
+import d2spa.client._
 
 /*import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,7 +21,7 @@ import japgolly.scalajs.react.extra.router._*/
 
 import d2spa.client.AppModel
 
-import d2spa.shared.{Menus, MetaDatas, EntityMetaData, PropertyMetaInfo, QueryTask, EO, StringValue}
+import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, Task, EO, StringValue}
 
 // The First page displayed is the Query page. When the query page is mounted, it calls the server for the entities to be displayed.
 // This is done with an action "InitMetaData" which trigger "" on the server "getMetaData"
@@ -58,9 +37,10 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
 
   override val actionHandler = composeHandlers(
     new MenuHandler(zoomTo(_.content.menuModel)),
-    new DataHandler(zoomTo(_.content.metaDatas)),
+    new DataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOsHandler(zoomTo(_.content.eos)),
-    new EOHandler(zoomTo(_.content.eo))
+    new EOHandler(zoomTo(_.content.eo)),
+    new QueryValuesHandler(zoomTo(_.content.queryValues))
     //new MegaDataHandler(zoomTo(_.content))
   )
 
@@ -88,20 +68,20 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 }
 */
 
-class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(modelRW) {
+class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
 
-  private def zoomToEntity(entityMetaData: String, rw: ModelRW[M, MetaDatas]): Option[ModelRW[M, EntityMetaData]] = {
-    rw.value.entityMetaDatas.indexWhere(n => n.entityName == entityMetaData) match {
+  private def zoomToEntity(entityMetaData: String, rw: ModelRW[M, List[EntityMetaData]]): Option[ModelRW[M, EntityMetaData]] = {
+    rw.value.indexWhere(n => n.entityName == entityMetaData) match {
       case -1 =>
         // should not happen!
         None
       case idx =>
-        Some(rw.zoomRW(_.entityMetaDatas(idx))((m, v) =>
-          m.copy(entityMetaDatas = (m.entityMetaDatas.take(idx) :+ v) ++ m.entityMetaDatas.drop(idx + 1))))
+        Some(rw.zoomRW(_(idx))((m, v) =>
+          (m.take(idx) :+ v) ++ m.drop(idx + 1)))
     }
   }
-  private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, QueryTask]): Option[ModelRW[M, PropertyMetaInfo]] = {
-    rw.value.displayPropertyKeys.indexWhere(n => n.key == property.key) match {
+  private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, Task]): Option[ModelRW[M, PropertyMetaInfo]] = {
+    rw.value.displayPropertyKeys.indexWhere(n => n.d2WContext.propertyKey == property.d2WContext.propertyKey) match {
       case -1 =>
         // should not happen!
         None
@@ -110,13 +90,37 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
           m.copy(displayPropertyKeys = (m.displayPropertyKeys.take(idx) :+ v) ++ m.displayPropertyKeys.drop(idx + 1))))
     }
   }
+  private def zoomToTask(task: String, rw: ModelRW[M, EntityMetaData]): Option[ModelRW[M, Task]] = {
+    if (task.equals(TaskDefine.edit)) {
+      Some(rw.zoomRW(_.editTask) ((m, v) =>
+        m.copy(editTask = v)))
+    } else if (task.equals(TaskDefine.list)) {
+      Some(rw.zoomRW(_.listTask)((m, v) =>
+        m.copy(listTask = v)))
+    } else if (task.equals(TaskDefine.inspect)) {
+      Some(rw.zoomRW(_.inspectTask)((m, v) =>
+        m.copy(inspectTask = v)))
+    } else if (task.equals(TaskDefine.query)) {
+      Some(rw.zoomRW(_.queryTask)((m, v) =>
+        m.copy(queryTask = v)))
+    } else {
+      Some(rw.zoomRW(_.queryTask)((m, v) =>
+        m.copy(queryTask = v)))
+    }
+  }
 
+  def ruleResultsWith(base: List[RuleResult], addOn: List[RuleResult]): List[RuleResult] = {
+    val baseMap = base.map(x => (x.key,x.aValueString)).toMap
+    val addOnMap = addOn.map(x => (x.key,x.aValueString)).toMap
+    val mixMap = baseMap ++ addOnMap
+    mixMap.map(x => {RuleResult(x._1,x._2)}).toList
+  }
 
   // handle actions
   override def handle = {
     case FetchMetaDataForMenu(entity: String) =>
       println("InitMetaData ")
-      value.entityMetaDatas.indexWhere(n => n.entityName == entity) match {
+      value.indexWhere(n => n.entityName == entity) match {
         case -1 =>
           effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaDataForMenu(entity, _))))
         case _ =>
@@ -124,29 +128,39 @@ class DataHandler[M](modelRW: ModelRW[M, MetaDatas]) extends ActionHandler(model
       }
 
     case SetMetaDataForMenu(entity: String, entityMetaData) =>
-      updated(value.copy(entityMetaDatas = entityMetaData :: value.entityMetaDatas),Effect.action(InstallQueryPage(entity)))
+      updated(entityMetaData :: value,Effect.action(InstallQueryPage(entity)))
 
     case InitMetaData(entity: String) =>
       println("InitMetaData ")
       effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(entity, _))))
     case SetMetaData(entity: String, entityMetaData) =>
-      updated(value.copy(entityMetaDatas = entityMetaData :: value.entityMetaDatas),Effect.action(InitMenu))
+      updated(entityMetaData :: value,Effect.action(InitMenu))
 
-    case UpdateQueryProperty(entity, property, newEOValue) =>
-      println("UpdateProperty: for entity " + entity + " property: " + property + " " + newEOValue)
+    case FireRulesForKeys(property, keysToFire: List[String]) =>
+      effectOnly(Effect(AjaxClient[Api].fireRules(property.d2WContext,keysToFire).call().map(SetRuleResults(property,_))))
+
+    case SetRuleResults(property, ruleResultByKey) =>
+      val d2wContext = property.d2WContext
+      val entity = d2wContext.entity
+      val task = d2wContext.task
+      val propertyKey = d2wContext.propertyKey
       val entityWriter = zoomToEntity(entity,modelRW)
       entityWriter match {
-        case Some(erw) => zoomToProperty(property, erw.zoomRW(_.queryTask)((qt, v) => qt.copy(queryTask = v))) match {
-          case Some(prw) => {
-            println("newEOValue " + newEOValue)
-            println("prw " + prw)
-            ModelUpdate(prw.updated(prw.value.copy(value = newEOValue)))
+        case Some(erw) => zoomToTask(task, erw) match {
+          case Some(trw) => {
+            zoomToProperty(property, trw) match {
+              case Some(prw) => {
+                println("newEOValue " + ruleResultByKey)
+                println("prw " + prw)
+                ModelUpdate(prw.updated(prw.value.copy(ruleKeyValues = ruleResultsWith(prw.value.ruleKeyValues,ruleResultByKey))))
+              }
+              case None => noChange
+            }
           }
           case None     => noChange
         }
         case None     => noChange
       }
-
 
   }
 }
@@ -181,7 +195,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       val eo = value.get
-      updated(Ready(value.get.copy(values = (eo.values - property.key) + (property.key -> newEOValue))))
+      updated(Ready(value.get.copy(values = (eo.values - property.d2WContext.propertyKey) + (property.d2WContext.propertyKey -> newEOValue))))
   }
 }
 
@@ -197,7 +211,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       } else
         noChange
     case SetMenus(menus) =>
-      updated(Ready(menus) ) // ,Effect.action(InitMetaData)
+      updated(Ready(menus)) // ,Effect.action(InitMetaData)
     /*case InitMenuSelection =>
       println("Initializing Menus")
       updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
@@ -233,20 +247,20 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = previousTask))),
-        Effect( AfterEffectRouter.setPageForTaskAndEntity(previousTask, selectedEntity))
+        Effect(AfterEffectRouter.setPageForTaskAndEntity(previousTask, selectedEntity))
       )
 
-    case Save(selectedEntity,eo) =>
+    case Save(selectedEntity, eo) =>
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].updateEO(selectedEntity,eo).call().map(InspectEO("edit",_)))
+        Effect(AjaxClient[Api].updateEO(selectedEntity, eo).call().map(InspectEO("edit", _)))
       )
     case InstallQueryPage(entity) =>
       println("Query page for entity " + entity)
 
-      effectOnly( Effect(AfterEffectRouter.setQueryPageForEntity(entity)))
+      effectOnly(Effect(AfterEffectRouter.setQueryPageForEntity(entity)))
     case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
 
@@ -259,14 +273,14 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "inspect"))),
-        Effect(AfterEffectRouter.setInspectPageForEntity( value.get.d2wContext.entity))
+        Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entity))
       )
 
     // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity, qualifiers) =>
       println("Search: for entity " + selectedEntity + " qualifier " + qualifiers)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity,qualifiers).call().map(SearchResult(selectedEntity,_))))
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity, qualifiers).call().map(SearchResult(selectedEntity, _))))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
     //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
@@ -274,7 +288,18 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case ShowPage(selectedEntity, selectedTask) =>
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = selectedTask))),
-        Effect( AfterEffectRouter.setListPageForEntity(selectedEntity))
+        Effect(AfterEffectRouter.setListPageForEntity(selectedEntity))
       )
   }
 }
+
+class QueryValuesHandler[M](modelRW: ModelRW[M, Map[String,QueryValue]]) extends ActionHandler(modelRW) {
+
+    override def handle = {
+
+      case UpdateQueryProperty(entity, queryValue) =>
+        updated(value + (queryValue.key -> queryValue))
+    }
+}
+
+

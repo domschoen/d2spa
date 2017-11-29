@@ -1,5 +1,6 @@
 package d2spa.client
 
+import d2spa.shared.{RuleKeys, TaskDefine}
 import diode.react.ModelProxy
 import diode.Action
 import org.scalajs.dom.ext.KeyCode
@@ -16,7 +17,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 
 object D2WListPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -34,7 +35,7 @@ object D2WListPage {
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val entityMetaData = p.proxy.value.metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+      val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
       val task = entityMetaData.listTask
       //val eos = if (task.eos.isReady) task.eos.get else Vector()
       val eos = p.proxy.value.eos.get
@@ -61,7 +62,8 @@ object D2WListPage {
                         <.td(),
                         displayPropertyKeys toTagMod (property =>
                           <.td(^.className :="listRepetitionColumnHeader",
-                            <.span(^.className :="listRepetitionColumnHeader",property.displayName)
+                            //<.span(^.className :="listRepetitionColumnHeader",property.ruleKeyValues(RuleKeys.displayNameForProperty).stringValue)
+                              <.span(^.className :="listRepetitionColumnHeader","toto2")
                           )
                         )
                       )
@@ -77,7 +79,7 @@ object D2WListPage {
                           displayPropertyKeys toTagMod (
                           property =>
                             <.td(^.className := "list1",
-                              eo.values(property.key).value
+                              eo.values(property.d2WContext.propertyKey).value
                             )
                           )
                         )
@@ -98,9 +100,9 @@ object D2WListPage {
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, entity, proxy))
+    component(Props(ctl, entity, task, proxy))
   }
 }
 

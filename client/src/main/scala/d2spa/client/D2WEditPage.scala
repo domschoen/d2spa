@@ -7,7 +7,7 @@ import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WD
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
-import d2spa.shared.EO
+import d2spa.shared.{EO,RuleKeys,TaskDefine}
 
 object D2WEditPage {
 
@@ -16,7 +16,7 @@ object D2WEditPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      Callback.when(props.proxy().metaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
+      Callback.when(props.proxy().entityMetaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
     }
 
 
@@ -37,12 +37,12 @@ object D2WEditPage {
     def render(p: Props) = {
       val entity = p.entity
       println("Render Edit page for entity: " + entity + " and task " + p.task)
-      val metaDatas = p.proxy.value.metaDatas
-      if  (!metaDatas.isEmpty) {
+      val metaDatas = p.proxy.value
+      if  (!metaDatas.entityMetaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
-        val isEdit = p.task.equals("edit")
-        val edittask = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
-        val displayPropertyKeys = edittask.displayPropertyKeys
+        val isEdit = p.task.equals(TaskDefine.edit)
+        val task = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
+        val displayPropertyKeys = task.displayPropertyKeys
         val banImage = if (isEdit) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
@@ -75,15 +75,19 @@ object D2WEditPage {
                           <.tbody(
                         displayPropertyKeys toTagMod (property =>
                           <.tr(^.className :="attribute",
-                            <.th(^.className :="propertyName query",
-                              property.displayName
+                            <.th(^.className :="propertyName query",{
+                              property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.aValueString
+                            }
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
-                              property.componentName match {
-                                case "ERD2WEditString" => ERD2WEditString(p.router,property,p.proxy)
-                                case "ERD2WEditNumber" => ERD2WEditNumber(p.router,property,p.proxy)
-                                case "ERD2WDisplayString" => ERD2WDisplayString(p.router,property,p.proxy)
-                                case _ => "Component not found: " + property.componentName
+                              {
+                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.aValueString
+                                componentName match {
+                                  case "ERD2WEditString" => ERD2WEditString(p.router, property, p.proxy)
+                                  case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, p.proxy)
+                                  case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, p.proxy)
+                                  case _ => "Component not found: " + componentName
+                                }
                               }
                             )
                           )

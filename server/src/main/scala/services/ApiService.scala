@@ -134,22 +134,30 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
   }
 
+
+  def fireRuleFuture(d2WContext: D2WContext, key: String) : Future[WSResponse] = {
+    val entityOpt = if (d2WContext.entity == null) None else Some(d2WContext.entity)
+    val taskOpt = if (d2WContext.task == null) None else Some(d2WContext.task)
+    val propertyKeyOpt = if (d2WContext.propertyKey == null) None else Some(d2WContext.propertyKey)
+    fireRuleFuture(entityOpt, taskOpt,propertyKeyOpt,key)
+  }
+
   def fireRuleFuture(entity: String, task: String, key: String) : Future[WSResponse] = {
-    fireRuleFuture(Some(entity),Some(task),None,Some(key))
+    fireRuleFuture(Some(entity),Some(task),None,key)
   }
   def fireRuleFuture(entity: String, task: String, propertyKey: String, key: String) : Future[WSResponse] = {
-    fireRuleFuture(Some(entity),Some(task),Some(propertyKey),Some(key))
+    fireRuleFuture(Some(entity),Some(task),Some(propertyKey),key)
   }
 
 
 
-  val fireRuleArguments = List("entity","task","propertyKey","key")
+  val fireRuleArguments = List("entity","task","propertyKey")
 
-  def fireRuleFuture(entity: Option[String], task: Option[String], propertyKey: Option[String], key: Option[String]) : Future[WSResponse] = {
+  def fireRuleFuture(entity: Option[String], task: Option[String], propertyKey: Option[String], key: String) : Future[WSResponse] = {
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
-    val fireRuleValues = List(entity,task,propertyKey,key)
+    val fireRuleValues = List(entity,task,propertyKey)
     val nonNullArguments = fireRuleArguments zip fireRuleValues
-    val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
+    val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get)) :+ ("key",key)
 
     val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
@@ -176,10 +184,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         pDisplayName <- propertyDisplayNameFuture
         pComponentName <- componentNameFuture
       } yield {
-        val propertyDisplayName = pDisplayName.body
-        val propertyComponentName = pComponentName.body
+        val propertyDisplayName = fromResponseToString(pDisplayName)
+        val propertyComponentName = fromResponseToString(pComponentName)
 
-        PropertyMetaInfo(propertyKey,propertyDisplayName,propertyComponentName,StringValue(""))
+        println("<" + propertyComponentName + ">")
+
+        PropertyMetaInfo(D2WContext(entity, task, null, propertyKey) ,StringValue(""),
+          List(RuleResult(propertyDisplayName._1,propertyDisplayName._2), RuleResult(propertyComponentName._1,propertyComponentName._2)))
       }
       subResult
     }).toList
@@ -187,6 +198,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val properties = Await result (futureOfList, 2 seconds)
     properties
   }
+
+  def fromResponseToString(response: WSResponse) = {
+    val jsObj = response.json.asInstanceOf[JsObject]
+    (jsObj.keys.toSeq(0), jsObj.values.toSeq(0).asOpt[String].get)
+  }
+
 
   def fromResponseToMetaInfo(response: WSResponse, entity: String, task: String) = {
     val queryDisplayPropertyKeysJson = response.json
@@ -202,11 +219,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def getMetaData(entity: String): Future[EntityMetaData] = {
     val finished = true //usesD2SPAServer
     if (finished) {
-      val entityDisplayNameFuture = fireRuleFuture(entity, "edit", "displayNameForEntity")
-      val queryDisplayPropertyKeysFuture = fireRuleFuture(entity, "query", "displayPropertyKeys")
-      val editDisplayPropertyKeysFuture = fireRuleFuture(entity, "edit", "displayPropertyKeys")
-      val listDisplayPropertyKeysFuture = fireRuleFuture(entity, "list", "displayPropertyKeys")
-      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entity, "inspect", "displayPropertyKeys")
+      val entityDisplayNameFuture = fireRuleFuture(entity, TaskDefine.edit, "displayNameForEntity")
+      val queryDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.query, "displayPropertyKeys")
+      val editDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.edit, "displayPropertyKeys")
+      val listDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.list, "displayPropertyKeys")
+      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.inspect, "displayPropertyKeys")
 
       val result = for {
         r1 <- entityDisplayNameFuture
@@ -215,15 +232,15 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         r4 <- inspectDisplayPropertyKeysFuture
         r5 <- editDisplayPropertyKeysFuture
       } yield {
-        val entityDisplayName = r1.body
+        val entityDisplayName = fromResponseToString(r1)
 
-        val queryProperties = fromResponseToMetaInfo(r2,entity,"query")
-        val listProperties = fromResponseToMetaInfo(r2,entity,"list")
-        val inspectProperties = fromResponseToMetaInfo(r2,entity,"inspect")
-        val editProperties = fromResponseToMetaInfo(r2,entity,"edit")
+        val queryProperties = fromResponseToMetaInfo(r2,entity,TaskDefine.query)
+        val listProperties = fromResponseToMetaInfo(r2,entity,TaskDefine.list)
+        val inspectProperties = fromResponseToMetaInfo(r2,entity,TaskDefine.inspect)
+        val editProperties = fromResponseToMetaInfo(r2,entity,TaskDefine.edit)
 
 
-        val emd = EntityMetaData(entity, entityDisplayName, QueryTask(queryProperties), ListTask(listProperties), InspectTask(inspectProperties), EditTask(editProperties))
+        val emd = EntityMetaData(entity, entityDisplayName._2, Task(queryProperties), Task(listProperties),Task(inspectProperties),Task(editProperties))
         println("emd" + emd)
         emd
       }
@@ -232,63 +249,105 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     else {
       if (entity.equals("Customer")) {
         Future(EntityMetaData("Customer", "Customer",
-          QueryTask(
-            List(
-              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",StringValue("")),
-              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",StringValue("")),
-              PropertyMetaInfo("address", "Address","ERD2WQueryStringOperator",StringValue(""))
-            )
-          ),
-          ListTask(
-            List(
-              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",null),
-              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",null)
-            )
-          ),
-          InspectTask(
-            List(
-              PropertyMetaInfo("name", "Name","ERD2WDisplayString",null),
-              PropertyMetaInfo("acronym", "Acronym","ERD2WDisplayString",null),
-              PropertyMetaInfo("address", "Address","ERD2WDisplayString",null)
-            )
-          ),
-          EditTask(
-            List(
-              PropertyMetaInfo("name", "Name","ERD2WQueryStringOperator",null),
-              PropertyMetaInfo("acronym", "Acronym","ERD2WQueryStringOperator",null),
-              PropertyMetaInfo("address", "Address","ERD2WQueryStringOperator",null)
+          Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "query", null, "name"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Name"), RuleResult("componentName","ERD2WQueryStringOperator"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "query", null, "acronym"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Acronym"), RuleResult("componentName","ERD2WQueryStringOperator"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "query", null, "address"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Address"), RuleResult("componentName","ERD2WQueryStringOperator")))
+              )
+            ) ,
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "list", null, "name"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Name"), RuleResult("componentName" ,"ERD2WDisplayString"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "list", null, "acronym"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Acronym"), RuleResult("componentName","ERD2WDisplayString")))
+              )
+            ) ,
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "inspect", null, "name"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Name"), RuleResult("componentName","ERD2WDisplayString"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "inspect", null, "acronym"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Acronym"), RuleResult("componentName","ERD2WDisplayString"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "inspect", null, "address"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Address"), RuleResult("componentName","ERD2WDisplayString")))
+              )
+            ) ,
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "edit", null, "name"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Name"), RuleResult("componentName","ERD2WQueryStringOperator"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "edit", null, "acronym"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Acronym"), RuleResult("componentName","ERD2WQueryStringOperator"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "edit", null, "address"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Address"), RuleResult("componentName","ERD2WQueryStringOperator")))
+              )
             )
           )
-        ))
+        )
       } else
         Future(EntityMetaData("Project", "Project",
-          QueryTask(
-            List(
-              PropertyMetaInfo("descr", "Description","ERD2WQueryStringOperator",StringValue(""))//,
-              //QueryProperty("csad", "CSAD","ERD2WQueryStringOperator",StringValue("toto"))
-            )
-          ),
-          ListTask(
-            List(
-              PropertyMetaInfo("descr", "Description","ERD2WQueryStringOperator",null)//,
-              //ListProperty("projectNumber", "Project Number","ERD2WQueryStringOperator")
-            )
-          ),
-          InspectTask(
-            List(
-              PropertyMetaInfo("descr", "Description","ERD2WDisplayString",null),
-              PropertyMetaInfo("projectNumber", "Project Number","ERD2WDisplayString",null)
-            )
-          ),
-          EditTask(
-            List(
-              PropertyMetaInfo("descr", "Description","ERD2WEditString",null),
-              PropertyMetaInfo("projectNumber", "Project Number","ERD2WEditString",null)
+          Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "query", null, "descr"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Description"), RuleResult("componentName","ERD2WQueryStringOperator"))),
+                PropertyMetaInfo(
+                  D2WContext("Customer", "query", null, "projectNumber"),
+                  StringValue(""),
+                  List(RuleResult("displayNameForProperty","Project Number"), RuleResult("componentName","ERD2WQueryStringOperator")))
+              )
+            ),
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "list", null, "descr"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Description"), RuleResult("componentName","ERD2WQueryStringOperator")))
+              )
+            ),
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "inspect", null, "descr"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Description"), RuleResult("componentName","ERD2WQueryStringOperator")))
+              )
+            ),
+            Task(
+              List(
+                PropertyMetaInfo(D2WContext("Customer", "edit", null, "descr"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Description"), RuleResult("componentName","ERD2WEditString"))),
+                PropertyMetaInfo(D2WContext("Customer", "edit", null, "descr"), StringValue(""),
+                  List(RuleResult("displayNameForProperty","Description"), RuleResult("componentName","ERD2WEditString")))
+              )
             )
           )
         )
-        )
     }
+  }
+  def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]] = {
+    val futures = keysToFire.map(x => {fireRuleFuture(d2WContext, x)})
+    val futureSequece = Future sequence futures
+    val result = for {
+      f <- futureSequece
+    } yield {
+      f.map(x => { val tuple = fromResponseToString(x); RuleResult(tuple._1,tuple._2)})
+    }
+    result
   }
 
 

@@ -16,6 +16,29 @@ object TodoPriority {
   implicit val todoPriorityPickler: Pickler[TodoPriority] = generatePickler[TodoPriority]
 }
 
+object QueryOperator {
+  val Match = "Match"
+  val Min = "Min"
+  val Max = "Max"
+}
+
+
+object TaskDefine {
+  val edit = "edit"
+  val inspect = "inspect"
+  val list = "list"
+  val query = "query"
+}
+
+object RuleKeys {
+  val keyWhenRelationship = "keyWhenRelationship"
+  val displayNameForKeyWhenRelationship = "displayNameForKeyWhenRelationship"
+  val displayNameForProperty = "displayNameForProperty"
+  val componentName = "componentName"
+}
+
+
+
 case class EOKeyValueQualifier(key: String,value: String)
 
 sealed abstract class EOValue
@@ -36,28 +59,26 @@ case class Menu(id:Int, title: String, entity: String)
 
 
 case class D2WContext(entity: String, task: String, previousTask: String, propertyKey: String)
+case class RuleResult(key: String, aValueString: String)
+
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
-case class MetaDatas(entityMetaDatas: List[EntityMetaData]) {
-  def isEmpty() = {
-    entityMetaDatas.isEmpty
-  }
-}
-case class EntityMetaData(entityName: String, displayName: String, queryTask: QueryTask, listTask: ListTask, inspectTask: InspectTask, editTask: EditTask)
-//case class EntityMetaData(entityName: String, displayName: String)
-
-
-
-
-// Task
-abstract class MetaTask {def displayPropertyKeys: List[PropertyMetaInfo]}
-case class QueryTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
-//case class ListTask(displayPropertyKeys: List[ListProperty], eos: Seq[EO]) extends MetaTask
-case class ListTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
-case class InspectTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
-case class EditTask(displayPropertyKeys: List[PropertyMetaInfo]) extends MetaTask
+//case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 // Property
-case class PropertyMetaInfo(key: String, displayName: String, componentName: String, value: StringValue)
+case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: List[RuleResult])
+//case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
+
+case class EntityMetaData(entityName: String, displayName: String, queryTask: Task, listTask:Task, inspectTask: Task, editTask: Task)
+
+// A container for value should be used. It would give a way to have not only String
+case class QueryValue(key: String,value: String, operator: String)
+
+// Task
+//case class Task(task: String, displayPropertyKeys: List[PropertyMetaInfo])
+case class Task(displayPropertyKeys: List[PropertyMetaInfo])
+
+
+/// Important NOTE: Seems that Map is not supported in case classes managed by boopickle

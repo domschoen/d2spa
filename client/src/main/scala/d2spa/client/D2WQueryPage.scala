@@ -12,17 +12,17 @@ import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WQueryToOneField}
-import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo}
+import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo, RuleKeys,  TaskDefine}
 
 object D2WQueryPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
       println("entity " + props.entity)
-      val entityMetaDataNotFetched = props.proxy().metaDatas.entityMetaDatas.indexWhere(n => n.entityName == props.entity) < 0
+      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entityName == props.entity) < 0
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(props.entity)))
     }
@@ -36,14 +36,14 @@ object D2WQueryPage {
     }
 
     def qualifiers(propertyKeys: List[PropertyMetaInfo]): List[EOKeyValueQualifier] = {
-       propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
+       propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.d2WContext.propertyKey,p.value.value))
     }
 
     def render(p: Props) = {
       val entity = p.entity
       println("Render Query page for entity: " + entity)
-      val metaDatas = p.proxy.value.metaDatas
-      if  (!metaDatas.isEmpty) {
+      val metaDatas = p.proxy.value
+      if  (!metaDatas.entityMetaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
         val task = entityMetaData.queryTask
         val displayPropertyKeys = task.displayPropertyKeys
@@ -71,13 +71,17 @@ object D2WQueryPage {
                           displayPropertyKeys toTagMod (property =>
                             <.tr(^.className :="attribute",
                               <.th(^.className :="propertyName query",
-                                property.displayName
+                                property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.aValueString
                               ),
                               <.td(^.className :="query d2wAttributeValueCell",
-                                property.componentName match {
-                                  case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator(p.router,property,p.proxy)
-                                  case "ERD2WQueryToOneField" => ERD2WQueryToOneField(p.router,property,p.proxy)
-                                  case _ => "Component not found: " + property.componentName
+                                {
+                                  val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.aValueString
+                                  componentName match {
+
+                                  case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, property, p.proxy)
+                                  case "ERD2WQueryToOneField" => ERD2WQueryToOneField (p.router, property, p.proxy)
+                                  case _ => "Component not found: " + componentName
+                                  }
                                 }
                               )
                             )
@@ -106,8 +110,8 @@ object D2WQueryPage {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, entity, proxy))
+    component(Props(ctl, entity, task, proxy))
   }
 }

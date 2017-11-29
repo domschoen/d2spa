@@ -8,6 +8,8 @@ import d2spa.shared._
   * Created by dschoen on 01.05.17.
   */
 
+
+
 case class AppModel (content: MegaContent)
 
 // , genericPart: GenericData, customPart: CustomData
@@ -17,7 +19,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], metaDatas: MetaDatas, eos: Pot[Seq[EO]], eo: Pot[EO])
+case class MegaContent(menuModel: Pot[Menus], entityMetaDatas: List[EntityMetaData], eos: Pot[Seq[EO]], eo: Pot[EO], queryValues: Map[String,QueryValue])
 
 
 // Generic Part
@@ -50,7 +52,7 @@ case object InitAppModel extends Action
 case class SelectMenu(entity: String) extends Action
 case class Save(entity: String, eo: EO) extends Action
 
-case class UpdateQueryProperty(entity: String, property: PropertyMetaInfo, value: StringValue) extends Action
+case class UpdateQueryProperty(entity: String, queryValue: QueryValue) extends Action
 case class UpdateEOValueForProperty(entity: String, property: PropertyMetaInfo, value: StringValue) extends Action
 
 case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
@@ -61,6 +63,8 @@ case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 
 case class InspectEO(fromTask: String, eo: EO) extends Action
 
+case class FireRulesForKeys(property: PropertyMetaInfo, keys: List[String]) extends Action
+case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
 
 
 case class ShowPage(entity: String, task: String) extends Action
@@ -85,11 +89,19 @@ object AppModel {
   val bootingModel = AppModel(
     MegaContent(
       Empty,
-      MetaDatas(List()),
+      List(),
       Empty,
-      Empty
+      Empty,
+      Map()
     )
   )
+
+  def ruleForKey(property: PropertyMetaInfo, key:String) = {
+    val result = property.ruleKeyValues.find(r => {r.key.equals(key)})
+    if (result.isDefined) result.head.aValueString else ""
+  }
+  def rulesContainsKey(property: PropertyMetaInfo, key:String) = property.ruleKeyValues.find(r => {r.key.equals(key)}).isDefined
+
 }
 
 

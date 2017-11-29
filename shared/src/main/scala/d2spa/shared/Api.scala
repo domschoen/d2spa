@@ -14,4 +14,5 @@ trait Api {
 
   def newEO(entity:String) : Future[EO]
 
+  def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]]
 }

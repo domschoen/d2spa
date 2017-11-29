@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.shared.PropertyMetaInfo
+import d2spa.shared.{PropertyMetaInfo, QueryOperator}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react.{ReactEventFromInput, _}
@@ -14,7 +14,7 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{ StringValue, EOKeyValueQualifier, PropertyMetaInfo}
+import d2spa.shared.{ StringValue, EOKeyValueQualifier, PropertyMetaInfo, QueryValue}
 
 object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
@@ -26,9 +26,11 @@ object ERD2WQueryStringOperator  {
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
+      val propertyKey = p.property.d2WContext.propertyKey
       <.div(
         <.input(^.id := "description", ^.value := p.property.value.value,
-          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity,p.property,StringValue(e.target.value)))} )
+          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity,
+            QueryValue(propertyKey,e.target.value,QueryOperator.Match)))} )
       )
     }
   }

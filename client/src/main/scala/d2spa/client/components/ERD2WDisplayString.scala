@@ -31,7 +31,7 @@ object ERD2WDisplayString  {
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       val eo = p.proxy.value.eo.get
-      val eoValue = eo.values(p.property.key)
+      val eoValue = eo.values(p.property.d2WContext.propertyKey)
       <.div(
         <.span(^.id := "description", eoValue.value)
       )
