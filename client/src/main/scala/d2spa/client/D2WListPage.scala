@@ -1,5 +1,6 @@
 package d2spa.client
 
+import d2spa.client.components.{ERD2WDisplayString, ERD2WEditNumber, ERD2WEditString}
 import d2spa.shared.{RuleKeys, TaskDefine}
 import diode.react.ModelProxy
 import diode.Action
@@ -79,7 +80,15 @@ object D2WListPage {
                           displayPropertyKeys toTagMod (
                           property =>
                             <.td(^.className := "list1",
-                              eo.values(property.d2WContext.propertyKey).value
+                              {
+                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
+                                componentName match {
+                                  case "ERD2WEditString" => ERD2WEditString(p.router, property, eo, p.proxy)
+                                  case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, eo, p.proxy)
+                                  case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, eo, p.proxy)
+                                  case _ => "Component not found: " + componentName
+                                }
+                              }
                             )
                           )
                         )

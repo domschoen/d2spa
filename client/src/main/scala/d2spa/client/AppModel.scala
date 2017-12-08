@@ -19,7 +19,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], entityMetaDatas: List[EntityMetaData], eos: Pot[Seq[EO]], eo: Pot[EO], queryValues: Map[String,QueryValue])
+case class MegaContent(menuModel: Pot[Menus], entityMetaDatas: List[EntityMetaData], eos: Pot[Seq[EO]], eo: Pot[EO], queryValues: List[QueryValue])
 
 
 // Generic Part
@@ -53,9 +53,9 @@ case class SelectMenu(entity: String) extends Action
 case class Save(entity: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entity: String, queryValue: QueryValue) extends Action
-case class UpdateEOValueForProperty(entity: String, property: PropertyMetaInfo, value: StringValue) extends Action
+case class UpdateEOValueForProperty(entity: String, property: PropertyMetaInfo, value: EOValue) extends Action
 
-case class Search(entity: String, qualifiers: List[EOKeyValueQualifier]) extends Action
+case class Search(entity: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 // similar to:
@@ -63,12 +63,12 @@ case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 
 case class InspectEO(fromTask: String, eo: EO) extends Action
 
-case class FireRulesForKeys(property: PropertyMetaInfo, keys: List[String]) extends Action
+case class HydrateProperty(property: PropertyMetaInfo, keys: List[String]) extends Action
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
-
+case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: String, task: String) extends Action
-
+case class SetupQueryPageForEntity(entity:String) extends Action
 
 /*      Menus(
         List(
@@ -92,13 +92,16 @@ object AppModel {
       List(),
       Empty,
       Empty,
-      Map()
+      List()
     )
   )
 
-  def ruleForKey(property: PropertyMetaInfo, key:String) = {
+
+
+
+  def ruleStringValueForKey(property: PropertyMetaInfo, key:String) = {
     val result = property.ruleKeyValues.find(r => {r.key.equals(key)})
-    if (result.isDefined) result.head.aValueString else ""
+    if (result.isDefined) result.head.eovalue.stringV.get else ""
   }
   def rulesContainsKey(property: PropertyMetaInfo, key:String) = property.ruleKeyValues.find(r => {r.key.equals(key)}).isDefined
 

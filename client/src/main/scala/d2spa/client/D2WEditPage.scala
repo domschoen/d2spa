@@ -3,11 +3,11 @@ package d2spa.client
 import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo}
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.TaskAppPage
-import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WEditNumber,ERD2WDisplayString, ERD2WEditString, EditInspectComponent}
+import d2spa.client.components._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
-import d2spa.shared.{EO,RuleKeys,TaskDefine}
+import d2spa.shared.{EO, RuleKeys, TaskDefine}
 
 object D2WEditPage {
 
@@ -76,16 +76,17 @@ object D2WEditPage {
                         displayPropertyKeys toTagMod (property =>
                           <.tr(^.className :="attribute",
                             <.th(^.className :="propertyName query",{
-                              property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.aValueString
+                              property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.eovalue.stringV.get
                             }
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
                               {
-                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.aValueString
+                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
                                 componentName match {
-                                  case "ERD2WEditString" => ERD2WEditString(p.router, property, p.proxy)
-                                  case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, p.proxy)
-                                  case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, p.proxy)
+                                  case "ERD2WEditString" => ERD2WEditString(p.router, property,p.proxy.value.eo.get, p.proxy)
+                                  case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, p.proxy.value.eo.get, p.proxy)
+                                  case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, p.proxy.value.eo.get, p.proxy)
+                                  case "ERD2WEditToOneRelationship" => ERD2WEditToOneRelationship(p.router, property, p.proxy.value.eo.get, p.proxy)
                                   case _ => "Component not found: " + componentName
                                 }
                               }

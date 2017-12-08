@@ -14,7 +14,7 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{PropertyMetaInfo, StringValue}
+import d2spa.shared.{PropertyMetaInfo, EOValue, EO}
 import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 
@@ -22,7 +22,7 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 object ERD2WEditString  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -31,9 +31,10 @@ object ERD2WEditString  {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       val eo = p.proxy.value.eo.get
       val eoValue = eo.values(p.property.d2WContext.propertyKey)
+      val value = if (eoValue.stringV.isDefined) eoValue.stringV.get else ""
       <.div(
-        <.input(^.id := "description", ^.value := eoValue.value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))} )
+        <.input(^.id := "description", ^.value := value,
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(stringV = Some(e.target.value))))} )
       )
     }
   }
@@ -42,6 +43,6 @@ object ERD2WEditString  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))
 
 }

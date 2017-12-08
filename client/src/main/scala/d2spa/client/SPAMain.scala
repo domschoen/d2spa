@@ -44,7 +44,7 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WQueryPage(ctl,m.entity,"query", p))
+              menusConnection(p => D2WQueryPage(ctl, m.entity, "query", p))
             }
           )
 

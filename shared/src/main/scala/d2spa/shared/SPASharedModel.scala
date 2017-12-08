@@ -34,24 +34,49 @@ object RuleKeys {
   val keyWhenRelationship = "keyWhenRelationship"
   val displayNameForKeyWhenRelationship = "displayNameForKeyWhenRelationship"
   val displayNameForProperty = "displayNameForProperty"
+  val displayNameForEntity = "displayNameForEntity"
   val componentName = "componentName"
+  val displayPropertyKeys = "displayPropertyKeys"
+  val destinationEos = "destinationEos"
 }
 
-
+object ValueType {
+  val stringV = "stringV"
+  val intV = "intV"
+  val eoV = "eoV"
+  val eosV = "eosV"
+}
 
 case class EOKeyValueQualifier(key: String,value: String)
 
-sealed abstract class EOValue
-case class StringValue(value: String) extends EOValue
-case class IntValue(value: Int) extends EOValue
 //case class DateValue(value: java.util.Date) extends EOValue
+case class EOValue(typeV: String = "stringV", stringV: Option[String] = None, intV: Option[Int] = None, eoV: Option[EORef] = None, eosV: Seq[EORef] = Seq())
 
-sealed abstract class GenericData
-case class EOE(values: String) extends GenericData
-case class EO(entity: String, values: scala.collection.Map[String,StringValue]) extends GenericData
-case class EOs(eos: List[EO]) extends GenericData
-case object NoData extends GenericData
+object EOValueUtils {
+  def stringV(value: String) = EOValue(stringV = if (value == null) None else Some(value))
+  def eoV(value: EORef) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
+  def eosV(value: Seq[EORef]) = EOValue(typeV=ValueType.eosV, eosV = value)
+  def intV(value: Int) = EOValue(intV = Some(value))
 
+  def juiceString(value: EOValue) : String = if (value == null) "" else {
+    value.typeV match {
+      case ValueType.stringV => if (value.stringV.isDefined) value.stringV.get else ""
+      case ValueType.eoV => if (value.eoV.isDefined) value.eoV.get.toString else ""
+      case _ => ""
+    }
+  }
+  def isDefined(value: EOValue) : Boolean =
+    value.typeV match {
+      case ValueType.stringV => value.stringV.isDefined
+      case ValueType.eoV => value.eoV.isDefined
+      case _ => false
+    }
+
+}
+
+
+case class EO(entity: String, values: scala.collection.Map[String,EOValue])
+case class EORef(entity: String, displayName: String, id: Int)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
@@ -59,7 +84,7 @@ case class Menu(id:Int, title: String, entity: String)
 
 
 case class D2WContext(entity: String, task: String, previousTask: String, propertyKey: String)
-case class RuleResult(key: String, aValueString: String)
+case class RuleResult(key: String, eovalue: EOValue)
 
 
 // Kind of cache of entity task d2w rules
@@ -67,7 +92,7 @@ case class RuleResult(key: String, aValueString: String)
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 // Property
-case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: List[RuleResult])
+case class PropertyMetaInfo(d2WContext: D2WContext, ruleKeyValues: List[RuleResult] = List())
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 

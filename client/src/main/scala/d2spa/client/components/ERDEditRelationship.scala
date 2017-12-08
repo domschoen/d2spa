@@ -1,6 +1,8 @@
 package d2spa.client.components
 
+
 import d2spa.client.{AppModel, HydrateProperty}
+import d2spa.shared.EO
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -11,22 +13,12 @@ import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client.{MegaContent, UpdateQueryProperty}
 import d2spa.shared.{PropertyMetaInfo, QueryValue, D2WContext, RuleKeys, QueryOperator}
 
-object ERD2WQueryToOneField  {
-  //@inline private def bss = GlobalStyles.bootstrapStyles
-//bss.formControl,
-
+object ERDEditRelationship  {
 
   case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
-
-  // keyWhenRelationship is used for the key to match: propertyKey + "." + keyWhenRelationship
-  // displayNameForKeyWhenRelationship = D2WContext(task=query, entity = destinationEntity, propertyKey = keyWhenRelationship).displayNameForProperty
-  // (is used for the pre-text)
-  // 2 info needed, one based on the other
-  // destinationEntity has to be processed in EOF application (D2SPAServer)
-  // => we can ask: D2WContext.displayNameForKeyWhenRelationship
-  // this component will perform action FireRulesForKeys (keyWhenRelationship,displayNameForKeyWhenRelationship)
-
+  // destinationEntityName:
+  // contains a switch component (ERD2WSwitchComponent)
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
@@ -45,15 +37,15 @@ object ERD2WQueryToOneField  {
       <.div(
         <.span(pretext),
         <.input(^.id := "toOneTextField", ^.value := value,
-           ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
+          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
       )
     }
   }
 
-  private val component = ScalaComponent.builder[Props]("ERD2WQueryToOneField")
+  private val component = ScalaComponent.builder[Props]("ERDEditRelationship")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
 }

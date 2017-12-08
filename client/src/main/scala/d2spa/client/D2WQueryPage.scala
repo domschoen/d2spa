@@ -30,14 +30,11 @@ object D2WQueryPage {
 
     val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
 
-    def search(router: RouterCtl[TaskAppPage],entity: String,qualifiers: List[EOKeyValueQualifier]) = {
+    def search(router: RouterCtl[TaskAppPage],entity: String) = {
       Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entity,qualifiers)))
+        $.props >>= (_.proxy.dispatchCB(Search(entity)))
     }
 
-    def qualifiers(propertyKeys: List[PropertyMetaInfo]): List[EOKeyValueQualifier] = {
-       propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.d2WContext.propertyKey,p.value.value))
-    }
 
     def render(p: Props) = {
       val entity = p.entity
@@ -57,7 +54,7 @@ object D2WQueryPage {
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity,qualifiers(displayPropertyKeys)))
+                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity))
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),
@@ -71,11 +68,12 @@ object D2WQueryPage {
                           displayPropertyKeys toTagMod (property =>
                             <.tr(^.className :="attribute",
                               <.th(^.className :="propertyName query",
-                                property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.aValueString
+                                property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.eovalue.stringV.get
                               ),
+                              // Component part
                               <.td(^.className :="query d2wAttributeValueCell",
                                 {
-                                  val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.aValueString
+                                  val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
                                   componentName match {
 
                                   case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, property, p.proxy)

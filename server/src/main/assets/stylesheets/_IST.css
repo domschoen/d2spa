@@ -741,5 +741,6 @@ td.d2wAttributeValueCell {
 	width: 100%;
 	text-align: left;
 	vertical-align: top;
+	padding-left: 10px;
 }
 

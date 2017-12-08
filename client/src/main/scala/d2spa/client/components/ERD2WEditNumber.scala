@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.shared.PropertyMetaInfo
+import d2spa.shared.{EO, PropertyMetaInfo}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -14,13 +14,13 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{PropertyMetaInfo, StringValue}
+import d2spa.shared.{PropertyMetaInfo, EOValue}
 import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERD2WEditNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -29,9 +29,10 @@ object ERD2WEditNumber {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       val eo = p.proxy.value.eo.get
       val eoValue = eo.values(p.property.d2WContext.propertyKey)
+      val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
       <.div(
-        <.input(^.id := "description", ^.value := eoValue.value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))} )
+        <.input(^.id := "description", ^.value := value,
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,EOValue(intV = Some(e.target.value.toInt))))} )
       )
     }
   }
@@ -40,7 +41,7 @@ object ERD2WEditNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))
 
 }
 

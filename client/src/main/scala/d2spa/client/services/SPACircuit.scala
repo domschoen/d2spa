@@ -21,7 +21,7 @@ import japgolly.scalajs.react.extra.router._*/
 
 import d2spa.client.AppModel
 
-import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, Task, EO, StringValue}
+import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, Task, EO, EOValue}
 
 // The First page displayed is the Query page. When the query page is mounted, it calls the server for the entities to be displayed.
 // This is done with an action "InitMetaData" which trigger "" on the server "getMetaData"
@@ -110,8 +110,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 
   def ruleResultsWith(base: List[RuleResult], addOn: List[RuleResult]): List[RuleResult] = {
-    val baseMap = base.map(x => (x.key,x.aValueString)).toMap
-    val addOnMap = addOn.map(x => (x.key,x.aValueString)).toMap
+    val baseMap = base.map(x => (x.key,x.eovalue)).toMap
+    val addOnMap = addOn.map(x => (x.key,x.eovalue)).toMap
     val mixMap = baseMap ++ addOnMap
     mixMap.map(x => {RuleResult(x._1,x._2)}).toList
   }
@@ -136,10 +136,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     case SetMetaData(entity: String, entityMetaData) =>
       updated(entityMetaData :: value,Effect.action(InitMenu))
 
-    case FireRulesForKeys(property, keysToFire: List[String]) =>
+    case HydrateProperty(property, keysToFire: List[String]) =>
       effectOnly(Effect(AjaxClient[Api].fireRules(property.d2WContext,keysToFire).call().map(SetRuleResults(property,_))))
 
     case SetRuleResults(property, ruleResultByKey) =>
+      println("Rule Results " + ruleResultByKey)
       val d2wContext = property.d2WContext
       val entity = d2wContext.entity
       val task = d2wContext.task
@@ -175,6 +176,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
         Effect(AfterEffectRouter.setListPageForEntity(entity))
       )
   }
+
 }
 class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
 
@@ -240,7 +242,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
-        Effect.action(FetchMetaDataForMenu(selectedEntity))
+        Effect.action(SetupQueryPageForEntity(selectedEntity))
       )
     case SetPreviousPage(selectedEntity) =>
       val previousTask = value.get.d2wContext.previousTask
@@ -276,15 +278,6 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entity))
       )
 
-    // Menu Handler --> SearchResult in EOsHandler
-    case Search(selectedEntity, qualifiers) =>
-      println("Search: for entity " + selectedEntity + " qualifier " + qualifiers)
-      // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity, qualifiers).call().map(SearchResult(selectedEntity, _))))
-    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
-    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
-    //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
-    //
     case ShowPage(selectedEntity, selectedTask) =>
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = selectedTask))),
@@ -293,12 +286,27 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
   }
 }
 
-class QueryValuesHandler[M](modelRW: ModelRW[M, Map[String,QueryValue]]) extends ActionHandler(modelRW) {
+class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {
 
     override def handle = {
+      // Menu Handler --> SearchResult in EOsHandler
+      case Search(selectedEntity) =>
+        println("Search: for entity " + selectedEntity)
+        // Call the server to get the result +  then execute action Search Result (see above datahandler)
+        effectOnly(Effect(AjaxClient[Api].search(selectedEntity, value).call().map(SearchResult(selectedEntity, _))))
+      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
+      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
+      //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
+      //
+
+      case SetupQueryPageForEntity(selectedEntity) =>
+        updated(
+          List(),
+          Effect.action(FetchMetaDataForMenu(selectedEntity))
+        )
 
       case UpdateQueryProperty(entity, queryValue) =>
-        updated(value + (queryValue.key -> queryValue))
+        updated(queryValue :: value)
     }
 }
 

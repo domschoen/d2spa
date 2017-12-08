@@ -33,3 +33,6 @@ val res = map ++ map2
 case class Task(task: String, name: String)
 val tasks = List(Task("edit", "Edit"), Task("list", "List")).toSeq
 val editTask = tasks.filter(t => t.task.equals("edit")).head
+
+
+
