@@ -197,6 +197,9 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       val eo = value.get
+      // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
+      println("EO: " + eo)
+
       updated(Ready(value.get.copy(values = (eo.values - property.d2WContext.propertyKey) + (property.d2WContext.propertyKey -> newEOValue))))
   }
 }

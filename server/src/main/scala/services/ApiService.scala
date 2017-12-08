@@ -520,6 +520,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def woWsParameterForValue(value: EOValue): JsValue = {
     value.typeV match {
       case ValueType.stringV => JsString(value.stringV.get)
+      case ValueType.intV => JsNumber (value.intV.get)
       case ValueType.eoV => JsObject( Seq( "pk attribute name" -> JsNumber(6), "type" -> JsString("entity name")))
       case _ => JsString("")
     }
@@ -534,6 +535,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
     val data = Json.toJson(eoValues)
 
+    println("data " + data)
 
     val futureResponse: Future[WSResponse] = request.post(data)
     futureResponse.map { response =>

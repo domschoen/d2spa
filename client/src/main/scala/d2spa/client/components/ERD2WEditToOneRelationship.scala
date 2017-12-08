@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client._
-import d2spa.shared.{EO, EOValue}
+import d2spa.shared._
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -11,7 +11,6 @@ import d2spa.client.components.GlobalStyles
 
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
-import d2spa.shared.{PropertyMetaInfo, QueryOperator, QueryValue, RuleKeys}
 
 
 sealed trait TodoPriority
@@ -49,6 +48,12 @@ object ERD2WEditToOneRelationship  {
       }
     }
 
+    def eoRefWith(eoRefs: Seq[EORef],id: String) = {
+      println("id " + id + " class " + id.getClass.getName)
+      val idAsInt = id.toInt
+      eoRefs.find(eoRef => {eoRef.id.equals(idAsInt)})
+    }
+
     //^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))}
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
@@ -64,7 +69,7 @@ object ERD2WEditToOneRelationship  {
             <.div(
               <.select(bss.formControl, ^.id := "priority",  ^.onChange ==> { e: ReactEventFromInput =>
                 // //e.target.value
-                p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(eoV = None)))},
+                p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(eoV = eoRefWith(eoRefs,e.target.value))))},
                 {
                   eoRefs toTagMod (eoRef =>
                     <.option(^.value := eoRef.id, eoRef.displayName)

@@ -90,6 +90,13 @@ object D2WEditPage {
                                   case _ => "Component not found: " + componentName
                                 }
                               }
+                            ),
+                            <.td(^.className :="query d2wAttributeValueCell",
+                              {
+                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
+                                componentName
+
+                              }
                             )
                           )
                         )
