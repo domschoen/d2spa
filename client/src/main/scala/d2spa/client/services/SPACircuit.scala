@@ -256,6 +256,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       )
 
     case Save(selectedEntity, eo) =>
+      println("SAVE " + eo)
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),

@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.shared.{EO, PropertyMetaInfo}
+import d2spa.shared.{EO, PropertyMetaInfo, ValueType}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -32,7 +32,8 @@ object ERD2WEditNumber {
       val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,EOValue(intV = Some(e.target.value.toInt))))} )
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,
+            EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))} )
       )
     }
   }

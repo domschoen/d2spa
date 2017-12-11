@@ -81,7 +81,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   implicit val eoRefReads: Reads[EORef] = (
       (JsPath \ "entity").read[String] and
       (JsPath \ "displayName").read[String] and
-      (JsPath \ "id").read[Int]
+      (JsPath \ "id").read[Int] and
+      (JsPath \ "pkAttributeName").read[String]
     ) (EORef.apply _)
 
 
@@ -521,18 +522,31 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     value.typeV match {
       case ValueType.stringV => JsString(value.stringV.get)
       case ValueType.intV => JsNumber (value.intV.get)
-      case ValueType.eoV => JsObject( Seq( "pk attribute name" -> JsNumber(6), "type" -> JsString("entity name")))
+        // id: hardcoded
+      case ValueType.eoV => {
+        val eoV = value.eoV.get
+        val pkAttributeName = eoV.pkAttributeName
+        JsObject( Seq( pkAttributeName -> JsNumber(eoV.id), "type" -> JsString(eoV.entity)))
+      }
       case _ => JsString("")
     }
 
   }
 
   def updateEO(entity: String, eo: EO): Future[EO] = {
+    println("Update EO: " + eo)
+
+
     val url = d2spaServerBaseUrl + "/" + entity + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-    val eoDefinedValues = eo.values filter (v => { EOValueUtils.isDefined(v._2) })
+    val eoDefinedValues = eo.values filter (v => {
+      println("v._2" + v._2)
+      EOValueUtils.isDefined(v._2) })
+
+    println("eoDefinedValues " + eoDefinedValues)
     val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
+    println("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
     println("data " + data)

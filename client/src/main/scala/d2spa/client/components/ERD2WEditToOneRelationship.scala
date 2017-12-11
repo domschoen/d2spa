@@ -35,7 +35,7 @@ object ERD2WEditToOneRelationship  {
       //val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
       val dataNotFetched = true
       //Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship,RuleKeys.destinationEos))))
-      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship,RuleKeys.destinationEos))))
+      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship, RuleKeys.destinationEos))))
     }
 
 
@@ -48,7 +48,7 @@ object ERD2WEditToOneRelationship  {
       }
     }
 
-    def eoRefWith(eoRefs: Seq[EORef],id: String) = {
+    def eoRefWith(eoRefs: Seq[EORef], id: String) = {
       println("id " + id + " class " + id.getClass.getName)
       val idAsInt = id.toInt
       eoRefs.find(eoRef => {eoRef.id.equals(idAsInt)})
@@ -60,16 +60,19 @@ object ERD2WEditToOneRelationship  {
       //val eoRefs = AppModel.ruleEORefsValueForKey(p.property,RuleKeys.destinationEos)
       //al text = if (p.property == null) "nulllll" else p.property.ruleKeyValues
       <.div({
+        println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+
         val result = p.property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.destinationEos)})
         result match {
           case Some(rule) => {
             // RuleResult(destinationEos,EOValue(eosV,None,None,None,Vector(EORef(Customer,1, Av. de France, a,1), EORef(Customer,5, Toto, Second,2))))
             val eoRefs = rule.eovalue.eosV
-            <.div(eoRefs.mkString("."))
+            println("eoRefs " + eoRefs)
+            //<.div(eoRefs.mkString("."))
             <.div(
               <.select(bss.formControl, ^.id := "priority",  ^.onChange ==> { e: ReactEventFromInput =>
                 // //e.target.value
-                p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(eoV = eoRefWith(eoRefs,e.target.value))))},
+                p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eoRefs,e.target.value))))},
                 {
                   eoRefs toTagMod (eoRef =>
                     <.option(^.value := eoRef.id, eoRef.displayName)
