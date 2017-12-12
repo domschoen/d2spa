@@ -1,6 +1,6 @@
 package d2spa.client
 
-import d2spa.client.components.{D2WDisplayNumber, ERD2WDisplayString, ERD2WEditNumber, ERD2WEditString}
+import d2spa.client.components._
 import d2spa.shared.{RuleKeys, TaskDefine}
 import diode.react.ModelProxy
 import diode.Action
@@ -88,28 +88,7 @@ object D2WListPage {
                           displayPropertyKeys toTagMod (
                           property =>
                             <.td(^.className := "list1",
-                              {
-                                val componentNameFound = property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.componentName)})
-                                componentNameFound match {
-                                  case Some(ruleResult) => {
-                                    val componentNameOpt = ruleResult.eovalue.stringV
-
-                                    componentNameOpt match {
-                                      case Some(componentName) => {
-                                        componentName match {
-                                          case "ERD2WEditString" => ERD2WEditString(p.router, property, eo, p.proxy)
-                                          case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, eo, p.proxy)
-                                          case "D2WDisplayNumber" => D2WDisplayNumber(p.router, property, eo, p.proxy)
-                                          case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, eo, p.proxy)
-                                          case _ => "Component not found: " + componentName
-                                        }
-                                      }
-                                      case _ => "Rule Result with empty value for property " + property.d2wContext.propertyKey
-                                    }
-                                  }
-                                  case _ => "No component Rule found for property " + property.d2wContext.propertyKey
-                                }
-                              }
+                              D2WComponentInstaller(p.router,property,eo, p.proxy)
                             )
                           )
                         )

@@ -36,6 +36,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
 
   override val actionHandler = composeHandlers(
+    new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOsHandler(zoomTo(_.content.eos)),
@@ -67,6 +68,13 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
   }
 }
 */
+
+class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case SwithDebugMode =>
+      updated(!value)
+  }
+}
 
 class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
 

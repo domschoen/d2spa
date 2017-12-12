@@ -19,7 +19,7 @@ case class CustomData()
 
 
 
-case class MegaContent(menuModel: Pot[Menus], entityMetaDatas: List[EntityMetaData], eos: Pot[Seq[EO]], eo: Pot[EO], queryValues: List[QueryValue])
+case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], entityMetaDatas: List[EntityMetaData], eos: Pot[Seq[EO]], eo: Pot[EO], queryValues: List[QueryValue])
 
 
 // Generic Part
@@ -70,6 +70,8 @@ case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 case class ShowPage(entity: String, task: String) extends Action
 case class SetupQueryPageForEntity(entity:String) extends Action
 
+case object SwithDebugMode extends Action
+
 /*      Menus(
         List(
           MainMenu(1, "MCU",
@@ -88,6 +90,7 @@ case class SetupQueryPageForEntity(entity:String) extends Action
 object AppModel {
   val bootingModel = AppModel(
     MegaContent(
+      false,
       Empty,
       List(),
       Empty,

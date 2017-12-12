@@ -6,11 +6,12 @@ import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-
 import d2spa.client.components.GlobalStyles
-import scalacss.ScalaCssReact._
 
+import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
+import d2spa.client.components.Bootstrap.{Button, CommonStyle}
+import d2spa.client.components.Icon
 
 
 
@@ -45,31 +46,35 @@ object MenuHeader {
 
     def render(p: Props) = {
       val style = bss.listGroup
+      val debugButtonText = if (p.proxy.value.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
-          <.ul(style.listGroup,^.className := "menu",
-            p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
-              mainMenu.children toTagMod (
-                menu => {
-                  <.li(style.item,GlobalStyles.menuItem,(style.active).when(p.entity.equals(menu.entity)),
-                    <.div(GlobalStyles.menuInputGroup,
-                      <.div(GlobalStyles.menuLabel, menu.entity, ^.onClick --> selectMenu(menu.entity)),
-                      <.div(GlobalStyles.menuAddon,<.i(^.className := "fa fa-plus"),^.onClick --> newEO(menu.entity))
+          <.div(
+            <.ul(style.listGroup, ^.className := "menu",
+              p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
+                mainMenu.children toTagMod (
+                  menu => {
+                    <.li(style.item, GlobalStyles.menuItem, (style.active).when(p.entity.equals(menu.entity)),
+                      <.div(GlobalStyles.menuInputGroup,
+                        <.div(GlobalStyles.menuLabel, menu.entity, ^.onClick --> selectMenu(menu.entity)),
+                        <.div(GlobalStyles.menuAddon, <.i(^.className := "fa fa-plus"), ^.onClick --> newEO(menu.entity))
+                      )
                     )
-                  )
-                }
+                  }
                 )
               )
+            ),
+            Button(Button.Props(p.proxy.dispatchCB(SwithDebugMode), CommonStyle.danger), Icon.bug, debugButtonText)
           )
         } else
-          EmptyVdom
+          ""
       )
+
     }
   }
 
   private val component = ScalaComponent.builder[Props]("MenuHeader")
     .renderBackend[Backend]
-    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
 
