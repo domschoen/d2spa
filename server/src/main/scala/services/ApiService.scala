@@ -395,6 +395,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         )
     }
   }
+
+
   def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]] = {
     val futures = keysToFire.map(x => {fireRuleFuture(d2WContext, x)})
     val futureSequece = Future sequence futures

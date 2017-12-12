@@ -1,26 +1,18 @@
 package d2spa.client.components
 
-
-import d2spa.shared.{EO, EOValueUtils, PropertyMetaInfo}
+import d2spa.shared.{EO, EOValueUtils}
 import diode.react.ModelProxy
-import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.ext.KeyCode
-
-import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 
-import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
-import d2spa.client.UpdateQueryProperty
-import d2spa.shared.{PropertyMetaInfo, EOValue}
-import d2spa.client.{MegaContent, UpdateEOValueForProperty}
+import d2spa.client.SPAMain.TaskAppPage
+import d2spa.shared.PropertyMetaInfo
 
 
-
-object ERD2WDisplayString  {
+object D2WDisplayNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
   case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
@@ -38,7 +30,7 @@ object ERD2WDisplayString  {
     }
   }
 
-  private val component = ScalaComponent.builder[Props]("ERD2WDisplayString")
+  private val component = ScalaComponent.builder[Props]("D2WDisplayNumber")
     .renderBackend[Backend]
     .build
 

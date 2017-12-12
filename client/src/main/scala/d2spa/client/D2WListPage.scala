@@ -1,6 +1,6 @@
 package d2spa.client
 
-import d2spa.client.components.{ERD2WDisplayString, ERD2WEditNumber, ERD2WEditString}
+import d2spa.client.components.{D2WDisplayNumber, ERD2WDisplayString, ERD2WEditNumber, ERD2WEditString}
 import d2spa.shared.{RuleKeys, TaskDefine}
 import diode.react.ModelProxy
 import diode.Action
@@ -42,6 +42,7 @@ object D2WListPage {
       val eos = p.proxy.value.eos.get
       println("list task inside " + eos )
       val displayPropertyKeys = task.displayPropertyKeys
+      println("list task displayPropertyKeys " + displayPropertyKeys )
       <.div(
         <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
         <.div(^.id:="a",
@@ -62,9 +63,16 @@ object D2WListPage {
                       <.tr(^.className :="listRepetitionColumnHeader",
                         <.td(),
                         displayPropertyKeys toTagMod (property =>
-                          <.td(^.className :="listRepetitionColumnHeader",
-                            //<.span(^.className :="listRepetitionColumnHeader",property.ruleKeyValues(RuleKeys.displayNameForProperty).stringValue)
-                              <.span(^.className :="listRepetitionColumnHeader","toto2")
+                          <.td(^.className :="listRepetitionColumnHeader",{
+                            val displayNameFound = property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.displayNameForProperty)})
+                            val displayString = displayNameFound match {
+                              case Some(ruleResult) => {
+                                ruleResult.eovalue.stringV.get
+                              }
+                              case _ => property.d2wContext.propertyKey
+                            }
+                            <.span(^.className :="listRepetitionColumnHeader",displayString)
+                          }
                           )
                         )
                       )
@@ -81,12 +89,25 @@ object D2WListPage {
                           property =>
                             <.td(^.className := "list1",
                               {
-                                val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
-                                componentName match {
-                                  case "ERD2WEditString" => ERD2WEditString(p.router, property, eo, p.proxy)
-                                  case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, eo, p.proxy)
-                                  case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, eo, p.proxy)
-                                  case _ => "Component not found: " + componentName
+                                val componentNameFound = property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.componentName)})
+                                componentNameFound match {
+                                  case Some(ruleResult) => {
+                                    val componentNameOpt = ruleResult.eovalue.stringV
+
+                                    componentNameOpt match {
+                                      case Some(componentName) => {
+                                        componentName match {
+                                          case "ERD2WEditString" => ERD2WEditString(p.router, property, eo, p.proxy)
+                                          case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, eo, p.proxy)
+                                          case "D2WDisplayNumber" => D2WDisplayNumber(p.router, property, eo, p.proxy)
+                                          case "ERD2WDisplayString" => ERD2WDisplayString(p.router, property, eo, p.proxy)
+                                          case _ => "Component not found: " + componentName
+                                        }
+                                      }
+                                      case _ => "Rule Result with empty value for property " + property.d2wContext.propertyKey
+                                    }
+                                  }
+                                  case _ => "No component Rule found for property " + property.d2wContext.propertyKey
                                 }
                               }
                             )

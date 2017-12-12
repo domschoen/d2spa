@@ -22,7 +22,7 @@ object ERDEditRelationship  {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2WContext.propertyKey)
+      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2wContext.propertyKey)
       val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
       Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property, List(RuleKeys.keyWhenRelationship, RuleKeys.displayNameForKeyWhenRelationship))))
     }
@@ -30,7 +30,7 @@ object ERDEditRelationship  {
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
       val displayNameForKeyWhenRelationship = AppModel.ruleStringValueForKey(p.property,RuleKeys.displayNameForKeyWhenRelationship)
-      val queryKey = p.property.d2WContext.propertyKey + "." + AppModel.ruleStringValueForKey(p.property,RuleKeys.keyWhenRelationship)
+      val queryKey = p.property.d2wContext.propertyKey + "." + AppModel.ruleStringValueForKey(p.property,RuleKeys.keyWhenRelationship)
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""

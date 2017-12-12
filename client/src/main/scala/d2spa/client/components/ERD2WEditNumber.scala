@@ -27,8 +27,8 @@ object ERD2WEditNumber {
 
     def render(p: Props) = {
       val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val eo = p.proxy.value.eo.get
-      val eoValue = eo.values(p.property.d2WContext.propertyKey)
+      val eo = p.eo
+      val eoValue = eo.values(p.property.d2wContext.propertyKey)
       val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
       <.div(
         <.input(^.id := "description", ^.value := value,

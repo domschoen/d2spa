@@ -61,6 +61,7 @@ object EOValueUtils {
   def juiceString(value: EOValue) : String = if (value == null) "" else {
     value.typeV match {
       case ValueType.stringV => if (value.stringV.isDefined) value.stringV.get else ""
+      case ValueType.intV => if (value.intV.isDefined) value.intV.get.toString else ""
       case ValueType.eoV => if (value.eoV.isDefined) value.eoV.get.toString else ""
       case _ => ""
     }
@@ -94,7 +95,7 @@ case class RuleResult(key: String, eovalue: EOValue)
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 // Property
-case class PropertyMetaInfo(d2WContext: D2WContext, ruleKeyValues: List[RuleResult] = List())
+case class PropertyMetaInfo(d2wContext: D2WContext, ruleKeyValues: List[RuleResult] = List())
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 

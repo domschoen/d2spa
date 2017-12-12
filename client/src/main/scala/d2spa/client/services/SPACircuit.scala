@@ -81,7 +81,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     }
   }
   private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, Task]): Option[ModelRW[M, PropertyMetaInfo]] = {
-    rw.value.displayPropertyKeys.indexWhere(n => n.d2WContext.propertyKey == property.d2WContext.propertyKey) match {
+    rw.value.displayPropertyKeys.indexWhere(n => n.d2wContext.propertyKey == property.d2wContext.propertyKey) match {
       case -1 =>
         // should not happen!
         None
@@ -137,11 +137,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value,Effect.action(InitMenu))
 
     case HydrateProperty(property, keysToFire: List[String]) =>
-      effectOnly(Effect(AjaxClient[Api].fireRules(property.d2WContext,keysToFire).call().map(SetRuleResults(property,_))))
+      effectOnly(Effect(AjaxClient[Api].fireRules(property.d2wContext,keysToFire).call().map(SetRuleResults(property,_))))
 
     case SetRuleResults(property, ruleResultByKey) =>
       println("Rule Results " + ruleResultByKey)
-      val d2wContext = property.d2WContext
+      val d2wContext = property.d2wContext
       val entity = d2wContext.entity
       val task = d2wContext.task
       val propertyKey = d2wContext.propertyKey
@@ -200,7 +200,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       println("EO: " + eo)
 
-      updated(Ready(value.get.copy(values = (eo.values - property.d2WContext.propertyKey) + (property.d2WContext.propertyKey -> newEOValue))))
+      updated(Ready(value.get.copy(values = (eo.values - property.d2wContext.propertyKey) + (property.d2wContext.propertyKey -> newEOValue))))
   }
 }
 

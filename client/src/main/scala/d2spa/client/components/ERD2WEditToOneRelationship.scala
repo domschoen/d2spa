@@ -31,7 +31,7 @@ object ERD2WEditToOneRelationship  {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2WContext.propertyKey)
+      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2wContext.propertyKey)
       //val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
       val dataNotFetched = true
       //Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship,RuleKeys.destinationEos))))
@@ -56,7 +56,7 @@ object ERD2WEditToOneRelationship  {
 
     //^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))}
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
+      val entity = p.property.d2wContext.entity
       //val eoRefs = AppModel.ruleEORefsValueForKey(p.property,RuleKeys.destinationEos)
       //al text = if (p.property == null) "nulllll" else p.property.ruleKeyValues
       <.div({

@@ -28,9 +28,9 @@ object ERD2WEditString  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val eo = p.proxy.value.eo.get
-      val eoValue = eo.values(p.property.d2WContext.propertyKey)
+      val entity = p.property.d2wContext.entity
+      val eo = p.eo
+      val eoValue = eo.values(p.property.d2wContext.propertyKey)
       val value = if (eoValue.stringV.isDefined) eoValue.stringV.get else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
