@@ -42,3 +42,4 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Enable the save only if all mandatory attributes are present. Display a message explaining that
   - Display error message from server
   - Delete
+  - Fix problem: Project + without save seems to be added
