@@ -102,9 +102,11 @@ object D2WListPage {
                                       <.td(^.className := "list1",
                                         D2WComponentInstaller(p.router,property,eo, p.proxy)
                                       )
-                                    )
+                                  ),
+                                  <.td(<.img(^.className := "IconButton",^.src := "/assets/images/trashcan-btn.gif"))
+
                                 )
-                                )
+                              )
                             )
                           )
                         )
