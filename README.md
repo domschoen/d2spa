@@ -34,3 +34,11 @@ Callback.log(s"Menu selected: $entity") >> router.set(QueryPage(entity)) >>
 but if the action takes time the page is displayed with not information...
 #### Solution
 No real solution, just avoid using dynamic route. All possible dynamic routes are listed as location route. It means less flexibility and kind of hardcoding.
+
+## To Do
+
+  - Limit the number of characters according to eomodel size and display a message explaining it
+  - Fix problem: Start app, Project highlighted, click + on Customer
+  - Enable the save only if all mandatory attributes are present. Display a message explaining that
+  - Display error message from server
+  - Delete
