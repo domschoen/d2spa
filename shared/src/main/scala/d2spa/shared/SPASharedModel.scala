@@ -81,7 +81,7 @@ object EOValueUtils {
 case class EO(entity: String, values: scala.collection.Map[String,EOValue])
 case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
 
-case class Menus(menus: List[MainMenu], d2wContext: D2WContext)
+case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: String)
 

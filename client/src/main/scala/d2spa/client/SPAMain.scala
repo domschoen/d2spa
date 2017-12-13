@@ -44,14 +44,18 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WQueryPage(ctl, m.entity, "query", p))
+              menusConnection(p => {
+                D2WQueryPage(ctl, m.entity, "query", p)
+              })
             }
           )
 
         | dynamicRouteCT("#task/list/entity" / string(".*").caseClass[ListPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WListPage(ctl, m.entity,"list", p))
+              menusConnection(p => {
+                D2WListPage(ctl, m.entity,"list", p)
+              })
             }
           )
         | dynamicRouteCT("#task/edit/entity" / string(".*").caseClass[EditPage]) ~> dynRenderR(

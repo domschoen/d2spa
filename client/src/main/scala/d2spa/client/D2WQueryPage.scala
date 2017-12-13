@@ -28,7 +28,6 @@ object D2WQueryPage {
     }
 
 
-    val componentByName = Map("ERD2WQueryStringOperator" -> ERD2WQueryStringOperator)
 
     def search(router: RouterCtl[TaskAppPage],entity: String) = {
       Callback.log(s"Search: $entity") >>

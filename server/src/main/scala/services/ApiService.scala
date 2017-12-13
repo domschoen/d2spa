@@ -38,6 +38,7 @@ case class MenuItem (
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
   val usesD2SPAServer = config.getBoolean("d2spa.usesD2SPAServer").getOrElse(true)
+  val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
 
@@ -121,10 +122,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
           // D2WContext(null,null,null)
 
-          Menus(List(),D2WContext(null,null,null,null))
+          Menus(List(),D2WContext(null,null,null,null),showDebugButton)
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null,null))
+          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null,null),showDebugButton)
         }
       }
 
@@ -139,7 +140,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             )
           )
         ),
-        D2WContext("Project", "query", null, null)
+        D2WContext("Project", "query", null, null),
+        showDebugButton
       )
       Future(data)
     }

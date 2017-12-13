@@ -142,6 +142,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       println("InitMetaData ")
       effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(entity, _))))
     case SetMetaData(entity: String, entityMetaData) =>
+      println("SetMetaData " + entityMetaData)
       updated(entityMetaData :: value,Effect.action(InitMenu))
 
     case HydrateProperty(property, keysToFire: List[String]) =>
@@ -220,10 +221,12 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case InitMenu =>
       println("InitMenu ")
       if (value.isEmpty) {
+        println("Api get Menus")
         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
       } else
         noChange
     case SetMenus(menus) =>
+      println("Set Menus " + menus)
       updated(Ready(menus)) // ,Effect.action(InitMetaData)
     /*case InitMenuSelection =>
       println("Initializing Menus")

@@ -49,6 +49,7 @@ object MenuHeader {
       val debugButtonText = if (p.proxy.value.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
+          println("Menu not empty")
           <.div(
             <.ul(style.listGroup, ^.className := "menu",
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
@@ -64,10 +65,14 @@ object MenuHeader {
                 )
               )
             ),
-            Button(Button.Props(p.proxy.dispatchCB(SwithDebugMode), CommonStyle.danger), Icon.bug, debugButtonText)
+            {
+              if (p.proxy.value.menuModel.get.showDebugButton) {
+                Button(Button.Props(p.proxy.dispatchCB(SwithDebugMode), CommonStyle.danger), Icon.bug, debugButtonText)
+              } else <.span("")
+            }
           )
         } else
-          ""
+          "Cannot get Menus"
       )
 
     }
