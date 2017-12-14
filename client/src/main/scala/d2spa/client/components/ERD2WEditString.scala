@@ -34,7 +34,7 @@ object ERD2WEditString  {
       val value = if (eoValue.stringV.isDefined) eoValue.stringV.get else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(stringV = Some(e.target.value))))} )
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity,p.property, EOValue(stringV = Some(e.target.value))))} )
       )
     }
   }

@@ -193,17 +193,23 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       val propertyKey = x.asOpt[String].get
       val propertyDisplayNameFuture = fireRuleFuture(entity, task, propertyKey, "displayNameForProperty")
       val componentNameFuture = fireRuleFuture(entity, task, propertyKey, "componentName")
+      val typeFuture = fireRuleFuture(entity, task, propertyKey, "attributeType")
 
       val subResult = for {
         pDisplayName <- propertyDisplayNameFuture
         pComponentName <- componentNameFuture
+        ptype <- typeFuture
       } yield {
         val propertyDisplayName = fromResponseToString(pDisplayName)
         val propertyComponentName = fromResponseToString(pComponentName)
+        val attributeType = fromResponseToString(ptype)
 
         println("<" + propertyComponentName + ">")
 
-        PropertyMetaInfo(D2WContext(entity, task, null, propertyKey), List(
+        PropertyMetaInfo(
+          attributeType._2,
+          D2WContext(entity, task, null, propertyKey),
+          List(
           RuleResult(propertyDisplayName._1, EOValueUtils.stringV(propertyDisplayName._2)),
           RuleResult(propertyComponentName._1,EOValueUtils.stringV(propertyComponentName._2))
           )
@@ -235,8 +241,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayNameForEntity
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(entity: String): Future[EntityMetaData] = {
-    val finished = true //usesD2SPAServer
-    if (finished) {
+    if (usesD2SPAServer) {
       val entityDisplayNameFuture = fireRuleFuture(entity, TaskDefine.edit, RuleKeys.displayNameForEntity)
       val queryDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.query, RuleKeys.displayPropertyKeys)
       val editDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.edit, RuleKeys.displayPropertyKeys)
@@ -267,18 +272,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         Future(EntityMetaData("Customer", "Customer",
           Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "query", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "query", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "query", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "query", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
@@ -288,12 +293,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "list", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "list", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName" ,EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "list", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
@@ -303,18 +308,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "inspect", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "inspect", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "inspect", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "inspect", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
@@ -324,18 +329,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "edit", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "edit", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "edit", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
@@ -349,12 +354,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         Future(EntityMetaData("Project", "Project",
           Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "query", null, "descr"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "query", null, "descr"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
-                PropertyMetaInfo(
+                PropertyMetaInfo(ValueType.stringV,
                   D2WContext("Customer", "query", null, "projectNumber"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Project Number")),
@@ -364,7 +369,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ),
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "list", null, "descr"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "list", null, "descr"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
@@ -373,7 +378,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ),
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "inspect", null, "descr"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "inspect", null, "descr"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
@@ -382,12 +387,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ),
             Task(
               List(
-                PropertyMetaInfo(D2WContext("Customer", "edit", null, "descr"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "descr"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WEditString"))
                   )),
-                PropertyMetaInfo(D2WContext("Customer", "edit", null, "descr"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "descr"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WEditString"))
@@ -577,27 +582,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     eo.copy(validationError = Some(error))
   }
 
-  // New EO has to be created by the server because it needs to contain all attribute even those not directly displayed
-  // 2 solutions:
-  // 1) ask the D2SPAServer to created it
-  // 2) Create it here using getMetaData and cache it here
-  // Prefered solution: 2)
-  def newEO(entity:String) : Future[EO] = {
-    println("New EO for entity: " + entity)
-    if (entity.equals("Project")) {
-      Future(EO(entity,Map (
-        "descr" -> EOValue(stringV = Some("a")),
-        "projectNumber" -> EOValue(stringV = Some("1"))
-      ), None))
-
-    } else {
-      Future(EO(entity,Map (
-        "name" -> EOValue(stringV = Some("a")),
-        "acronym" -> EOValue(stringV = Some("1")),
-        "address" -> EOValue(stringV = Some("Av. de France"))
-      ),None))
-    }
-  }
 
 
 }

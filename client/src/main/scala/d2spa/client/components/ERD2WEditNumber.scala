@@ -32,7 +32,7 @@ object ERD2WEditNumber {
       val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(eo,entity,p.property,
             EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))} )
       )
     }

@@ -49,34 +49,30 @@ object ERD2WEditToOneRelationship  {
     }
 
     def eoRefWith(eoRefs: Seq[EORef], id: String) = {
-      println("id " + id + " class " + id.getClass.getName)
+      //println("id " + id + " class " + id.getClass.getName)
       val idAsInt = id.toInt
       eoRefs.find(eoRef => {eoRef.id.equals(idAsInt)})
     }
 
-    //^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property,StringValue(e.target.value)))}
     def render(p: Props) = {
       val entity = p.property.d2wContext.entity
-      //val eoRefs = AppModel.ruleEORefsValueForKey(p.property,RuleKeys.destinationEos)
-      //al text = if (p.property == null) "nulllll" else p.property.ruleKeyValues
+      val eo = p.eo
+      //println("Edit To One Relationship " + eo)
+
       <.div({
-        println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+        //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
 
         val result = p.property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.destinationEos)})
         result match {
           case Some(rule) => {
-            // RuleResult(destinationEos,EOValue(eosV,None,None,None,Vector(EORef(Customer,1, Av. de France, a,1), EORef(Customer,5, Toto, Second,2))))
             val eoRefs = rule.eovalue.eosV
             println("eoRefs " + eoRefs)
-            //<.div(eoRefs.mkString("."))
             <.div(
               <.select(bss.formControl, ^.id := "priority",  ^.onChange ==> { e: ReactEventFromInput =>
-                // //e.target.value
-                p.proxy.dispatchCB(UpdateEOValueForProperty(entity,p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eoRefs,e.target.value))))},
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo,entity,p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eoRefs,e.target.value))))},
                 {
                   eoRefs toTagMod (eoRef =>
                     <.option(^.value := eoRef.id, eoRef.displayName)
-                    //<.div(eoRef.displayName)
                     )
                 }
               )
@@ -86,7 +82,7 @@ object ERD2WEditToOneRelationship  {
             <.div("")
           }
         }
-        }
+      }
       )
     }
   }

@@ -8,7 +8,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-import d2spa.shared.{PropertyMetaInfo, QueryOperator, RuleKeys}
+import d2spa.shared.{PropertyMetaInfo, QueryOperator, RuleKeys, EOValue}
 import scala.scalajs.js
 
 import scalacss.ScalaCssReact._
@@ -51,7 +51,12 @@ object D2WEditPage {
         val task = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
         val displayPropertyKeys = task.displayPropertyKeys
         val banImage = if (isEdit) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
-        val eo = p.proxy.value.eo.get
+        val eo = p.proxy.value.eo.getOrElse( {
+          val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
+            x.d2wContext.propertyKey -> EOValue(typeV = x.typeV)
+          }).toMap
+          EO(entity,valueMap,None)
+        })
         println("Edit page EO " + eo)
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),

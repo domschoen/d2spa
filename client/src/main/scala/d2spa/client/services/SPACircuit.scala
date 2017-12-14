@@ -207,16 +207,21 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallEditPage(fromTask,eo))
       )
+    case NewEOPage(selectedEntity) =>
+      updated(
+        Empty,
+        Effect.action(FetchMetaDataForMenu("edit",selectedEntity)) // from edit ?
+      )
 
-    case UpdateEOValueForProperty(entity, property, newEOValue) =>
+
+    case UpdateEOValueForProperty(eo, entity, property, newEOValue) =>
       println("Update EO Property: for entity " + entity + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
-      val eo = value.get
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       println("EO: " + eo)
 
-      updated(Ready(value.get.copy(values = (eo.values - property.d2wContext.propertyKey) + (property.d2wContext.propertyKey -> newEOValue))))
+      updated(Ready(eo.copy(values = (eo.values - property.d2wContext.propertyKey) + (property.d2wContext.propertyKey -> newEOValue))))
   }
 }
 
@@ -235,32 +240,8 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case SetMenus(menus) =>
       println("Set Menus " + menus)
       updated(Ready(menus)) // ,Effect.action(InitMetaData)
-    /*case InitMenuSelection =>
-      println("Initializing Menus")
-      updated(value.copy(d2wContext = value.d2wContext.copy(entity ="ChipsetSecurityType", task = "query")))*/
-    case NewEOPage(selectedEntity) =>
-      println("edit page for entity " + selectedEntity)
-
-      // d2spa.client of a model update followed by an effect
-      // An effect has to call an action. Here it is "UpdateAllTodos"
-      //       updated(
-      //          value.map(_.updated(item)),
-      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
-      //       )
-      updated(
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "edit"))),
-        Effect(AjaxClient[Api].newEO(selectedEntity).call().map(EOCreated))
-      )
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
-
-      // d2spa.client of a model update followed by an effect
-      // An effect has to call an action. Here it is "UpdateAllTodos"
-      //       updated(
-      //          value.map(_.updated(item)),
-      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
-      //       )
-
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
         Effect.action(SetupQueryPageForEntity(selectedEntity))
@@ -293,13 +274,6 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
     case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
-
-      // d2spa.client of a model update followed by an effect
-      // An effect has to call an action. Here it is "UpdateAllTodos"
-      //       updated(
-      //          value.map(_.updated(item)),
-      //          Effect(AjaxClient[Api].updateTodo(item).call().map(UpdateAllTodos))
-      //       )
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "inspect"))),

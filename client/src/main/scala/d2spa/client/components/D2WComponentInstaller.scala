@@ -36,7 +36,7 @@ object D2WComponentInstaller  {
             componentNameOpt match {
               case Some(componentName) => {
                 componentName match {
-                  case "ERD2WEditToOneRelationship" => ERD2WEditToOneRelationship(p.router, property, p.proxy.value.eo.get, p.proxy)
+                  case "ERD2WEditToOneRelationship" => ERD2WEditToOneRelationship(p.router, property, eo, p.proxy)
                   case "ERD2WEditString" => ERD2WEditString(p.router, property, eo, p.proxy)
                   case "ERD2WEditNumber" => ERD2WEditNumber(p.router, property, eo, p.proxy)
                   case "D2WDisplayNumber" => D2WDisplayNumber(p.router, property, eo, p.proxy)

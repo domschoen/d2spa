@@ -53,7 +53,7 @@ case class SelectMenu(entity: String) extends Action
 case class Save(entity: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entity: String, queryValue: QueryValue) extends Action
-case class UpdateEOValueForProperty(entity: String, property: PropertyMetaInfo, value: EOValue) extends Action
+case class UpdateEOValueForProperty(eo: EO, entity: String, property: PropertyMetaInfo, value: EOValue) extends Action
 
 case class Search(entity: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
