@@ -126,17 +126,17 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case FetchMetaDataForMenu(entity: String) =>
+    case FetchMetaDataForMenu(task, entity) =>
       println("InitMetaData ")
       value.indexWhere(n => n.entityName == entity) match {
         case -1 =>
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaDataForMenu(entity, _))))
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaDataForMenu(task, entity, _))))
         case _ =>
-          effectOnly(Effect.action(InstallQueryPage(entity)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEntity(task,entity)))
       }
 
-    case SetMetaDataForMenu(entity: String, entityMetaData) =>
-      updated(entityMetaData :: value,Effect.action(InstallQueryPage(entity)))
+    case SetMetaDataForMenu(task, entity, entityMetaData) =>
+      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEntity(task, entity)))
 
     case InitMetaData(entity: String) =>
       println("InitMetaData ")
@@ -194,7 +194,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       println("eo created " + eo)
       updated(
         Ready(eo),
-        Effect(AfterEffectRouter.setEditPageForEntity(eo.entity))
+        Effect.action(FetchMetaDataForMenu("edit", eo.entity))
       )
     case InspectEO(fromTask, eo) =>
       updated(
@@ -291,10 +291,6 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
           ))
         )
 
-    case InstallQueryPage(entity) =>
-      println("Query page for entity " + entity)
-
-      effectOnly(Effect(AfterEffectRouter.setQueryPageForEntity(entity)))
     case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
 
@@ -334,7 +330,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
       case SetupQueryPageForEntity(selectedEntity) =>
         updated(
           List(),
-          Effect.action(FetchMetaDataForMenu(selectedEntity))
+          Effect.action(FetchMetaDataForMenu("query", selectedEntity))
         )
 
       case UpdateQueryProperty(entity, queryValue) =>

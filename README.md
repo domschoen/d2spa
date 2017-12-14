@@ -21,7 +21,7 @@ Go to the project directory and issue those commands:
 open you browser with this url: http://localhost:9000/#task/query/entity/Project
 
 ## Features
-  - When save, if server return an error (field exceeding DB field size for example), it stays in edit mode and display error message
+  - At save, if server return an error (field exceeding DB field size for example), it stays in edit mode and display error message
 
 
 
@@ -42,10 +42,12 @@ but if the action takes time the page is displayed with not information...
 No real solution, just avoid using dynamic route. All possible dynamic routes are listed as location route. It means less flexibility and kind of hardcoding.
 
 ## To Do
+### Important
 
-  - Limit the number of characters according to eomodel size and display a message explaining it
-  - Fix problem: Start app, Project highlighted, click + on Customer
-  - Enable the save only if all mandatory attributes are present. Display a message explaining that
   - Delete
   - Fix problem: Project + without save seems to be added
   - Generic implementation of ApiService.newEO
+
+### Nice to have
+  - Limit the number of characters according to eomodel size and display a message explaining it
+  - Enable the save only if all mandatory attributes are present. Display a message explaining that
