@@ -19,6 +19,12 @@ Go to the project directory and issue those commands:
 ```
 
 open you browser with this url: http://localhost:9000/#task/query/entity/Project
+
+## Features
+  - When save, if server return an error (field exceeding DB field size for example), it stays in edit mode and display error message
+
+
+
 ## Difficulties
 ### No location with Dynamic route
 #### Difficulty
@@ -40,6 +46,6 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Limit the number of characters according to eomodel size and display a message explaining it
   - Fix problem: Start app, Project highlighted, click + on Customer
   - Enable the save only if all mandatory attributes are present. Display a message explaining that
-  - Display error message from server
   - Delete
   - Fix problem: Project + without save seems to be added
+  - Generic implementation of ApiService.newEO

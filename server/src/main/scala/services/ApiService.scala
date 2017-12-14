@@ -2,6 +2,7 @@ package services
 
 import java.util.{Date, UUID}
 
+import com.fasterxml.jackson.core.JsonParseException
 import d2spa.shared.{PropertyMetaInfo, _}
 import play.api.Configuration
 import play.api.libs.ws._
@@ -54,7 +55,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       "name" -> EOValue(stringV = Some("Brunei Darussalam")),
       "alpha2_code" -> EOValue(stringV = Some("BN")),
       "alpha3_code" -> EOValue(stringV = Some("BRN"))
-      )
+      ),None
     )
   )
 
@@ -486,7 +487,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
           }
         }
-        eos ::= EO(entity,valuesMap)
+        eos ::= EO(entity,valuesMap,None)
       }
       eos.toSeq
     }
@@ -557,28 +558,44 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     val futureResponse: Future[WSResponse] = request.post(data)
     futureResponse.map { response =>
-
-      val resultBody = response.json
-      val array = resultBody.asInstanceOf[JsObject]
-      eo
+      try {
+        val resultBody = response.json
+        val array = resultBody.asInstanceOf[JsObject]
+        eo
+      } catch {
+        case parseException: JsonParseException => {
+          handleException(response.body,eo)
+        }
+        case t: Throwable => {
+          handleException(t.getMessage(),eo)
+        }
+      }
     }
   }
 
+  def handleException(error: String, eo: EO) : EO = {
+    eo.copy(validationError = Some(error))
+  }
+
   // New EO has to be created by the server because it needs to contain all attribute even those not directly displayed
+  // 2 solutions:
+  // 1) ask the D2SPAServer to created it
+  // 2) Create it here using getMetaData and cache it here
+  // Prefered solution: 2)
   def newEO(entity:String) : Future[EO] = {
     println("New EO for entity: " + entity)
     if (entity.equals("Project")) {
       Future(EO(entity,Map (
         "descr" -> EOValue(stringV = Some("a")),
         "projectNumber" -> EOValue(stringV = Some("1"))
-      )))
+      ), None))
 
     } else {
       Future(EO(entity,Map (
         "name" -> EOValue(stringV = Some("a")),
         "acronym" -> EOValue(stringV = Some("1")),
         "address" -> EOValue(stringV = Some("Av. de France"))
-      )))
+      ),None))
     }
   }
 

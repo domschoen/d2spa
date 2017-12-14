@@ -201,6 +201,13 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallInspectPage(fromTask,eo))
       )
+
+    case EditEO(fromTask, eo) =>
+      updated(
+        Ready(eo),
+        Effect.action(InstallEditPage(fromTask,eo))
+      )
+
     case UpdateEOValueForProperty(entity, property, newEOValue) =>
       println("Update EO Property: for entity " + entity + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
@@ -268,12 +275,22 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
     case Save(selectedEntity, eo) =>
       println("SAVE " + eo)
-      updated(
-        // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
-        // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].updateEO(selectedEntity, eo).call().map(InspectEO("edit", _)))
-      )
+        updated(
+          // change context to inspect
+          Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+          // Update the DB and dispatch the result withing UpdatedEO action
+          Effect(AjaxClient[Api].updateEO(selectedEntity, eo).call().map( newEO => {
+            val onError = newEO.validationError.isDefined
+            if (onError) {
+              EditEO("edit", newEO)
+
+            } else {
+              InspectEO("edit", newEO)
+            }
+          }
+          ))
+        )
+
     case InstallQueryPage(entity) =>
       println("Query page for entity " + entity)
 

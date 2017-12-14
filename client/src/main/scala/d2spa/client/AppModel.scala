@@ -38,7 +38,7 @@ case class SetMetaData(entity: String, metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(entity: String, metaData: EntityMetaData) extends Action
 
 case class NewEOPage(entity: String) extends Action
-case class InstallEditPage(entity: String) extends Action
+case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class InstallQueryPage(entity:String) extends Action
 case class SetPreviousPage(entity:String) extends Action
@@ -62,6 +62,7 @@ case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
 case class InspectEO(fromTask: String, eo: EO) extends Action
+case class EditEO(fromTask: String, eo: EO) extends Action
 
 case class HydrateProperty(property: PropertyMetaInfo, keys: List[String]) extends Action
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
