@@ -38,6 +38,10 @@ object D2WListPage {
       Callback.log(s"Inspect: $eo") >>
         $.props >>= (_.proxy.dispatchCB(InspectEO("list", eo)))
     }
+    def deleteEO (eo: EO) = {
+      Callback.log(s"Delete: $eo") >>
+        $.props >>= (_.proxy.dispatchCB(DeleteEO("list",eo)))
+    }
 
 
     def render(p: Props) = {
@@ -103,7 +107,7 @@ object D2WListPage {
                                         D2WComponentInstaller(p.router,property,eo, p.proxy)
                                       )
                                   ),
-                                  <.td(<.img(^.className := "IconButton",^.src := "/assets/images/trashcan-btn.gif"))
+                                  <.td(<.img(^.className := "IconButton",^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
 
                                 )
                               )

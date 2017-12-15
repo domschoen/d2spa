@@ -79,7 +79,7 @@ object EOValueUtils {
 }
 
 
-case class EO(entity: String, values: scala.collection.Map[String,EOValue], validationError: Option[String])
+case class EO(entity: String, values: scala.collection.Map[String,EOValue], id: Option[Int], validationError: Option[String])
 case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)

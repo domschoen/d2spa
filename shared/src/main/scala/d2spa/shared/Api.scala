@@ -10,6 +10,7 @@ trait Api {
   def getMetaData(entity: String): Future[EntityMetaData]
 
   def updateEO(entity: String, eo: EO): Future[EO]
+  def deleteEO(eo: EO): Future[EO]
 
   def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]]
 }

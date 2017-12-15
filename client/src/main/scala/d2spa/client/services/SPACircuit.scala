@@ -184,6 +184,21 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
         Ready(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entity))
       )
+    case DeleteEO(fromTask, eo) =>
+      val eos = value.get
+      val newValue = eos.find(o => {o.id = eo.id})
+        case -1 =>
+          // should not happen!
+          None
+        case idx =>
+          Some(m.take(idx) :+ v) ++ m.drop(idx + 1)))
+      }
+
+      updated(
+        Ready(eoses = eoses - eo),
+        Effect(AjaxClient[Api].deleteEO(eo).call().map(SetRuleResults(property,_))))
+    )
+
   }
 
 }
@@ -201,6 +216,8 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallInspectPage(fromTask,eo))
       )
+
+
 
     case EditEO(fromTask, eo) =>
       updated(

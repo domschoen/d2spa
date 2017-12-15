@@ -62,6 +62,7 @@ case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
 case class InspectEO(fromTask: String, eo: EO) extends Action
+case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
 
 case class HydrateProperty(property: PropertyMetaInfo, keys: List[String]) extends Action

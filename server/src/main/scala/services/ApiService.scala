@@ -543,9 +543,29 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
+  def deleteEO(eo: EO): Future[EO] = {
+    println("Update EO: " + eo)
+    val url = d2spaServerBaseUrl + "/" + eo.entity + "/" + eo.id.get
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.delete()
+    futureResponse.map { response =>
+      try {
+        val resultBody = response.json
+        val array = resultBody.asInstanceOf[JsObject]
+        eo
+      } catch {
+        case parseException: JsonParseException => {
+          handleException(response.body,eo)
+        }
+        case t: Throwable => {
+          handleException(t.getMessage(),eo)
+        }
+      }
+    }
+
+  }
   def updateEO(entity: String, eo: EO): Future[EO] = {
     println("Update EO: " + eo)
-
 
     val url = d2spaServerBaseUrl + "/" + entity + ".json"
 

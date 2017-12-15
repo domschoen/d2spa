@@ -47,7 +47,7 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Delete
   - Fix problem: Project + without save seems to be added
   - Implement ERDList
-  - Implement DisplayToOne
+  - Implement ERD2WDisplayToOne
 
 ### Nice to have
   - Limit the number of characters according to eomodel size and display a message explaining it
