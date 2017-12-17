@@ -55,7 +55,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       "name" -> EOValue(stringV = Some("Brunei Darussalam")),
       "alpha2_code" -> EOValue(stringV = Some("BN")),
       "alpha3_code" -> EOValue(stringV = Some("BRN"))
-      ),None
+      ),Some(1),None
     )
   )
 
@@ -492,7 +492,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
           }
         }
-        eos ::= EO(entity,valuesMap,None)
+        eos ::= EO(entity,valuesMap,Some(1),None)
       }
       eos.toSeq
     }
@@ -543,6 +543,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
+
+  // DELETE
+  // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
+  // => 2
   def deleteEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
     val url = d2spaServerBaseUrl + "/" + eo.entity + "/" + eo.id.get
@@ -562,8 +566,27 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
       }
     }
-
   }
+
+
+
+  // Put
+  // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
+  // {"descr":"bobo","projectNumber":2}
+  // => returns:
+  /* {
+  "id": 2,
+  "type": "Project",
+  "descr": "bobo",
+  "projectNumber": 2,
+  "customer": null
+}*/
+
+  // POST (create)
+  // call Project.json with: {"descr":"bb","projectNumber":2}
+  // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
+
+
   def updateEO(entity: String, eo: EO): Future[EO] = {
     println("Update EO: " + eo)
 
@@ -579,7 +602,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     println("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
-    println("data " + data)
+    println("Upate WS:  " + url)
+    println("WS post data: " + data)
 
     val futureResponse: Future[WSResponse] = request.post(data)
     futureResponse.map { response =>

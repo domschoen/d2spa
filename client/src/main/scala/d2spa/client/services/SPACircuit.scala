@@ -186,18 +186,14 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
       )
     case DeleteEO(fromTask, eo) =>
       val eos = value.get
-      val newValue = eos.find(o => {o.id = eo.id})
-        case -1 =>
-          // should not happen!
-          None
-        case idx =>
-          Some(m.take(idx) :+ v) ++ m.drop(idx + 1)))
-      }
+      val newEos = eos.filterNot(o => {o.id.equals(eo.id)})
+      updated(Ready(newEos))
+      /*
 
       updated(
         Ready(eoses = eoses - eo),
-        Effect(AjaxClient[Api].deleteEO(eo).call().map(SetRuleResults(property,_))))
-    )
+        Effect(AjaxClient[Api].deleteEO(eo).call().map(SetRuleResults(property,_))))*/
+
 
   }
 
