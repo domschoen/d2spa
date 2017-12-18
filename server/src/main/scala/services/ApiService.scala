@@ -562,8 +562,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
   // => 2
   def deleteEO(eo: EO): Future[EO] = {
-    println("Update EO: " + eo)
-    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get
+    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get + ".json"
+    println("Delete EO: " + eo)
+    println("Delete WS: " + url)
+
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.delete()
     futureResponse.map { response =>
@@ -594,6 +596,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+
+    // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = eo.values filter (v => {
       println("v._2" + v._2)
       EOValueUtils.isDefined(v._2) })
@@ -610,8 +614,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     futureResponse.map { response =>
       try {
         val resultBody = response.json
-        val array = resultBody.asInstanceOf[JsObject]
-        eo
+        val jsObj = resultBody.asInstanceOf[JsObject]
+        val pkAttributeName = entity.pkAttributeName
+        val pkValue = jsObj.value(pkAttributeName)
+        pkValue match {
+          case JsNumber(pkNumber) => eo.copy(values = eo.values + (pkAttributeName -> EOValueUtils.intV(pkNumber.intValue())))
+          case _ => eo
+        }
       } catch {
         case parseException: JsonParseException => {
           handleException(response.body,eo)
@@ -640,7 +649,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def updateEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
     val entity = eo.entity
-    val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
+    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val eoDefinedValues = eo.values filter (v => {
@@ -655,7 +664,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     println("Upate WS:  " + url)
     println("WS post data: " + data)
 
-    val futureResponse: Future[WSResponse] = request.post(data)
+    val futureResponse: Future[WSResponse] = request.put(data)
     futureResponse.map { response =>
       try {
         val resultBody = response.json

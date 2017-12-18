@@ -50,6 +50,7 @@ case object InitAppModel extends Action
 
 case class SelectMenu(entity: EOEntity) extends Action
 case class Save(entity: EOEntity, eo: EO) extends Action
+case class NewEO(entity: EOEntity, eo: EO) extends Action
 
 case class UpdateQueryProperty(entity: EOEntity, queryValue: QueryValue) extends Action
 case class UpdateEOValueForProperty(eo: EO, entity: EOEntity, property: PropertyMetaInfo, value: EOValue) extends Action

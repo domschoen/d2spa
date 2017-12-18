@@ -27,8 +27,15 @@ object D2WEditPage {
 
 
     def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
-      Callback.log(s"Save: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
+      val hasPk = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)}).isDefined
+      if (hasPk) {
+        Callback.log(s"Save: $entity") >>
+          $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
+      } else {
+        Callback.log(s"Save: $entity") >>
+          $.props >>= (_.proxy.dispatchCB(NewEO(entity,eo)))
+      }
+
     }
 
     def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
