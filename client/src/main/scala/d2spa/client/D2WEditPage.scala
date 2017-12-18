@@ -1,16 +1,15 @@
 package d2spa.client
 
 import d2spa.client.components.D2WComponentInstaller
-import d2spa.shared.{EO, EOValueUtils, PropertyMetaInfo, TaskDefine}
+import d2spa.shared._
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-import d2spa.shared.{PropertyMetaInfo, QueryOperator, RuleKeys, EOValue}
-import scala.scalajs.js
 
+import scala.scalajs.js
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 
@@ -27,11 +26,12 @@ object D2WEditPage {
     }
 
 
-    def save(router: RouterCtl[TaskAppPage],entity: String,eo: EO) = {
+    def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
       Callback.log(s"Save: $entity") >>
         $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
     }
-    def returnAction (router: RouterCtl[TaskAppPage],entity: String) = {
+
+    def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
       Callback.log(s"Search: $entity") >>
         $.props >>= (_.proxy.dispatchCB(SetPreviousPage(entity)))
     }
@@ -42,11 +42,12 @@ object D2WEditPage {
     }*/
 
     def render(p: Props) = {
-      val entity = p.entity
-      println("Render Edit page for entity: " + entity + " and task " + p.task)
+      val entityName = p.entity
+      println("Render Edit page for entity: " + entityName + " and task " + p.task)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
-        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
+        val entity = entityMetaData.entity
         val isEdit = p.task.equals(TaskDefine.edit)
         val task = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
         val displayPropertyKeys = task.displayPropertyKeys
@@ -74,14 +75,14 @@ object D2WEditPage {
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
                 if (isEdit) {
-                  <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,p.entity,p.proxy.value.eo.get))
+                  <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,entity,p.proxy.value.eo.get))
                 } else {
                   " "
                 },
                 if (isEdit) {
                   " "
                 } else {
-                  <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,p.entity))
+                  <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entity))
                 }
               )
             ),

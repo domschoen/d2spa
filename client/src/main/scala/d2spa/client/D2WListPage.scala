@@ -12,7 +12,7 @@ import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
-import d2spa.shared.{EO, EOKeyValueQualifier, PropertyMetaInfo, RuleKeys}
+import d2spa.shared._
 import diode.data.Ready
 
 object D2WListPage {
@@ -23,16 +23,17 @@ object D2WListPage {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
       println("entity " + props.entity)
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entityName == props.entity) < 0
+      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(props.entity)) < 0
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(props.entity)))
     }
 
 
 
-    def returnAction (router: RouterCtl[TaskAppPage],entity: String) = {
+    def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
       Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(InstallQueryPage(entity)))
+        $.props >>= (_.proxy.dispatchCB(SetupQueryPageForEntity(entity)))
     }
     def inspectEO (eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
@@ -45,13 +46,14 @@ object D2WListPage {
 
 
     def render(p: Props) = {
-      val entity = p.entity
-      println("Render List page for entity: " + entity)
+      val entityName = p.entity
+      println("Render List page for entity: " + entityName)
       val menuModelPot = p.proxy.value.menuModel
       menuModelPot match {
         case Ready(menuModel) => {
-          val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+          val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
           val task = entityMetaData.listTask
+          val entity = entityMetaData.entity
           //val eos = if (task.eos.isReady) task.eos.get else Vector()
           val eosPot = p.proxy.value.eos
           eosPot match {
@@ -68,7 +70,7 @@ object D2WListPage {
                         <.td(^.className := "listHeaderEntityName",
                           <.span(^.className := "attribute",eos.size + " " + entityMetaData.displayName)
                         ),
-                        <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,p.entity))))
+                        <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entity))))
                       )
                     ),
                     <.tbody(

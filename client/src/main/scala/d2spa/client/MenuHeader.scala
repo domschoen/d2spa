@@ -12,6 +12,7 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
 import d2spa.client.components.Icon
+import d2spa.shared.EOEntity
 
 
 
@@ -29,14 +30,14 @@ object MenuHeader {
       Callback.when(props.proxy().menuModel.isEmpty)(props.proxy.dispatchCB(InitMenu))
     }*/
 
-    def selectMenu(entity: String) = {
+    def selectMenu(entity: EOEntity) = {
       println("selectMenu")
 
       Callback.log(s"Menu selected: $entity") >>
         $.props >>= (_.proxy.dispatchCB(SelectMenu(entity)))
     }
 
-    def newEO(entity: String) = {
+    def newEO(entity: EOEntity) = {
       println("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
@@ -55,9 +56,9 @@ object MenuHeader {
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
                 mainMenu.children toTagMod (
                   menu => {
-                    <.li(style.item, GlobalStyles.menuItem, (style.active).when(p.entity.equals(menu.entity)),
+                    <.li(style.item, GlobalStyles.menuItem, (style.active).when(p.entity.equals(menu.entity.name)),
                       <.div(GlobalStyles.menuInputGroup,
-                        <.div(GlobalStyles.menuLabel, menu.entity, ^.onClick --> selectMenu(menu.entity)),
+                        <.div(GlobalStyles.menuLabel, menu.entity.name, ^.onClick --> selectMenu(menu.entity)),
                         <.div(GlobalStyles.menuAddon, <.i(^.className := "fa fa-plus"), ^.onClick --> newEO(menu.entity))
                       )
                     )

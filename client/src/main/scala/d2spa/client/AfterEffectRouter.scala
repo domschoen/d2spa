@@ -2,13 +2,15 @@ package d2spa.client
 
 import scala.concurrent.Future
 import japgolly.scalajs.react.extra.router._
-import d2spa.client.SPAMain.{QueryPage,ListPage,EditPage,InspectPage, TaskAppPage}
+import d2spa.client.SPAMain.{EditPage, InspectPage, ListPage, QueryPage, TaskAppPage}
+import d2spa.shared.EOEntity
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEntity( task: String, entity:String) : Future[diode.NoAction.type] =
+  def setPageForTaskAndEntity( task: String, entity: String) : Future[diode.NoAction.type] =
     task match {
       case "query" => setRouterToPage(QueryPage(entity))
       case "list" => setRouterToPage(ListPage(entity))

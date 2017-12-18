@@ -12,7 +12,7 @@ import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WQueryToOneField}
-import d2spa.shared.{EOKeyValueQualifier, PropertyMetaInfo, RuleKeys,  TaskDefine}
+import d2spa.shared._
 
 object D2WQueryPage {
 
@@ -22,25 +22,27 @@ object D2WQueryPage {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
       println("entity " + props.entity)
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entityName == props.entity) < 0
+      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(props.entity)) < 0
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
+
       Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(props.entity)))
     }
 
 
 
-    def search(router: RouterCtl[TaskAppPage],entity: String) = {
+    def search(router: RouterCtl[TaskAppPage],entity: EOEntity) = {
       Callback.log(s"Search: $entity") >>
         $.props >>= (_.proxy.dispatchCB(Search(entity)))
     }
 
 
     def render(p: Props) = {
-      val entity = p.entity
-      println("Render Query page for entity: " + entity)
+      val entityName = p.entity
+      println("Render Query page for entity: " + entityName)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
-        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entityName.equals(entity)).get
+        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
         val task = entityMetaData.queryTask
         val displayPropertyKeys = task.displayPropertyKeys
         <.div(
@@ -53,7 +55,7 @@ object D2WQueryPage {
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,p.entity))
+                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,entityMetaData.entity))
                 //p.router.link(ListPage(p.entity))("Search")
               )
             ),

@@ -3,7 +3,8 @@ package services
 import java.util.{Date, UUID}
 
 import com.fasterxml.jackson.core.JsonParseException
-import d2spa.shared.{PropertyMetaInfo, _}
+import d2spa.shared
+import d2spa.shared._
 import play.api.Configuration
 import play.api.libs.ws._
 import play.api.Play.current
@@ -27,11 +28,17 @@ case class CountryItem(
                         alpha3_code: String
                       )
 
+case class EntityItem (
+                      name: String,
+                      pkAttributeName: String
+                    )
+
+
 case class MenuItem (
                         id : Int,
                         `type`: String,
                         title: String,
-                        entity: Option[String],
+                        entity: EntityItem,
                         parent: Option[MenuItem]
                       )
 
@@ -43,15 +50,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
 
-  var todos = Seq(
-    TodoItem("41424344-4546-4748-494a-4b4c4d4e4f50", 0x61626364, "Wear shirt that says “Life”. Hand out lemons on street corner.", TodoLow, completed = false),
-    TodoItem("2", 0x61626364, "Make vanilla pudding. Put in mayo jar. Eat in public.", TodoNormal, completed = false),
-    TodoItem("3", 0x61626364, "Walk away slowly from an explosion without looking back.", TodoHigh, completed = false),
-    TodoItem("4", 0x61626364, "Sneeze in front of the pope. Get blessed.", TodoNormal, completed = true)
-  )
-
   var eos = Seq(
-    EO("Project", Map(
+    EO(EOEntity("Project","id"), Map(
       "name" -> EOValue(stringV = Some("Brunei Darussalam")),
       "alpha2_code" -> EOValue(stringV = Some("BN")),
       "alpha3_code" -> EOValue(stringV = Some("BRN"))
@@ -70,11 +70,17 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       (JsPath \ "alpha3_code").read[String]
     )(CountryItem.apply _)
 
+  implicit lazy val entityItemReads: Reads[EntityItem] = (
+      (JsPath \ "name").read[String] and
+      (JsPath \ "pkAttributeName").read[String]
+    )(EntityItem.apply _)
+
+
   implicit lazy val menuItemReads: Reads[MenuItem] = (
       (JsPath \ "id").read[Int] and
       (JsPath \ "type").read[String] and
       (JsPath \ "title").read[String] and
-      (JsPath \ "entity").readNullable[String] and
+      ((JsPath \ "entity").read[EntityItem] orElse(Reads.pure(null))) and
       (JsPath \ "parent").lazyReadNullable(menuItemReads)
     )(MenuItem.apply _)
 
@@ -115,7 +121,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
         val mainMenus = childrenByParent.map{
           case (mm, cs) =>
-            val childMenus = cs.map(cm => Menu(cm.id,cm.title,cm.entity.getOrElse(null)))
+            val childMenus = cs.map(cm => Menu(cm.id,cm.title,EOEntity(cm.entity.name, cm.entity.pkAttributeName)))
             MainMenu(mm.id,mm.title,childMenus)
         }
         if (mainMenus.isEmpty) {
@@ -136,12 +142,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         List(
           MainMenu(1, "Project Management",
             List(
-              Menu(2, "Project", "Project"),
-              Menu(3, "Customer", "Customer")
+              Menu(2, "Project", EOEntity("Project","id")),
+              Menu(3, "Customer", EOEntity("Customer","id"))
             )
           )
         ),
-        D2WContext("Project", "query", null, null),
+        D2WContext(EOEntity("Project","id"), "query", null, null),
         showDebugButton
       )
       Future(data)
@@ -150,7 +156,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
   def fireRuleFuture(d2WContext: D2WContext, key: String) : Future[WSResponse] = {
-    val entityOpt = if (d2WContext.entity == null) None else Some(d2WContext.entity)
+    val entityOpt = if (d2WContext.entity == null) None else Some(d2WContext.entity.name)
     val taskOpt = if (d2WContext.task == null) None else Some(d2WContext.task)
     val propertyKeyOpt = if (d2WContext.propertyKey == null) None else Some(d2WContext.propertyKey)
     fireRuleFuture(entityOpt, taskOpt,propertyKeyOpt,key)
@@ -169,6 +175,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def fireRuleFuture(entity: Option[String], task: Option[String], propertyKey: Option[String], key: String) : Future[WSResponse] = {
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
+    //val entityName = entity.map(_.name)
     val fireRuleValues = List(entity,task,propertyKey,Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
@@ -188,12 +195,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
 
 
-  def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: String, task: String) = {
+  def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: EOEntity, task: String) = {
     val propertiesFutures = displayPropertyKeys.value.map( x => {
       val propertyKey = x.asOpt[String].get
-      val propertyDisplayNameFuture = fireRuleFuture(entity, task, propertyKey, "displayNameForProperty")
-      val componentNameFuture = fireRuleFuture(entity, task, propertyKey, "componentName")
-      val typeFuture = fireRuleFuture(entity, task, propertyKey, "attributeType")
+      val propertyDisplayNameFuture = fireRuleFuture(entity.name, task, propertyKey, "displayNameForProperty")
+      val componentNameFuture = fireRuleFuture(entity.name, task, propertyKey, "componentName")
+      val typeFuture = fireRuleFuture(entity.name, task, propertyKey, "attributeType")
 
       val subResult = for {
         pDisplayName <- propertyDisplayNameFuture
@@ -210,8 +217,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           attributeType._2,
           D2WContext(entity, task, null, propertyKey),
           List(
-          RuleResult(propertyDisplayName._1, EOValueUtils.stringV(propertyDisplayName._2)),
-          RuleResult(propertyComponentName._1,EOValueUtils.stringV(propertyComponentName._2))
+            RuleResult(propertyDisplayName._1, EOValueUtils.stringV(propertyDisplayName._2)),
+            RuleResult(propertyComponentName._1,EOValueUtils.stringV(propertyComponentName._2))
           )
         )
       }
@@ -228,7 +235,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
 
-  def fromResponseToMetaInfo(response: WSResponse, entity: String, task: String) = {
+  def fromResponseToMetaInfo(response: WSResponse, entity: EOEntity, task: String) = {
     val displayPropertyKeysJson = response.json
     val array = displayPropertyKeysJson.asInstanceOf[JsArray]
     //System.out.println("--- " + task + " --- " + array)
@@ -240,22 +247,26 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // D2WContext: task=edit, entity=..
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayNameForEntity
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
-  def getMetaData(entity: String): Future[EntityMetaData] = {
+  def getMetaData(entityName: String): Future[EntityMetaData] = {
     if (usesD2SPAServer) {
-      val entityDisplayNameFuture = fireRuleFuture(entity, TaskDefine.edit, RuleKeys.displayNameForEntity)
-      val queryDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.query, RuleKeys.displayPropertyKeys)
-      val editDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.edit, RuleKeys.displayPropertyKeys)
-      val listDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.list, RuleKeys.displayPropertyKeys)
-      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entity, TaskDefine.inspect, RuleKeys.displayPropertyKeys)
+      val entityDisplayNameFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayNameForEntity)
+      val pkAttributeNameFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.pkAttributeName)
+      val queryDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.query, RuleKeys.displayPropertyKeys)
+      val editDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayPropertyKeys)
+      val listDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.list, RuleKeys.displayPropertyKeys)
+      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.inspect, RuleKeys.displayPropertyKeys)
 
       val result = for {
         r1 <- entityDisplayNameFuture
+        queryPkAttributeName <- pkAttributeNameFuture
         queryDisplayPropertyKeys <- queryDisplayPropertyKeysFuture
         listDisplayPropertyKeys <- listDisplayPropertyKeysFuture
         inspectDisplayPropertyKeys <- inspectDisplayPropertyKeysFuture
         editDisplayPropertyKeys <- editDisplayPropertyKeysFuture
       } yield {
         val entityDisplayName = fromResponseToString(r1)
+        val pkAttributeName = fromResponseToString(queryPkAttributeName)
+        val entity = EOEntity(entityName,pkAttributeName._2)
 
         val queryProperties = fromResponseToMetaInfo(queryDisplayPropertyKeys,entity,TaskDefine.query)
         val listProperties = fromResponseToMetaInfo(listDisplayPropertyKeys,entity,TaskDefine.list)
@@ -268,23 +279,24 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       result
     }
     else {
-      if (entity.equals("Customer")) {
-        Future(EntityMetaData("Customer", "Customer",
+      if (entityName.equals("Customer")) {
+        val entity = EOEntity(entityName,"id")
+        Future(EntityMetaData(entity, "Customer",
           Task(
               List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "query", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "query", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "query", null, "acronym"),
+                  D2WContext(entity, "query", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "query", null, "address"),
+                  D2WContext(entity, "query", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
@@ -293,13 +305,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "list", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "list", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName" ,EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "list", null, "acronym"),
+                  D2WContext(entity, "list", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
@@ -308,19 +320,19 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "inspect", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "inspect", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "inspect", null, "acronym"),
+                  D2WContext(entity, "inspect", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "inspect", null, "address"),
+                  D2WContext(entity, "inspect", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
@@ -329,19 +341,19 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             ) ,
             Task(
               List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "name"),
+                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "edit", null, "name"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "edit", null, "acronym"),
+                  D2WContext(entity, "edit", null, "acronym"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
                   )),
                 PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "edit", null, "address"),
+                  D2WContext(entity, "edit", null, "address"),
                   List(
                     RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
                     RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
@@ -350,57 +362,59 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             )
           )
         )
-      } else
-        Future(EntityMetaData("Project", "Project",
+      } else {
+        val entity = EOEntity(entityName, "id")
+        Future(EntityMetaData(entity, "Project",
           Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "query", null, "descr"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext("Customer", "query", null, "projectNumber"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Project Number")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  ))
-              )
-            ),
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "list", null, "descr"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  ))
-              )
-            ),
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "inspect", null, "descr"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  ))
-              )
-            ),
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "descr"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WEditString"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,D2WContext("Customer", "edit", null, "descr"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Description")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WEditString"))
-                  ))
-              )
+            List(
+              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "query", null, "descr"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
+                )),
+              PropertyMetaInfo(ValueType.stringV,
+                D2WContext(entity, "query", null, "projectNumber"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Project Number")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
+                ))
+            )
+          ),
+          Task(
+            List(
+              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "list", null, "descr"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
+                ))
+            )
+          ),
+          Task(
+            List(
+              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "inspect", null, "descr"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
+                ))
+            )
+          ),
+          Task(
+            List(
+              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "edit", null, "descr"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WEditString"))
+                )),
+              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "edit", null, "descr"),
+                List(
+                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
+                  RuleResult("componentName", EOValueUtils.stringV("ERD2WEditString"))
+                ))
             )
           )
         )
+        )
+      }
     }
   }
 
@@ -438,8 +452,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
 
-  override def search(entity: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
-    println("Search for entity: " + entity + " queryValues " + queryValues)
+  def search(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+    println("Search for entity: " + entity.name + " queryValues " + queryValues)
     //if (usesD2SPAServer) {
       searchOnD2SPAServer(entity, queryValues)
     //} else {
@@ -461,9 +475,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
 
-  def searchOnD2SPAServer(entity: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+  def searchOnD2SPAServer(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
     val qualifierSuffix = if (queryValues == null || queryValues.isEmpty) "" else "?" + qualifiersUrlPart(queryValues)
-    val url = d2spaServerBaseUrl + "/" + entity + ".json" + qualifierSuffix
+    val url = d2spaServerBaseUrl + "/" + entity.name + ".json" + qualifierSuffix
     println("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
@@ -549,7 +563,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // => 2
   def deleteEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
-    val url = d2spaServerBaseUrl + "/" + eo.entity + "/" + eo.id.get
+    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.delete()
     futureResponse.map { response =>
@@ -570,6 +584,45 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
 
+  // POST (create)
+  // call Project.json with: {"descr":"bb","projectNumber":2}
+  // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
+
+  def newEO(entity: EOEntity, eo: EO): Future[EO] = {
+    println("Update EO: " + eo)
+
+    val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
+
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val eoDefinedValues = eo.values filter (v => {
+      println("v._2" + v._2)
+      EOValueUtils.isDefined(v._2) })
+
+    println("eoDefinedValues " + eoDefinedValues)
+    val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
+    println("eoValues " + eoValues)
+    val data = Json.toJson(eoValues)
+
+    println("Upate WS:  " + url)
+    println("WS post data: " + data)
+
+    val futureResponse: Future[WSResponse] = request.post(data)
+    futureResponse.map { response =>
+      try {
+        val resultBody = response.json
+        val array = resultBody.asInstanceOf[JsObject]
+        eo
+      } catch {
+        case parseException: JsonParseException => {
+          handleException(response.body,eo)
+        }
+        case t: Throwable => {
+          handleException(t.getMessage(),eo)
+        }
+      }
+    }
+  }
+
   // Put
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
   // {"descr":"bobo","projectNumber":2}
@@ -582,15 +635,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   "customer": null
 }*/
 
-  // POST (create)
-  // call Project.json with: {"descr":"bb","projectNumber":2}
-  // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
 
 
-  def updateEO(entity: String, eo: EO): Future[EO] = {
+  def updateEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
-
-    val url = d2spaServerBaseUrl + "/" + entity + ".json"
+    val entity = eo.entity
+    val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val eoDefinedValues = eo.values filter (v => {

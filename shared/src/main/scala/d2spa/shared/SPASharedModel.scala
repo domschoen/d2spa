@@ -38,6 +38,7 @@ object RuleKeys {
   val componentName = "componentName"
   val displayPropertyKeys = "displayPropertyKeys"
   val destinationEos = "destinationEos"
+  val pkAttributeName = "pkAttributeName"
 }
 
 object ValueType {
@@ -78,16 +79,16 @@ object EOValueUtils {
 
 }
 
-
-case class EO(entity: String, values: scala.collection.Map[String,EOValue], id: Option[Int], validationError: Option[String])
+case class EOEntity(name: String, pkAttributeName: String)
+case class EO(entity: EOEntity, values: scala.collection.Map[String,EOValue], id: Option[Int], validationError: Option[String])
 case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
-case class Menu(id:Int, title: String, entity: String)
+case class Menu(id:Int, title: String, entity: EOEntity)
 
 
-case class D2WContext(entity: String, task: String, previousTask: String, propertyKey: String)
+case class D2WContext(entity: EOEntity, task: String, previousTask: String, propertyKey: String)
 case class RuleResult(key: String, eovalue: EOValue)
 
 
@@ -100,7 +101,7 @@ case class PropertyMetaInfo(typeV: String = "stringV", d2wContext: D2WContext, r
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 
-case class EntityMetaData(entityName: String, displayName: String, queryTask: Task, listTask:Task, inspectTask: Task, editTask: Task)
+case class EntityMetaData(entity: EOEntity, displayName: String, queryTask: Task, listTask:Task, inspectTask: Task, editTask: Task)
 
 // A container for value should be used. It would give a way to have not only String
 case class QueryValue(key: String,value: String, operator: String)
