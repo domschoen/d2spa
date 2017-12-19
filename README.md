@@ -22,6 +22,7 @@ open you browser with this url: http://localhost:9000/#task/query/entity/Project
 
 ## Features
   - At save, if server return an error (field exceeding DB field size for example), it stays in edit mode and display error message
+  - Delete
 
 
 
@@ -44,7 +45,6 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 ## To Do
 ### Important
 
-  - Delete
   - Fix problem: Project + without save seems to be added
   - Implement ERDList
   - Implement ERD2WDisplayToOne
