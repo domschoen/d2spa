@@ -9,6 +9,8 @@ object Settings {
   /** The name of your application */
   val name = "scalajs-spa"
 
+
+
   /** The version of your application */
   val version = "1.1.5"
 

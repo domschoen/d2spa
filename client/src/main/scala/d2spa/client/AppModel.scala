@@ -63,7 +63,11 @@ case class SearchResult(entity: EOEntity, eos: Seq[EO]) extends Action
 
 case class InspectEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
+case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
+object ListEOs extends Action
+case class DeletedEO(eo:EO) extends Action
+case class UpdateEOsForEOOnError(eo:EO) extends Action
 
 case class HydrateProperty(property: PropertyMetaInfo, keys: List[String]) extends Action
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action

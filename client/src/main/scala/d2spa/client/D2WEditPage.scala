@@ -63,7 +63,7 @@ object D2WEditPage {
           val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
             x.d2wContext.propertyKey -> EOValue(typeV = x.typeV)
           }).toMap
-          EO(entity,valueMap,Some(1),None)
+          EO(entity,valueMap,None)
         })
         println("Edit page EO " + eo)
         <.div(

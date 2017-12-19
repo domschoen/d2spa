@@ -55,7 +55,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       "name" -> EOValue(stringV = Some("Brunei Darussalam")),
       "alpha2_code" -> EOValue(stringV = Some("BN")),
       "alpha3_code" -> EOValue(stringV = Some("BRN"))
-      ),Some(1),None
+      ),None
     )
   )
 
@@ -497,7 +497,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             case n: play.api.libs.json.JsNumber =>
               val bigDecimal = n.value
               // TBD use a BigDecimal container
-              valuesMap += (key -> EOValue(stringV = Some(bigDecimal.toString())))
+              valuesMap += (key -> EOValue(intV = Some(bigDecimal.toInt)))
             case play.api.libs.json.JsNull =>
               // TBD use a kind of Null ?
               valuesMap += (key -> EOValue())
@@ -506,7 +506,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
           }
         }
-        eos ::= EO(entity,valuesMap,Some(1),None)
+        eos ::= EO(entity,valuesMap,None)
       }
       eos.toSeq
     }
@@ -561,26 +561,33 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // DELETE
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
   // => 2
-  def deleteEO(eo: EO): Future[EO] = {
-    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get + ".json"
-    println("Delete EO: " + eo)
-    println("Delete WS: " + url)
 
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-    val futureResponse: Future[WSResponse] = request.delete()
-    futureResponse.map { response =>
-      try {
-        val resultBody = response.json
-        val array = resultBody.asInstanceOf[JsObject]
-        eo
-      } catch {
-        case parseException: JsonParseException => {
-          handleException(response.body,eo)
+  // Return the EO with everything and may be a validationError
+  def deleteEO(eo: EO): Future[EO] = {
+    val pk = EOValueUtils.pk(eo)
+    pk match {
+      case Some(pkValue) =>
+        val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pkValue + ".json"
+        println("Delete EO: " + eo)
+        println("Delete WS: " + url)
+
+        val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+        val futureResponse: Future[WSResponse] = request.delete()
+        futureResponse.map { response =>
+          try {
+            val resultBody = response.json
+            eo
+          } catch {
+            case parseException: JsonParseException => {
+              handleException(response.body,eo)
+            }
+            case t: Throwable => {
+              handleException(t.getMessage(),eo)
+            }
+          }
         }
-        case t: Throwable => {
-          handleException(t.getMessage(),eo)
-        }
-      }
+      case _ =>
+        Future(handleException("No value found for primary key in eo",eo))
     }
   }
 
@@ -648,8 +655,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def updateEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
+    val pk = EOValueUtils.pk(eo).get
+
     val entity = eo.entity
-    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + eo.id.get + ".json"
+    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pk + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val eoDefinedValues = eo.values filter (v => {

@@ -77,10 +77,24 @@ object EOValueUtils {
       case _ => false
     }
 
+  def pk(eo:EO) = {
+    val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
+    eoValue match {
+      case Some(myEoValue) =>
+        println("pk " + myEoValue)
+
+        val result = myEoValue._2.intV
+        println("pk  result " + result)
+
+        result
+      case _ => None
+    }
+  }
+
 }
 
 case class EOEntity(name: String, pkAttributeName: String)
-case class EO(entity: EOEntity, values: scala.collection.Map[String,EOValue], id: Option[Int], validationError: Option[String])
+case class EO(entity: EOEntity, values: scala.collection.Map[String,EOValue], validationError: Option[String])
 case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)

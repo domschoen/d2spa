@@ -41,7 +41,7 @@ object D2WListPage {
     }
     def deleteEO (eo: EO) = {
       Callback.log(s"Delete: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(DeleteEO("list",eo)))
+        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list",eo)))
     }
 
 
@@ -64,6 +64,13 @@ object D2WListPage {
               <.div(
                 <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
                 <.div(^.id:="a",
+                  {
+                    val eoOnError = eos.find(x => (x.validationError.isDefined))
+                    if (eoOnError.isDefined) {
+                      val validationError =  eoOnError.get.validationError.get
+                      <.div(<.span(^.color:="red",^.dangerouslySetInnerHtml := validationError))
+                    } else <.div()
+                  },
                   <.table(^.className := "listPage",
                     <.tbody(
                       <.tr(^.className := "listHeader",

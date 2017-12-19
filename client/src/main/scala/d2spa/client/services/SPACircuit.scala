@@ -184,18 +184,44 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
         Ready(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entity.name))
       )
-    case DeleteEO(fromTask, eo) =>
-      val eos = value.get
+    case DeleteEOFromList(fromTask, eo) =>
+      /*val eos = value.get
       val newEos = eos.filterNot(o => {o.id.equals(eo.id)})
+      updated(Ready(newEos))*/
+      effectOnly(Effect(AjaxClient[Api].deleteEO(eo).call().map( deletedEO => {
+        val onError = deletedEO.validationError.isDefined
+        if (onError) {
+          println("Deleted EO error " + deletedEO.validationError)
+          UpdateEOsForEOOnError(deletedEO)
+
+        } else {
+          println("Deleted EO action ")
+
+          DeletedEO(deletedEO)
+        }
+      })))
+    case DeletedEO(deletedEO) =>
+      println("Deleted EO " + deletedEO)
+      val eos = value.get
+      val deletedEOPk = EOValueUtils.pk(deletedEO).get
+
+      val newEos = eos.filterNot(o => {
+        val pk = EOValueUtils.pk(o)
+        pk.isDefined && pk.get.equals(deletedEOPk)})
       updated(Ready(newEos))
-      /*
 
-      updated(
-        Ready(eoses = eoses - eo),
-        Effect(AjaxClient[Api].deleteEO(eo).call().map(SetRuleResults(property,_))))*/
+    case UpdateEOsForEOOnError(eoOnError) =>
+      val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
+      val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
+      val eos = value.get
+      val deletedEOPk = EOValueUtils.pk(eoWithDisplayableError).get
+      val newEos = eos.map(o => {
+        val pk = EOValueUtils.pk(o)
+        if (pk.isDefined && pk.get.equals(deletedEOPk)) eoWithDisplayableError else o})
+      updated(Ready(newEos))
 
 
-  }
+}
 
 }
 class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
@@ -269,21 +295,21 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
     case Save(selectedEntity, eo) =>
       println("SAVE " + eo)
-        updated(
-          // change context to inspect
-          Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
-          // Update the DB and dispatch the result withing UpdatedEO action
-          Effect(AjaxClient[Api].updateEO(eo).call().map( newEO => {
-            val onError = newEO.validationError.isDefined
-            if (onError) {
-              EditEO("edit", newEO)
+      updated(
+        // change context to inspect
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+        // Update the DB and dispatch the result withing UpdatedEO action
+        Effect(AjaxClient[Api].updateEO(eo).call().map( newEO => {
+          val onError = newEO.validationError.isDefined
+          if (onError) {
+            EditEO("edit", newEO)
 
-            } else {
-              InspectEO("edit", newEO)
-            }
+          } else {
+            InspectEO("edit", newEO)
           }
-          ))
-        )
+        }
+        ))
+      )
     case NewEO(selectedEntity, eo) =>
       println("SAVE " + eo)
       updated(
@@ -320,26 +346,26 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
 class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {
 
-    override def handle = {
-      // Menu Handler --> SearchResult in EOsHandler
-      case Search(selectedEntity) =>
-        println("Search: for entity " + selectedEntity)
-        // Call the server to get the result +  then execute action Search Result (see above datahandler)
-        effectOnly(Effect(AjaxClient[Api].search(selectedEntity, value).call().map(SearchResult(selectedEntity, _))))
-      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
-      //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
-      //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
-      //
+  override def handle = {
+    // Menu Handler --> SearchResult in EOsHandler
+    case Search(selectedEntity) =>
+      println("Search: for entity " + selectedEntity)
+      // Call the server to get the result +  then execute action Search Result (see above datahandler)
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity, value).call().map(SearchResult(selectedEntity, _))))
+    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
+    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
+    //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
+    //
 
-      case SetupQueryPageForEntity(selectedEntity) =>
-        updated(
-          List(),
-          Effect.action(FetchMetaDataForMenu("query", selectedEntity))
-        )
+    case SetupQueryPageForEntity(selectedEntity) =>
+      updated(
+        List(),
+        Effect.action(FetchMetaDataForMenu("query", selectedEntity))
+      )
 
-      case UpdateQueryProperty(entity, queryValue) =>
-        updated(queryValue :: value)
-    }
+    case UpdateQueryProperty(entity, queryValue) =>
+      updated(queryValue :: value)
+  }
 }
 
 
