@@ -39,6 +39,12 @@ object D2WListPage {
       Callback.log(s"Inspect: $eo") >>
         $.props >>= (_.proxy.dispatchCB(InspectEO("list", eo)))
     }
+
+    def editEO (eo: EO) = {
+      Callback.log(s"Edit: $eo") >>
+        $.props >>= (_.proxy.dispatchCB(EditEO("list", eo)))
+    }
+
     def deleteEO (eo: EO) = {
       Callback.log(s"Delete: $eo") >>
         $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list",eo)))
@@ -107,7 +113,7 @@ object D2WListPage {
                                 <.tr(
                                   <.td(
                                     <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
-                                    <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif"),
+                                    <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
                                     <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
                                   ),
                                   displayPropertyKeys toTagMod (

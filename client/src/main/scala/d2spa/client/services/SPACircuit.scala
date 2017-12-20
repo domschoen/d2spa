@@ -335,6 +335,13 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "inspect"))),
         Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entity.name))
       )
+    case InstallEditPage(fromTask, eo) =>
+      println("Edit page for entity " + eo)
+      updated(
+        // change context to inspect
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "edit"))),
+        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entity.name))
+      )
 
     case ShowPage(selectedEntity, selectedTask) =>
       updated(

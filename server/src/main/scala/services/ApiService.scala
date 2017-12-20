@@ -497,7 +497,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             case n: play.api.libs.json.JsNumber =>
               val bigDecimal = n.value
               // TBD use a BigDecimal container
-              valuesMap += (key -> EOValue(intV = Some(bigDecimal.toInt)))
+              valuesMap += (key -> EOValue(typeV = ValueType.intV, intV = Some(bigDecimal.toInt)))
             case play.api.libs.json.JsNull =>
               // TBD use a kind of Null ?
               valuesMap += (key -> EOValue())
