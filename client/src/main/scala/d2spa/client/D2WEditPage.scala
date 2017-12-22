@@ -115,16 +115,6 @@ object D2WEditPage {
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
                               D2WComponentInstaller(p.router,property, eo, p.proxy)
-                            ),
-                            // DEBUG
-                            <.td(^.className :="query d2wAttributeValueCell",
-                              {
-                                if (p.proxy.value.isDebugMode) {
-                                  val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
-                                  componentName
-                                } else ""
-
-                              }
                             )
                           )
                         )

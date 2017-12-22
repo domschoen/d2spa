@@ -45,9 +45,11 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 ## To Do
 ### Important
 
-  - Fix problem: Project + without save seems to be added
+  - Fix problem: Project + inspect fails (we need to first go to inspect Customer to work ok)
   - Implement ERDList
   - Implement ERD2WDisplayToOne
+  - None value in popup when value is null
+  
 
 ### Nice to have
   - Limit the number of characters according to eomodel size and display a message explaining it
