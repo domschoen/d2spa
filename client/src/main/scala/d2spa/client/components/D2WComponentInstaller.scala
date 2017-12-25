@@ -42,6 +42,7 @@ object D2WComponentInstaller  {
                   case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, property, eo, p.proxy),displayedComponentName)
                   case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, property, eo, p.proxy),displayedComponentName)
                   case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, property, eo, p.proxy),displayedComponentName)
+                  case "ERDList" => <.span(ERDList(p.router, property, eo, p.proxy),displayedComponentName)
                   case _ => <.span("Component not found: " + componentName)
                 }
               }

@@ -1,47 +1,50 @@
 package d2spa.client.components
 
-import d2spa.client.SPAMain.TaskAppPage
-import d2spa.client.{AppModel, HydrateProperty, MegaContent, UpdateQueryProperty}
-import d2spa.shared._
+import d2spa.client.HydrateProperty
+import d2spa.client.components.ERD2WEditToOneRelationship.Props
+import d2spa.shared.{EO, PropertyMetaInfo, RuleKeys, ValueType}
 import diode.react.ModelProxy
-import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
-import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^.{<, ^}
+import diode.Action
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.ext.KeyCode
+
+import scalacss.ScalaCssReact._
+//import d2spa.client.css.GlobalStyle
+
+import d2spa.client.SPAMain.{TaskAppPage}
+import d2spa.client.MegaContent
+import d2spa.client.UpdateQueryProperty
+import d2spa.shared.{PropertyMetaInfo, EOValue}
+import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERDList {
 
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2wContext.propertyKey)
-      val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
-      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property, List(RuleKeys.keyWhenRelationship, RuleKeys.displayNameForKeyWhenRelationship))))
-    }
+
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val displayNameForKeyWhenRelationship = AppModel.ruleStringValueForKey(p.property,RuleKeys.displayNameForKeyWhenRelationship)
-      val queryKey = p.property.d2wContext.propertyKey + "." + AppModel.ruleStringValueForKey(p.property,RuleKeys.keyWhenRelationship)
-      val pretext = "where " + displayNameForKeyWhenRelationship + " is "
-      val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
-      val value = if (queryValue.isDefined) queryValue.get.value else ""
-      <.div(
-        <.span(pretext),
-        <.input(^.id := "toOneTextField", ^.value := value,
-          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
+      val eo = p.eo
+      val propertyKey = p.property.d2wContext.propertyKey
+      //val eoValue = eo.values(p.property.d2wContext.propertyKey)
+      //val size = eoValue.eosV.size
+      val size = 1
+      <.div(size + "Projects " + propertyKey
       )
     }
   }
 
   private val component = ScalaComponent.builder[Props]("ERDList")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,eo, proxy))
 
 }

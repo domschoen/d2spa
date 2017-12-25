@@ -49,6 +49,10 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Implement ERDList
   - Implement ERD2WDisplayToOne
   - None value in popup when value is null
+  - inspect url whould be better with a number: http://localhost:9000/#task/inspect/entity/Customer/1
+  - Needs to inspect Project before inspecting Customer
+  - Create an eomodel in MegaContent
+  - Why to-many relationship Customer.projects is not part of exported data ?
   
 
 ### Nice to have
