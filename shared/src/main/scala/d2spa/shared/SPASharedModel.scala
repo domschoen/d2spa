@@ -2,19 +2,6 @@ package d2spa.shared
 
 import boopickle.Default._
 
-sealed trait TodoPriority
-
-case object TodoLow extends TodoPriority
-
-case object TodoNormal extends TodoPriority
-
-case object TodoHigh extends TodoPriority
-
-case class TodoItem(id: String, timeStamp: Int, content: String, priority: TodoPriority, completed: Boolean)
-
-object TodoPriority {
-  implicit val todoPriorityPickler: Pickler[TodoPriority] = generatePickler[TodoPriority]
-}
 
 object QueryOperator {
   val Match = "Match"
@@ -57,7 +44,7 @@ object EOValueUtils {
   def stringV(value: String) = EOValue(stringV = if (value == null) None else Some(value))
   def eoV(value: EORef) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
   def eosV(value: Seq[EORef]) = EOValue(typeV=ValueType.eosV, eosV = value)
-  def intV(value: Int) = EOValue(intV = Some(value))
+  def intV(value: Int) = EOValue(typeV=ValueType.intV, intV = if (value == null) None else Some(value))
 
 
   def juiceString(value: EOValue) : String = if (value == null) "" else {
@@ -94,7 +81,7 @@ object EOValueUtils {
 }
 
 case class EOEntity(name: String, pkAttributeName: String)
-case class EO(entity: EOEntity, values: scala.collection.Map[String,EOValue], validationError: Option[String])
+case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
 case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)

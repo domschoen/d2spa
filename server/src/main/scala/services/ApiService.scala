@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.util._
 import scala.concurrent.duration._
-import play.api.libs.json._
+import play.api.libs.json.{JsString, _}
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
@@ -651,6 +651,78 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   "customer": null
 }*/
 
+  def completeEO(eo: EO, missingKeys: Set[String]): Future[EO] = {
+    println("Complete EO: " + eo)
+    val pk = EOValueUtils.pk(eo).get
+
+    val entity = eo.entity
+    // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Customer/2/propertyValues.json?missingKeys=("projects")
+    val toArrayString= missingKeys.map(x => s""""${x}"""").mkString("(",",",")")
+    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pk + "/propertyValues.json?missingKeys=" + toArrayString
+
+
+    // returns
+    // {
+    //  "id": 2,
+    //  "type": "Customer",
+    //  "projects": [
+    //    {
+    //      "id": 1,
+    //      "type": "Project"
+    //    }
+    //  ]
+    // }
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+
+    val futureResponse: Future[WSResponse] = request.get
+    futureResponse.map { response =>
+      try {
+        val resultBody = response.json
+        val jObj = resultBody.asInstanceOf[JsObject]
+
+        val pkName = eo.entity.pkAttributeName
+        // Seq[(String, JsValue)]
+        val jObjValues = jObj.fields.filter(x => !(x._1.equals(pkName) || x._1.equals("type")))
+//case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
+// case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
+
+        val newValues = jObjValues.map ( kvTuple => {
+          val value = kvTuple._2
+          // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
+          val newValue = if (value.isInstanceOf[play.api.libs.json.JsArray]) {
+            val seqJsValues = value.asInstanceOf[play.api.libs.json.JsArray].value
+            // {"id":1,"type":"Project"}
+            val eoRefs = seqJsValues.map (x => {
+              val jsEO = x.asInstanceOf[JsObject].fields.toList.toMap
+              val entityName = jsEO("type").asInstanceOf[JsString].value
+              val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
+
+              // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
+              EORef(entityName,"name",id,"id")
+            })
+            EOValueUtils.eosV(eoRefs)
+          } else if (value.isInstanceOf[JsString]) {
+            val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
+            EOValueUtils.stringV(stringV)
+          } else {
+            EOValueUtils.stringV(value.toString())
+          }
+          println("JsObj value " + value.getClass.getName + " value: " + value)
+          (kvTuple._1,newValue)
+        }).toMap
+
+        val updatedValues = eo.values ++ newValues
+        eo.copy(values = updatedValues)
+      } catch {
+        case parseException: JsonParseException => {
+          handleException(response.body,eo)
+        }
+        case t: Throwable => {
+          handleException(t.getMessage(),eo)
+        }
+      }
+    }
+  }
 
 
   def updateEO(eo: EO): Future[EO] = {

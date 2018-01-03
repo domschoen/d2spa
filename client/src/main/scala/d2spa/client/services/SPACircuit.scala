@@ -238,8 +238,11 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallInspectPage(fromTask,eo))
       )
-
-
+    case CompleteEO(eo, missingKeys) =>
+      effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO)))
+    case RefreshEO(eo) =>
+      println("Refreshed EO " + eo)
+      updated(Ready(eo))
 
     case EditEO(fromTask, eo) =>
       updated(
@@ -276,9 +279,15 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
       } else
         noChange
+    case InitMenuAndEO(eo, missingKeys) =>
+      effectOnly(Effect(AjaxClient[Api].getMenus().call().map(menus => {
+        SetMenusAndEO(menus, eo, missingKeys)
+      })))
+
     case SetMenus(menus) =>
       println("Set Menus " + menus)
       updated(Ready(menus)) // ,Effect.action(InitMetaData)
+
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)
       updated(
@@ -299,7 +308,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].updateEO(eo).call().map( newEO => {
+        Effect(AjaxClient[Api].updateEO(eo).call().map(newEO => {
           val onError = newEO.validationError.isDefined
           if (onError) {
             EditEO("edit", newEO)
@@ -316,7 +325,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map( newEO => {
+        Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map(newEO => {
           val onError = newEO.validationError.isDefined
           if (onError) {
             EditEO("edit", newEO)
@@ -349,6 +358,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect(AfterEffectRouter.setListPageForEntity(selectedEntity.name))
       )
   }
+
 }
 
 class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {

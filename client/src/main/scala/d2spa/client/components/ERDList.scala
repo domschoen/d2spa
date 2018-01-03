@@ -32,11 +32,12 @@ object ERDList {
     def render(p: Props) = {
       val eo = p.eo
       val propertyKey = p.property.d2wContext.propertyKey
-      //val eoValue = eo.values(p.property.d2wContext.propertyKey)
-      //val size = eoValue.eosV.size
-      val size = 1
-      <.div(size + "Projects " + propertyKey
-      )
+      println("ERDList propertyKey: " + propertyKey)
+      println("ERDList eo.values: " + eo.values)
+      val eoValue = if (eo.values.contains(propertyKey)) Some(eo.values(p.property.d2wContext.propertyKey)) else None
+      val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
+      //val size = 1
+      <.div(size + "Projects " + propertyKey)
     }
   }
 

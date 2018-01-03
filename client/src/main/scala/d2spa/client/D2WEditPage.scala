@@ -12,6 +12,7 @@ import org.scalajs.dom.ext.KeyCode
 import scala.scalajs.js
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
+import scala.collection.immutable.Set
 
 import d2spa.client.SPAMain.{TaskAppPage}
 
@@ -21,8 +22,33 @@ object D2WEditPage {
 
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(props: Props) = {
-      Callback.when(props.proxy().entityMetaDatas.isEmpty)(props.proxy.dispatchCB(InitMenu))
+    def mounted(p: Props) = {
+      val eoOpt = p.proxy.value.eo
+      //println("EO before calculation of nonExistingPropertValues " + eoOpt)
+      val nonExistingPropertValues: Set[String] = if (!eoOpt.isEmpty) {
+        // If new eo, it is ok if not all attribute are set
+        // We verify we have all data needed by the displayPropertyKeys and if not we fetch them
+        val displayPropertyKeys = displayPropertyKeysFromProps(p)
+        val eo = eoOpt.get
+        val eoProperties: Set[String] = eo.values.keySet.map(_.toString)
+        println("eo properties " + eoProperties)
+        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.d2wContext.propertyKey).toSet
+        displayPropertyKeysKeys -- eoProperties
+      } else Set()
+      val missingInit = p.proxy().entityMetaDatas.isEmpty
+      val missingEOKeys = nonExistingPropertValues.size > 0
+      println("nonExistingPropertValues " + nonExistingPropertValues)
+      Callback.when(missingInit)(p.proxy.dispatchCB(InitMenu)) >>
+        Callback.when(missingEOKeys)(p.proxy.dispatchCB(CompleteEO(eoOpt.get,nonExistingPropertValues)))
+
+
+      /*val needsCallback =  missingInit || missingEOKeys
+
+
+      Callback.when(needsCallback)(p.proxy.dispatchCB(
+        if (missingInit && missingEOKeys)
+          InitMenuAndEO(eoOpt.get, nonExistingPropertValues)
+        else if (missingInit && !missingEOKeys) InitMenu else CompleteEO(eoOpt.get,nonExistingPropertValues)))*/
     }
 
 
@@ -48,17 +74,26 @@ object D2WEditPage {
       EO(Map())
     }*/
 
+    def isEdit(p: Props) = p.task.equals(TaskDefine.edit)
+
+
+    def entityMetaDataFromProps(p: Props): EntityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.entity)).get
+
+    def displayPropertyKeysFromProps(p: Props) = {
+      val entityMetaData = entityMetaDataFromProps(p)
+      val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
+      task.displayPropertyKeys
+    }
+
     def render(p: Props) = {
       val entityName = p.entity
       println("Render Edit page for entity: " + entityName + " and task " + p.task)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
-        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
+        val entityMetaData = entityMetaDataFromProps(p)
+        val displayPropertyKeys = displayPropertyKeysFromProps(p)
         val entity = entityMetaData.entity
-        val isEdit = p.task.equals(TaskDefine.edit)
-        val task = if (isEdit) entityMetaData.editTask else entityMetaData.inspectTask
-        val displayPropertyKeys = task.displayPropertyKeys
-        val banImage = if (isEdit) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
+        val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val eo = p.proxy.value.eo.getOrElse( {
           val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
             x.d2wContext.propertyKey -> EOValue(typeV = x.typeV)
@@ -81,12 +116,12 @@ object D2WEditPage {
             <.div(^.className :="buttonsbar d2wPage",
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
-                if (isEdit) {
+                if (isEdit(p)) {
                   <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,entity,p.proxy.value.eo.get))
                 } else {
                   " "
                 },
-                if (isEdit) {
+                if (isEdit(p)) {
                   " "
                 } else {
                   <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entity))

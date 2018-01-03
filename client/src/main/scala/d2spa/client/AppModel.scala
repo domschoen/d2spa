@@ -29,7 +29,10 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], entityMetaDa
 // define actions
 
 case object InitMenu extends Action
+case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
+case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
+case class RefreshEO(eo:EO) extends Action
 
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entity: EOEntity) extends Action
@@ -43,6 +46,7 @@ case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action
 
 case class EOCreated(eo:EO) extends Action
+case class CompleteEO(eo:EO, missingKeys:Set[String]) extends Action
 
 case object InitMenuSelection extends Action
 
