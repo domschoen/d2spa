@@ -44,7 +44,7 @@ object EOValueUtils {
   def stringV(value: String) = EOValue(stringV = if (value == null) None else Some(value))
   def eoV(value: EORef) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
   def eosV(value: Seq[EORef]) = EOValue(typeV=ValueType.eosV, eosV = value)
-  def intV(value: Int) = EOValue(typeV=ValueType.intV, intV = if (value == null) None else Some(value))
+  def intV(value: Int) = EOValue(typeV=ValueType.intV, intV = Some(value))
 
 
   def juiceString(value: EOValue) : String = if (value == null) "" else {
@@ -64,6 +64,20 @@ object EOValueUtils {
       case _ => false
     }
 
+  def stringValueForKey(eo: EO, key: String) = {
+    valueForKey(eo,key) match {
+      case Some(value) => juiceString(value)
+      case None => ""
+    }
+  }
+
+  def valueForKey(eo: EO, key: String) = {
+    if (eo.values.contains(key)) {
+      Some(eo.values(key))
+    } else
+      None
+  }
+
   def pk(eo:EO) = {
     val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
     eoValue match {
@@ -80,9 +94,13 @@ object EOValueUtils {
 
 }
 
+
+case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String)
+case class EOAttribute(name: String)
+
 case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
-case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
+case class EORef(entity: EOEntity, id: Int)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
@@ -113,3 +131,11 @@ case class Task(displayPropertyKeys: List[PropertyMetaInfo])
 
 
 /// Important NOTE: Seems that Map is not supported in case classes managed by boopickle
+
+object EOModelUtils {
+  def destinationEntity(eomodel: EOModel, entity: EOEntity, relationshipName: String) = {
+    EOEntity("toto", "titi")
+  }
+
+
+}

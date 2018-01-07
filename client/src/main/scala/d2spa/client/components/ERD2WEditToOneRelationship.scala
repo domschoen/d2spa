@@ -35,7 +35,7 @@ object ERD2WEditToOneRelationship  {
       //val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
       val dataNotFetched = true
       //Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship,RuleKeys.destinationEos))))
-      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property,List(RuleKeys.keyWhenRelationship, RuleKeys.destinationEos))))
+      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property, List(RuleKeys.keyWhenRelationship, RuleKeys.destinationEos))))
     }
 
 
@@ -48,44 +48,66 @@ object ERD2WEditToOneRelationship  {
       }
     }
 
-    def eoRefWith(eoRefs: Seq[EORef], id: String) = {
+    def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
       //println("id " + id + " class " + id.getClass.getName)
       val idAsInt = id.toInt
-      eoRefs.find(eoRef => {eoRef.id.equals(idAsInt)})
+      val pkAttributeName = entity.pkAttributeName
+      val optEO = eos.find(eo => {
+        val optPk = EOValueUtils.pk(eo)
+        optPk.isDefined && optPk.get.equals(idAsInt)
+      })
+      if (optEO.isDefined) Some(EORef(entity, EOValueUtils.pk(optEO.get).get)) else None
     }
 
     def render(p: Props) = {
       val entity = p.property.d2wContext.entity
       val eo = p.eo
+      val propertyName = p.property.d2wContext.propertyKey
       //println("Edit To One Relationship " + eo)
+      val keyWhenRelationshipRuleOpt = p.property.ruleKeyValues.find(r => {
+        r.key.equals(RuleKeys.keyWhenRelationship)
+      })
+      keyWhenRelationshipRuleOpt match {
+        case Some(keyWhenRelationshipRule) => {
+          val keyWhenRelationship = keyWhenRelationshipRule.eovalue.stringV.get
+          <.div(
+            {
+              //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+              val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
+              val eoCache = p.proxy.value.eos
+              val destinationEOs = if (eoCache.contains(destinationEntity.name)) Some(eoCache(destinationEntity.name)) else None
 
-      <.div({
-        //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
-
-        val result = p.property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.destinationEos)})
-        result match {
-          case Some(rule) => {
-            val eoRefs = rule.eovalue.eosV
-            println("eoRefs " + eoRefs)
-            <.div(
-              <.select(bss.formControl, ^.id := "priority",  ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo,entity,p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eoRefs,e.target.value))))},
-                {
-                  eoRefs toTagMod (eoRef =>
-                    <.option(^.value := eoRef.id, eoRef.displayName)
+              destinationEOs match {
+                case Some(eos) => {
+                  println("eoRefs " + eos)
+                  <.div(
+                    <.select(bss.formControl, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
+                      p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.target.value))))
+                    },
+                      {
+                        eos toTagMod (eo => {
+                          val id = EOValueUtils.pk(eo)
+                          val displayName = EOValueUtils.stringValueForKey(eo, keyWhenRelationship)
+                          <.option(^.value := id, displayName)
+                        })
+                      }
                     )
+                  )
                 }
-              )
-            )
-          }
-          case _ => {
-            <.div("")
-          }
+                case _ => {
+                  <.div("")
+                }
+              }
+            }
+          )
+        }
+        case _ => {
+          <.div("")
         }
       }
-      )
     }
   }
+
 
   private val component = ScalaComponent.builder[Props]("ERD2WEditToOneRelationship")
     .renderBackend[Backend]
