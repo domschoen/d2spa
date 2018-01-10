@@ -104,7 +104,7 @@ object AppModel {
       Empty,
       Empty,
       List(),
-      Empty,
+      Map(),
       Empty,
       List()
     )

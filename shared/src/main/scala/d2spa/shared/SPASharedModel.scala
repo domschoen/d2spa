@@ -100,7 +100,7 @@ case class EOEntity(name: String, pkAttributeName: String)
 case class EOAttribute(name: String)
 
 case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
-case class EORef(entity: EOEntity, id: Int)
+case class EORef(entityName: String, id: Int)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])

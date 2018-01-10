@@ -61,9 +61,9 @@ object D2WListPage {
           val task = entityMetaData.listTask
           val entity = entityMetaData.entity
           //val eos = if (task.eos.isReady) task.eos.get else Vector()
-          val eosPot = p.proxy.value.eos
+          val eosPot = if (p.proxy.value.eos.contains(entityName)) Some(p.proxy.value.eos(entityName)) else None
           eosPot match {
-            case Ready(eos) =>
+            case Some(eos) =>
               println("list task inside " + eos )
               val displayPropertyKeys = task.displayPropertyKeys
               println("list task displayPropertyKeys " + displayPropertyKeys )

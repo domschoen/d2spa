@@ -56,7 +56,7 @@ object ERD2WEditToOneRelationship  {
         val optPk = EOValueUtils.pk(eo)
         optPk.isDefined && optPk.get.equals(idAsInt)
       })
-      if (optEO.isDefined) Some(EORef(entity, EOValueUtils.pk(optEO.get).get)) else None
+      if (optEO.isDefined) Some(EORef(entity.name, EOValueUtils.pk(optEO.get).get)) else None
     }
 
     def render(p: Props) = {
@@ -85,10 +85,17 @@ object ERD2WEditToOneRelationship  {
                       p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.target.value))))
                     },
                       {
-                        eos toTagMod (eo => {
+                        val optionTuples = eos map (x => {
                           val id = EOValueUtils.pk(eo)
-                          val displayName = EOValueUtils.stringValueForKey(eo, keyWhenRelationship)
-                          <.option(^.value := id, displayName)
+                          if (id.isDefined) {
+                            val displayName = EOValueUtils.stringValueForKey(eo, keyWhenRelationship)
+                            Some((id.get,displayName))
+                          } else None
+                        })
+                        // remove None
+                        val validTuples = optionTuples.flatten
+                        validTuples toTagMod (eo => {
+                            <.option(^.value := eo._1, eo._2)
                         })
                       }
                     )
@@ -111,7 +118,7 @@ object ERD2WEditToOneRelationship  {
 
   private val component = ScalaComponent.builder[Props]("ERD2WEditToOneRelationship")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))

@@ -42,12 +42,20 @@ case class MenuItem (
                         parent: Option[MenuItem]
                       )
 
+case class FetchedEOEntity (
+                           name: String,
+                           primaryKeyAttributeNames: Seq[String]
+                           )
 
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
   val usesD2SPAServer = config.getBoolean("d2spa.usesD2SPAServer").getOrElse(true)
   val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
+
+
+
+  def eomodelF() = fetchEOModel()
 
 
   var eos = Seq(
@@ -76,6 +84,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     )(EntityItem.apply _)
 
 
+  implicit lazy val fetchedEOEntityReads: Reads[FetchedEOEntity] = (
+      (JsPath \ "name").read[String] and
+      (JsPath \ "primaryKeyAttributeNames").read[Seq[String]]
+    )(FetchedEOEntity.apply _)
+
+
   implicit lazy val menuItemReads: Reads[MenuItem] = (
       (JsPath \ "id").read[Int] and
       (JsPath \ "type").read[String] and
@@ -87,11 +101,47 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 // case class EORef(entity: String, displayName: String, pk: Int)
 
   implicit val eoRefReads: Reads[EORef] = (
-      (JsPath \ "entity").read[String] and
-      (JsPath \ "displayName").read[String] and
-      (JsPath \ "id").read[Int] and
-      (JsPath \ "pkAttributeName").read[String]
+      (JsPath \ "entityName").read[String] and
+      (JsPath \ "id").read[Int]
     ) (EORef.apply _)
+
+
+  var _eomodel: Option[EOModel] = None
+
+  def eomodel(): EOModel = {
+    if (!_eomodel.isDefined) {
+      _eomodel = Some(Await.result(eomodelF,10 seconds))
+    }
+    _eomodel.get
+  }
+
+
+
+
+  def fetchEOModel() : Future[EOModel] = {
+    val url = d2spaServerBaseUrl + "/EOModel.json";
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.get()
+    futureResponse.map { response =>
+      val resultBody = response.json
+      val array = resultBody.asInstanceOf[JsArray]
+      var entities = List[EOEntity]()
+      for (menuRaw <- array.value) {
+        //println(menuRaw)
+        val obj = menuRaw.validate[FetchedEOEntity]
+        obj match {
+          case s: JsSuccess[FetchedEOEntity] => {
+            val wiObj = s.get
+            val primaryKeyAttributeName = wiObj.primaryKeyAttributeNames(0)
+            entities =  EOEntity(wiObj.name,primaryKeyAttributeName) :: entities
+          }
+          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+        }
+      }
+      println("Entities " + entities)
+      EOModel(entities)
+    }
+  }
 
 
   override def getMenus(): Future[Menus] = {
@@ -212,6 +262,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val attributeType = fromResponseToString(ptype)
 
         println("<" + propertyComponentName + ">")
+
 
         PropertyMetaInfo(
           attributeType._2,
@@ -541,6 +592,31 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
   }*/
 
+  /* stays with future
+
+  def pkAttributeNameForEntityNamed(entityName: String): String = {
+    eomodel.onComplete({
+      case Success(model) => {
+        val entityOpt = model.entities.find(e => e.name.equals(entityName))
+        entityOpt match {
+          case Some(entity) => entity.pkAttributeName
+          case None => ""
+        }
+
+      }
+      case Failure(exception) => {
+        ""
+      }
+    })
+  }*/
+
+  def pkAttributeNameForEntityNamed(entityName: String): String = {
+    val entityOpt = eomodel().entities.find(e => e.name.equals(entityName))
+    entityOpt match {
+      case Some(entity) => entity.pkAttributeName
+      case None => ""
+    }
+  }
 
   def woWsParameterForValue(value: EOValue): JsValue = {
     value.typeV match {
@@ -549,8 +625,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         // id: hardcoded
       case ValueType.eoV => {
         val eoV = value.eoV.get
-        val pkAttributeName = eoV.pkAttributeName
-        JsObject( Seq( pkAttributeName -> JsNumber(eoV.id), "type" -> JsString(eoV.entity)))
+        val pkAttributeName = pkAttributeNameForEntityNamed(eoV.entityName)
+        JsObject( Seq( pkAttributeName -> JsNumber(eoV.id), "type" -> JsString(eoV.entityName)))
       }
       case _ => JsString("")
     }
@@ -698,7 +774,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-              EORef(entityName,"name",id,"id")
+              EORef(entityName,id)
             })
             EOValueUtils.eosV(eoRefs)
           } else if (value.isInstanceOf[JsString]) {

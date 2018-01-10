@@ -175,13 +175,17 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 }
 
-class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(modelRW) {
+class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHandler(modelRW) {
+
+  def updatedModelForEntityNamed(eos: Seq[EO], entityName: String): Map[String, Seq[EO]] = {
+    value + (entityName -> eos)
+  }
 
   override def handle = {
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)
       updated(
-        Ready(eoses),
+        updatedModelForEntityNamed(eoses,entity.name),
         Effect(AfterEffectRouter.setListPageForEntity(entity.name))
       )
     case DeleteEOFromList(fromTask, eo) =>
@@ -202,23 +206,25 @@ class EOsHandler[M](modelRW: ModelRW[M, Pot[Seq[EO]]]) extends ActionHandler(mod
       })))
     case DeletedEO(deletedEO) =>
       println("Deleted EO " + deletedEO)
-      val eos = value.get
+      val entityName = deletedEO.entity.name
+      val eos = value(entityName)
       val deletedEOPk = EOValueUtils.pk(deletedEO).get
 
       val newEos = eos.filterNot(o => {
         val pk = EOValueUtils.pk(o)
         pk.isDefined && pk.get.equals(deletedEOPk)})
-      updated(Ready(newEos))
+      updated(updatedModelForEntityNamed(newEos,entityName))
 
     case UpdateEOsForEOOnError(eoOnError) =>
       val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
       val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
-      val eos = value.get
+      val entityName = eoOnError.entity.name
+      val eos = value(entityName)
       val deletedEOPk = EOValueUtils.pk(eoWithDisplayableError).get
       val newEos = eos.map(o => {
         val pk = EOValueUtils.pk(o)
         if (pk.isDefined && pk.get.equals(deletedEOPk)) eoWithDisplayableError else o})
-      updated(Ready(newEos))
+      updated(updatedModelForEntityNamed(newEos,entityName))
 
 
 }

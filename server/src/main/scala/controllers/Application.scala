@@ -21,6 +21,7 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 class Application @Inject() (implicit val config: Configuration, env: Environment, ws: WSClient) extends Controller {
   val apiService = new ApiService(config,ws)
 
+
   def index = Action {
     Ok(views.html.index("D2SPA"))
   }
