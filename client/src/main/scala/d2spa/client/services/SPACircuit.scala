@@ -41,7 +41,8 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOsHandler(zoomTo(_.content.eos)),
     new EOHandler(zoomTo(_.content.eo)),
-    new QueryValuesHandler(zoomTo(_.content.queryValues))
+    new QueryValuesHandler(zoomTo(_.content.queryValues)),
+    new EOModelHandler(zoomTo(_.content.eomodel))
     //new MegaDataHandler(zoomTo(_.content))
   )
 
@@ -68,6 +69,19 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
   }
 }
 */
+
+
+class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case FetchEOModel =>
+      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
+
+    case SetEOModel(eomodel) =>
+      updated(Ready(eomodel))
+
+  }
+
+}
 
 class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelRW) {
   override def handle = {

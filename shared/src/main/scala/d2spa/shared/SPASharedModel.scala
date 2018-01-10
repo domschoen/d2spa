@@ -96,8 +96,8 @@ object EOValueUtils {
 
 
 case class EOModel(entities: List[EOEntity])
-case class EOEntity(name: String, pkAttributeName: String)
-case class EOAttribute(name: String)
+case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
+case class EORelationship(name: String, destinationEntityName: String)
 
 case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
 case class EORef(entityName: String, id: Int)
@@ -134,8 +134,12 @@ case class Task(displayPropertyKeys: List[PropertyMetaInfo])
 
 object EOModelUtils {
   def destinationEntity(eomodel: EOModel, entity: EOEntity, relationshipName: String) = {
-    EOEntity("toto", "titi")
+    val sourceEntity = entityNamed(eomodel,entity.name).get
+    val relationship = sourceEntity.relationships.find(r => r.name.equals(relationshipName)).get
+    val destinationEntityName = relationship.destinationEntityName
+    val destinationEntity = entityNamed(eomodel,destinationEntityName).get
+    destinationEntity
   }
 
-
+  def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
 }

@@ -33,6 +33,8 @@ case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO) extends Action
+case object FetchEOModel extends Action
+case class SetEOModel(eomodel: EOModel) extends Action
 
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entity: EOEntity) extends Action

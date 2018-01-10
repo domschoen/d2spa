@@ -15,4 +15,5 @@ trait Api {
   def deleteEO(eo: EO): Future[EO]
   def completeEO(eo: EO, missingKeys: Set[String]): Future[EO]
   def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]]
+  def fetchEOModel(): Future[EOModel]
 }
