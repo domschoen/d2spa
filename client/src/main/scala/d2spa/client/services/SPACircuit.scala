@@ -74,7 +74,15 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler(modelRW) {
   override def handle = {
     case FetchEOModel =>
-      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
+      println("FetchEOModel")
+      value match {
+        case Ready(eomodel) =>
+          println("FetchEOModel no change")
+          noChange
+        case _ =>
+          println("FetchEOModel fetching")
+          effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
+      }
 
     case SetEOModel(eomodel) =>
       updated(Ready(eomodel))
@@ -160,6 +168,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value,Effect.action(InitMenu))
 
     case HydrateProperty(property, keysToFire: List[String]) =>
+      println("HydrateProperty " + property)
       effectOnly(Effect(AjaxClient[Api].fireRules(property.d2wContext,keysToFire).call().map(SetRuleResults(property,_))))
 
     case SetRuleResults(property, ruleResultByKey) =>
@@ -196,6 +205,13 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
   }
 
   override def handle = {
+    case FetchObjectsForEntity(entity) =>
+      println("Fetch Entity " + entity)
+      effectOnly(Effect(AjaxClient[Api].search(entity, List()).call().map(FetchedObjectsForEntity(_,entity))))
+
+    case FetchedObjectsForEntity(eos: Seq[EO], entity: EOEntity) =>
+      updated(updatedModelForEntityNamed(eos,entity.name))
+
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)
       updated(
@@ -386,7 +402,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
   override def handle = {
     // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity) =>
-      println("Search: for entity " + selectedEntity)
+      println("Search: for entity " + selectedEntity + " with query values " + value)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
       effectOnly(Effect(AjaxClient[Api].search(selectedEntity, value).call().map(SearchResult(selectedEntity, _))))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))

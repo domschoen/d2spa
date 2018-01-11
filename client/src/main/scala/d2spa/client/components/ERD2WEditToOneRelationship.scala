@@ -11,6 +11,7 @@ import d2spa.client.components.GlobalStyles
 
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
+import diode.data.Ready
 
 
 sealed trait TodoPriority
@@ -30,11 +31,35 @@ object ERD2WEditToOneRelationship  {
 
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2wContext.propertyKey)
-      val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
-      Callback.when(props.proxy.value.eomodel.isEmpty)(props.proxy.dispatchCB(FetchEOModel)) >>
-        Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property, List(RuleKeys.keyWhenRelationship, RuleKeys.destinationEos))))
+    def mounted(p: Props) = {
+      println("ERD2WEditToOneRelationship mounted")
+      val d2wContext = p.proxy.value.menuModel.get.d2wContext.copy(propertyKey = p.property.d2wContext.propertyKey)
+      println("ERD2WEditToOneRelationship mounted: d2wContext" + d2wContext)
+      val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
+      println("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+
+      val entity = p.property.d2wContext.entity
+      val propertyName = p.property.d2wContext.propertyKey
+      println("ERD2WEditToOneRelationship mounted: entity" + entity)
+      println("ERD2WEditToOneRelationship mounted: entity" + propertyName)
+
+      val eomodelPot = p.proxy.value.eomodel
+      eomodelPot match {
+        case (Ready(eomodel)) =>
+          println("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
+          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+          println("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+          Callback.when(true)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
+            Callback.when(dataNotFetched)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
+
+        case _ =>
+          println("ERD2WEditToOneRelationship mounted: eomodel not fetched")
+          Callback.when(true)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship))))
+
+      }
+
+
+
     }
 
 
@@ -69,33 +94,36 @@ object ERD2WEditToOneRelationship  {
       keyWhenRelationshipRuleOpt match {
         case Some(keyWhenRelationshipRule) => {
           val keyWhenRelationship = keyWhenRelationshipRule.eovalue.stringV.get
-          //val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
-          //val eoCache = p.proxy.value.eos
-          //val destinationEOs = if (eoCache.contains(destinationEntity.name)) Some(eoCache(destinationEntity.name)) else None
+          val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
+          val eoCache = p.proxy.value.eos
+          val destinationEOs = if (eoCache.contains(destinationEntity.name)) Some(eoCache(destinationEntity.name)) else None
           <.div(
             //{
               //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
-              <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
+           /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
             <.div("entity " +entity),
-            <.div("propertyName " +propertyName)
+            <.div("propertyName " +propertyName)*/
 
-            /*destinationEOs match {
+            destinationEOs match {
               case Some(eos) => {
                 println("eoRefs " + eos)
                 <.div(
                   <.select(bss.formControl, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
                     p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.target.value))))
                   },
-                    {
+                  {
                       val optionTuples = eos map (x => {
-                        val id = EOValueUtils.pk(eo)
+
+                        val id = EOValueUtils.pk(x)
+                        println("id " + id + " for eo: " + x)
                         if (id.isDefined) {
-                          val displayName = EOValueUtils.stringValueForKey(eo, keyWhenRelationship)
+                          val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
                           Some((id.get,displayName))
                         } else None
                       })
                       // remove None
                       val validTuples = optionTuples.flatten
+                      println("valid tuples " + validTuples)
                       validTuples toTagMod (eo => {
                           <.option(^.value := eo._1, eo._2)
                       })
@@ -104,14 +132,14 @@ object ERD2WEditToOneRelationship  {
                 )
               }
               case _ => {
-                <.div("")
+                <.div("No eos for destination entity " + destinationEntity)
               }
-            }*/
-            //}
+            }
+
           )
         }
         case _ => {
-          <.div("")
+          <.div("keyWhenRelationshipRule is None")
         }
       }
     }

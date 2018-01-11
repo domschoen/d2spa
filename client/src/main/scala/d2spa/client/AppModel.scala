@@ -36,6 +36,9 @@ case class RefreshEO(eo:EO) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
+case class FetchObjectsForEntity(entity: EOEntity) extends Action
+case class FetchedObjectsForEntity(eos: Seq[EO], entity: EOEntity) extends Action
+
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entity: EOEntity) extends Action
 

@@ -105,6 +105,7 @@ object SPAMain extends js.JSApp {
     GlobalStyles.addToDocument()
 
     //println( GlobalStyles.render[String] )
+    SPACircuit.dispatch(FetchEOModel)
 
     // create the router
     val router = Router(BaseUrl.until_#, config)

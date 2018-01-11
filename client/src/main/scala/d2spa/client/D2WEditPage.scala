@@ -38,8 +38,11 @@ object D2WEditPage {
       val missingInit = p.proxy().entityMetaDatas.isEmpty
       val missingEOKeys = nonExistingPropertValues.size > 0
       println("nonExistingPropertValues " + nonExistingPropertValues)
-      Callback.when(missingInit)(p.proxy.dispatchCB(InitMenu)) >>
-        Callback.when(missingEOKeys)(p.proxy.dispatchCB(CompleteEO(eoOpt.get,nonExistingPropertValues)))
+      val isEmptyEOModel = p.proxy.value.eomodel.isEmpty
+      println("D2WEditPage " + isEmptyEOModel)
+
+        Callback.when(missingInit)(p.proxy.dispatchCB(InitMenu)) >>
+          Callback.when(missingEOKeys)(p.proxy.dispatchCB(CompleteEO(eoOpt.get,nonExistingPropertValues)))
 
 
       /*val needsCallback =  missingInit || missingEOKeys
