@@ -767,7 +767,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
   }
 
-  // Put
+  // Get
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
   // {"descr":"bobo","projectNumber":2}
   // => returns:

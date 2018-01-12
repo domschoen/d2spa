@@ -165,7 +165,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(_))))
     case SetMetaData(entityMetaData) =>
       println("SetMetaData " + entityMetaData)
-      updated(entityMetaData :: value,Effect.action(InitMenu))
+      updated(entityMetaData :: value)
 
     case HydrateProperty(property, keysToFire: List[String]) =>
       println("HydrateProperty " + property)
@@ -207,10 +207,12 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
   override def handle = {
     case FetchObjectsForEntity(entity) =>
       println("Fetch Entity " + entity)
-      effectOnly(Effect(AjaxClient[Api].search(entity, List()).call().map(FetchedObjectsForEntity(_,entity))))
+      effectOnly(Effect(AjaxClient[Api].search(entity, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(entity, _))))
 
-    case FetchedObjectsForEntity(eos: Seq[EO], entity: EOEntity) =>
-      updated(updatedModelForEntityNamed(eos,entity.name))
+    case FetchedObjectsForEntity(entity, eoses) =>
+      println("FetchedObjectsForEntity Entity " + entity)
+      //println("FetchedObjectsForEntity eos " + eos)
+      updated(updatedModelForEntityNamed(eoses,entity.name))
 
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)
@@ -308,7 +310,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case InitMenu =>
+    case InitClient =>
       println("InitMenu ")
       if (value.isEmpty) {
         println("Api get Menus")
@@ -322,7 +324,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
     case SetMenus(menus) =>
       println("Set Menus " + menus)
-      updated(Ready(menus)) // ,Effect.action(InitMetaData)
+      updated(Ready(menus),Effect.action(FetchEOModel))
 
     case SelectMenu(selectedEntity) =>
       println("selectedEntity " + selectedEntity)

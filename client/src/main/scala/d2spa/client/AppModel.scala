@@ -28,7 +28,7 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot
 
 // define actions
 
-case object InitMenu extends Action
+case object InitClient extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
@@ -37,7 +37,7 @@ case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
 case class FetchObjectsForEntity(entity: EOEntity) extends Action
-case class FetchedObjectsForEntity(eos: Seq[EO], entity: EOEntity) extends Action
+case class FetchedObjectsForEntity(entity: EOEntity, eos: Seq[EO]) extends Action
 
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entity: EOEntity) extends Action
