@@ -51,7 +51,6 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - inspect url whould be better with a number: http://localhost:9000/#task/inspect/entity/Customer/1
   - When starting with http://localhost:9000/#task/query/entity/Customer, need to go to Project in order to edit a customer 
   - Why to-many relationship Customer.projects is not part of exported data ?
-  - Edit ToOne: set none and save to clear the value in DB
   
 
 ### Nice to have

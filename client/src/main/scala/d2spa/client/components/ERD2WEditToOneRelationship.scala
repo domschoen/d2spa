@@ -50,7 +50,7 @@ object ERD2WEditToOneRelationship  {
           val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
           println("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
           Callback.when(true)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
-            Callback.when(dataNotFetched)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
+            Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
 
         case _ =>
           println("ERD2WEditToOneRelationship mounted: eomodel not fetched")
@@ -74,6 +74,7 @@ object ERD2WEditToOneRelationship  {
 
     def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
       //println("id " + id + " class " + id.getClass.getName)
+      if (id.equals("None")) None
       val idAsInt = id.toInt
       val pkAttributeName = entity.pkAttributeName
       val optEO = eos.find(eo => {

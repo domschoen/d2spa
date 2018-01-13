@@ -682,13 +682,28 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def woWsParameterForValue(value: EOValue): JsValue = {
     value.typeV match {
-      case ValueType.stringV => JsString(value.stringV.get)
-      case ValueType.intV => JsNumber (value.intV.get)
-        // id: hardcoded
+      case ValueType.stringV =>
+        value.stringV match {
+          case Some(stringValue) =>
+            JsString(stringValue)
+          case _ =>
+            JsNull
+        }
+      case ValueType.intV =>
+        value.intV match {
+          case Some(intValue) =>
+            JsNumber(intValue)
+          case _ =>
+            JsNull
+        }
       case ValueType.eoV => {
-        val eoV = value.eoV.get
-        val pkAttributeName = pkAttributeNameForEntityNamed(eoV.entityName)
-        JsObject( Seq( pkAttributeName -> JsNumber(eoV.id), "type" -> JsString(eoV.entityName)))
+        value.eoV match {
+          case Some(eoRef) =>
+            val eoRef = value.eoV.get
+            val pkAttributeName = pkAttributeNameForEntityNamed(eoRef.entityName)
+            JsObject( Seq( pkAttributeName -> JsNumber(eoRef.id), "type" -> JsString(eoRef.entityName)))
+          case _ => JsNull
+        }
       }
       case _ => JsString("")
     }
@@ -862,6 +877,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
   }
 
+// Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
+//  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
   def updateEO(eo: EO): Future[EO] = {
     println("Update EO: " + eo)
@@ -871,12 +888,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pk + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-    val eoDefinedValues = eo.values filter (v => {
+    /*val eoDefinedValues = eo.values filter (v => {
       println("v._2" + v._2)
-      EOValueUtils.isDefined(v._2) })
+      EOValueUtils.isDefined(v._2) })*/
 
-    println("eoDefinedValues " + eoDefinedValues)
-    val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
+    println("eoDefinedValues " + eo.values)
+    val eoValues = eo.values map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
     println("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
