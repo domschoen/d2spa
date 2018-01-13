@@ -23,6 +23,7 @@ object D2WEditPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(p: Props) = {
+      println("D2WEditPage mounted")
       val eoOpt = p.proxy.value.eo
       //println("EO before calculation of nonExistingPropertValues " + eoOpt)
       val nonExistingPropertValues: Set[String] = if (!eoOpt.isEmpty) {
@@ -37,9 +38,9 @@ object D2WEditPage {
       } else Set()
       val missingInit = p.proxy().entityMetaDatas.isEmpty
       val missingEOKeys = nonExistingPropertValues.size > 0
-      println("nonExistingPropertValues " + nonExistingPropertValues)
+      println("D2WEditPage nonExistingPropertValues " + nonExistingPropertValues)
       val isEmptyEOModel = p.proxy.value.eomodel.isEmpty
-      println("D2WEditPage " + isEmptyEOModel)
+      println("D2WEditPage missingEOKeys " + isEmptyEOModel)
 
       Callback.when(missingEOKeys)(p.proxy.dispatchCB(CompleteEO(eoOpt.get,nonExistingPropertValues)))
 

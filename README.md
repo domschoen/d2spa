@@ -45,15 +45,13 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 ## To Do
 ### Important
 
-  - Fix problem: Project + inspect fails (we need to first go to inspect Customer to work ok)
   - Implement ERDList
   - Implement ERD2WDisplayToOne
   - None value in popup when value is null
   - inspect url whould be better with a number: http://localhost:9000/#task/inspect/entity/Customer/1
   - When starting with http://localhost:9000/#task/query/entity/Customer, need to go to Project in order to edit a customer 
-  - Needs to inspect Project before inspecting Customer
-  - Create an eomodel in MegaContent
   - Why to-many relationship Customer.projects is not part of exported data ?
+  - Edit ToOne: set none and save to clear the value in DB
   
 
 ### Nice to have

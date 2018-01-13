@@ -604,6 +604,16 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             case play.api.libs.json.JsNull =>
               // TBD use a kind of Null ?
               valuesMap += (key -> EOValue())
+            case play.api.libs.json.JsObject(fields) =>
+              // case class EORef(entityName: String, id: Int)
+              val fieldsMap = fields.toMap
+              println("fieldsMap " + fieldsMap)
+              val destinationEntityName = fieldsMap("type").asInstanceOf[JsString].value
+              val destinationEntity = EOModelUtils.entityNamed(eomodel(),destinationEntityName).get
+              println("destinationEntity " + destinationEntity)
+              val pkName = destinationEntity.pkAttributeName
+              val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
+              valuesMap += (key -> EOValue(typeV = ValueType.eoV, eoV = Some(EORef(destinationEntityName,pk))))
             case _ =>
               valuesMap += (key -> EOValue(stringV = Some("not supported")))
 

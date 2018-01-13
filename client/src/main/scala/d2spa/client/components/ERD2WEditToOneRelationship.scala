@@ -107,24 +107,33 @@ object ERD2WEditToOneRelationship  {
             destinationEOs match {
               case Some(eos) => {
                 println("eoRefs " + eos)
+                val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
+                val defaultValue = destinationEO match {
+                  case Some(EOValue(_,_,_,eoV,_)) => eoV match {
+                    case Some(EORef(_,id)) => id.toString()
+                    case _ => "None"
+                  }
+                  case _ => "None"
+                }
                 <.div(
-                  <.select(bss.formControl, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.target.value))))
+                  <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.currentTarget.value))))
                   },
                   {
-                      val optionTuples = eos map (x => {
+                      val tupleOpts = eos map (x => {
 
                         val id = EOValueUtils.pk(x)
                         println("id " + id + " for eo: " + x)
                         if (id.isDefined) {
                           val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
-                          Some((id.get,displayName))
+                          Some((id.get.toString,displayName))
                         } else None
                       })
                       // remove None
-                      val validTuples = optionTuples.flatten
-                      println("valid tuples " + validTuples)
-                      validTuples toTagMod (eo => {
+                      val tupleValids = tupleOpts.flatten.toList
+                      val tuplesWithNone = ("None", "- none -") :: tupleValids
+                      println("valid tuples " + tupleValids)
+                      tuplesWithNone toTagMod (eo => {
                           <.option(^.value := eo._1, eo._2)
                       })
                     }

@@ -277,6 +277,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Effect.action(InstallInspectPage(fromTask,eo))
       )
     case CompleteEO(eo, missingKeys) =>
+      println("CompleteEO for missingKeys " + missingKeys)
       effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO)))
     case RefreshEO(eo) =>
       println("Refreshed EO " + eo)
