@@ -12,6 +12,7 @@ import d2spa.client.components.GlobalStyles
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
 import diode.data.Ready
+import d2spa.client.logger._
 
 
 sealed trait TodoPriority
@@ -23,43 +24,32 @@ case object TodoNormal extends TodoPriority
 case object TodoHigh extends TodoPriority
 
 
-object ERD2WEditToOneRelationship  {
+object ERD2WEditToOneRelationship   {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
-  class Backend($ : BackendScope[Props, Unit]) {
+  class Backend($ : BackendScope[Props, Unit])  {
     def mounted(p: Props) = {
-      println("ERD2WEditToOneRelationship mounted")
-      val d2wContext = p.proxy.value.menuModel.get.d2wContext.copy(propertyKey = p.property.d2wContext.propertyKey)
-      println("ERD2WEditToOneRelationship mounted: d2wContext" + d2wContext)
+
+      //val destinationEntity = EOModelUtilsdes
+      log.debug("ERD2WEditToOneRelationship mounted")
       val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
-      println("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
       val entity = p.property.d2wContext.entity
       val propertyName = p.property.d2wContext.propertyKey
-      println("ERD2WEditToOneRelationship mounted: entity" + entity)
-      println("ERD2WEditToOneRelationship mounted: entity" + propertyName)
+      log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
+      log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
-      val eomodelPot = p.proxy.value.eomodel
-      eomodelPot match {
-        case (Ready(eomodel)) =>
-          println("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
-          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-          println("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
-          Callback.when(true)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
+      val eomodel = p.proxy.value.eomodel.get
+      log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
+      val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
             Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
-
-        case _ =>
-          println("ERD2WEditToOneRelationship mounted: eomodel not fetched")
-          Callback.when(true)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship))))
-
-      }
-
-
-
     }
 
 

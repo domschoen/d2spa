@@ -12,6 +12,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import CssSettings._
 import scalacss.ScalaCssReact._
+import d2spa.client.logger._
 
 @JSExportTopLevel("SPAMain")
 object SPAMain extends js.JSApp {

@@ -1,8 +1,9 @@
 package d2spa.client.components
 
-import d2spa.client.HydrateProperty
+import d2spa.client.{AppModel, FetchObjectsForEntity, HydrateProperty}
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
-import d2spa.shared.{EO, PropertyMetaInfo, RuleKeys, ValueType}
+import d2spa.client.logger.log
+import d2spa.shared._
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -26,8 +27,29 @@ object ERDList {
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
 
-  class Backend($ : BackendScope[Props, Unit]) {
 
+  // Possible workflow
+  // ERDList ask for full fledge EO at the end of the relationship, with all field needed by displayPropertyKeys
+  // ERDList convert EORef into EOs
+  class Backend($ : BackendScope[Props, Unit]) {
+    def mounted(p: Props) = {
+      //val destinationEntity = EOModelUtilsdes
+      log.debug("ERD2WEditToOneRelationship mounted")
+      val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
+      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+
+      val entity = p.property.d2wContext.entity
+      val propertyName = p.property.d2wContext.propertyKey
+      log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
+      log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
+
+      val eomodel = p.proxy.value.eomodel.get
+      log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
+      val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
+        Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
+    }
 
     def render(p: Props) = {
       val eo = p.eo
@@ -43,7 +65,7 @@ object ERDList {
 
   private val component = ScalaComponent.builder[Props]("ERDList")
     .renderBackend[Backend]
-    //.componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,eo, proxy))
