@@ -40,7 +40,7 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
       val entity = p.property.d2wContext.entity
-      val propertyName = p.property.d2wContext.propertyKey
+      val propertyName = p.property.d2wContext.propertyKey.get
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
       log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
@@ -48,7 +48,8 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireRules(p.property, Map(
+        RuleKeys.keyWhenRelationship -> p.property.d2wContext)))) >>
             Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
     }
 
@@ -77,7 +78,7 @@ object ERD2WEditToOneRelationship   {
     def render(p: Props) = {
       val entity = p.property.d2wContext.entity
       val eo = p.eo
-      val propertyName = p.property.d2wContext.propertyKey
+      val propertyName = p.property.d2wContext.propertyKey.get
       //println("Edit To One Relationship " + eo)
       val keyWhenRelationshipRuleOpt = p.property.ruleKeyValues.find(r => {
         r.key.equals(RuleKeys.keyWhenRelationship)

@@ -167,9 +167,9 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       println("SetMetaData " + entityMetaData)
       updated(entityMetaData :: value)
 
-    case HydrateProperty(property, keysToFire: List[String]) =>
-      println("HydrateProperty " + property)
-      effectOnly(Effect(AjaxClient[Api].fireRules(property.d2wContext,keysToFire).call().map(SetRuleResults(property,_))))
+    case FireRules(property, rules) =>
+      println("FireRules " )
+      effectOnly(Effect(AjaxClient[Api].fireRules(rules).call().map(SetRuleResults(property,_))))
 
     case SetRuleResults(property, ruleResultByKey) =>
       println("Rule Results " + ruleResultByKey)
@@ -239,7 +239,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
     case DeletedEO(deletedEO) =>
       println("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
-      val eos = value(entityName)
+      val eos = value(entityName)ђƒ
       val deletedEOPk = EOValueUtils.pk(deletedEO).get
 
       val newEos = eos.filterNot(o => {

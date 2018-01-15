@@ -33,7 +33,7 @@ object D2WEditPage {
         val eo = eoOpt.get
         val eoProperties: Set[String] = eo.values.keySet.map(_.toString)
         println("eo properties " + eoProperties)
-        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.d2wContext.propertyKey).toSet
+        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.d2wContext.propertyKey.get).toSet
         displayPropertyKeysKeys -- eoProperties
       } else Set()
       val missingInit = p.proxy().entityMetaDatas.isEmpty
@@ -99,7 +99,7 @@ object D2WEditPage {
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val eo = p.proxy.value.eo.getOrElse( {
           val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
-            x.d2wContext.propertyKey -> EOValue(typeV = x.typeV)
+            x.d2wContext.propertyKey.get -> EOValue(typeV = x.typeV)
           }).toMap
           EO(entity,valueMap,None)
         })
@@ -146,7 +146,7 @@ object D2WEditPage {
                                   case Some(ruleResult) => {
                                     ruleResult.eovalue.stringV.get
                                   }
-                                  case _ => property.d2wContext.propertyKey
+                                  case _ => property.d2wContext.propertyKey.get
                                 }
                                 <.span(displayString)
                               }

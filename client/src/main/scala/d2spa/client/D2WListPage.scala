@@ -100,7 +100,7 @@ object D2WListPage {
                                       case Some(ruleResult) => {
                                         ruleResult.eovalue.stringV.get
                                       }
-                                      case _ => property.d2wContext.propertyKey
+                                      case _ => property.d2wContext.propertyKey.get
                                     }
                                     <.span(^.className :="listRepetitionColumnHeader",displayString)
                                   }

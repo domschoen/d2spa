@@ -22,7 +22,8 @@ object D2WDisplayNumber {
 
     def render(p: Props) = {
       val eo = p.eo
-      val eoValue = eo.values(p.property.d2wContext.propertyKey)
+      val propertyName = p.property.d2wContext.propertyKey.get
+      val eoValue = eo.values(propertyName)
       val value = EOValueUtils.juiceString(eoValue)
       <.div(
         <.span(^.id := "description", value)

@@ -347,7 +347,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(entityName: String): Future[EntityMetaData] = {
     val fetchedEOModel = eomodel()
-    if (usesD2SPAServer) {
       val entityDisplayNameFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayNameForEntity)
       val queryDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.query, RuleKeys.displayPropertyKeys)
       val editDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayPropertyKeys)
@@ -374,150 +373,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         emd
       }
       result
-    }
-    else {
-      if (entityName.equals("Customer")) {
-        val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
-        Future(EntityMetaData(entity, "Customer",
-          Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "query", null, "name"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "query", null, "acronym"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "query", null, "address"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  ))
-              )
-            ) ,
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "list", null, "name"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
-                    RuleResult("componentName" ,EOValueUtils.stringV("ERD2WDisplayString"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "list", null, "acronym"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
-                  ))
-              )
-            ) ,
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "inspect", null, "name"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "inspect", null, "acronym"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "inspect", null, "address"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WDisplayString"))
-                  ))
-              )
-            ) ,
-            Task(
-              List(
-                PropertyMetaInfo(ValueType.stringV,D2WContext(entity, "edit", null, "name"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Name")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "edit", null, "acronym"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Acronym")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  )),
-                PropertyMetaInfo(ValueType.stringV,
-                  D2WContext(entity, "edit", null, "address"),
-                  List(
-                    RuleResult("displayNameForProperty",EOValueUtils.stringV("Address")),
-                    RuleResult("componentName",EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                  ))
-              )
-            )
-          )
-        )
-      } else {
-        val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
-        Future(EntityMetaData(entity, "Project",
-          Task(
-            List(
-              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "query", null, "descr"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                )),
-              PropertyMetaInfo(ValueType.stringV,
-                D2WContext(entity, "query", null, "projectNumber"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Project Number")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                ))
-            )
-          ),
-          Task(
-            List(
-              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "list", null, "descr"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                ))
-            )
-          ),
-          Task(
-            List(
-              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "inspect", null, "descr"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WQueryStringOperator"))
-                ))
-            )
-          ),
-          Task(
-            List(
-              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "edit", null, "descr"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WEditString"))
-                )),
-              PropertyMetaInfo(ValueType.stringV, D2WContext(entity, "edit", null, "descr"),
-                List(
-                  RuleResult("displayNameForProperty", EOValueUtils.stringV("Description")),
-                  RuleResult("componentName", EOValueUtils.stringV("ERD2WEditString"))
-                ))
-            )
-          )
-        )
-        )
-      }
-    }
+
+
+
   }
 
   // API method
-  def fireRules(d2WContext: D2WContext, keysToFire: List[String]): Future[List[RuleResult]] = {
-    val futures = keysToFire.map(x => {fireRuleFuture(d2WContext, x)})
+  def fireRules(rules: Map[String,D2WContext]): Future[List[RuleResult]] = {
+    val futures = rules.map{ case (key, d2wContext) => {fireRuleFuture(d2wContext, key)}}
     val futureSequece = Future sequence futures
     val result = for {
       f <- futureSequece

@@ -30,7 +30,8 @@ object ERD2WEditString  {
     def render(p: Props) = {
       val entity = p.property.d2wContext.entity
       val eo = p.eo
-      val eoValue = eo.values(p.property.d2wContext.propertyKey)
+      val propertyName = p.property.d2wContext.propertyKey.get
+      val eoValue = eo.values(propertyName)
       val value = if (eoValue.stringV.isDefined) eoValue.stringV.get else ""
       <.div(
         <.input(^.id := "description", ^.value := value,

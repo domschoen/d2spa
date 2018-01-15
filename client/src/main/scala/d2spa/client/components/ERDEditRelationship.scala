@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 
-import d2spa.client.{AppModel, HydrateProperty}
+import d2spa.client.{AppModel, FireRules}
 import d2spa.shared.EO
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
@@ -22,9 +22,11 @@ object ERDEditRelationship  {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = props.property.d2wContext.propertyKey)
+      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.d2wContext.propertyKey.get))
       val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
-      Callback.when(dataNotFetched)(props.proxy.dispatchCB(HydrateProperty(props.property, List(RuleKeys.keyWhenRelationship, RuleKeys.displayNameForKeyWhenRelationship))))
+      Callback.when(dataNotFetched)(props.proxy.dispatchCB(FireRules(props.property, Map(
+        RuleKeys.keyWhenRelationship -> props.property.d2wContext,
+        RuleKeys.displayNameForKeyWhenRelationship  -> props.property.d2wContext))))
     }
 
     def render(p: Props) = {

@@ -78,7 +78,7 @@ object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
 
-case class HydrateProperty(property: PropertyMetaInfo, keys: List[String]) extends Action
+case class FireRules(property: PropertyMetaInfo, rules: Map[String,D2WContext]) extends Action
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 

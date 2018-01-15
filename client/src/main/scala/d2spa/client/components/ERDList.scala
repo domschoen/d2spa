@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, FetchObjectsForEntity, HydrateProperty}
+import d2spa.client.{AppModel, FetchObjectsForEntity, FireRules}
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client.logger.log
 import d2spa.shared._
@@ -18,6 +18,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
 import d2spa.shared.{PropertyMetaInfo, EOValue}
+import d2spa.shared.TaskDefine
 import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERDList {
@@ -39,7 +40,7 @@ object ERDList {
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
       val entity = p.property.d2wContext.entity
-      val propertyName = p.property.d2wContext.propertyKey
+      val propertyName = p.property.d2wContext.propertyKey.get
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
       log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
@@ -47,19 +48,30 @@ object ERDList {
       log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(HydrateProperty(p.property, List(RuleKeys.keyWhenRelationship)))) >>
+
+      // listConfigurationName
+      // Then with D2WContext:
+      // - task = 'list'
+      // - entity.name = 'Project'
+      // - pageConfiguration = <listConfigurationName>
+
+      val displayPKeysContext = D2WContext(destinationEntity, d2spa.shared.TaskDefine.list , None, None, Left("listConfigurationName"))
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireRules(p.property, Map(
+          RuleKeys.keyWhenRelationship -> p.property.d2wContext,
+          RuleKeys.pageConfiguration -> displayPKeysContext
+      )))) >>
         Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
     }
 
     def render(p: Props) = {
       val eo = p.eo
-      val propertyKey = p.property.d2wContext.propertyKey
-      println("ERDList propertyKey: " + propertyKey)
+      val propertyName = p.property.d2wContext.propertyKey.get
+      println("ERDList propertyKey: " + propertyName)
       println("ERDList eo.values: " + eo.values)
-      val eoValue = if (eo.values.contains(propertyKey)) Some(eo.values(p.property.d2wContext.propertyKey)) else None
+      val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
       val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
       //val size = 1
-      <.div(size + "Projects " + propertyKey)
+      <.div(size + "Projects " + propertyName)
     }
   }
 

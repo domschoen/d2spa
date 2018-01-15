@@ -26,6 +26,7 @@ object RuleKeys {
   val displayPropertyKeys = "displayPropertyKeys"
   val destinationEos = "destinationEos"
   val pkAttributeName = "pkAttributeName"
+  val pageConfiguration = "pageConfiguration"
 }
 
 object ValueType {
@@ -107,7 +108,7 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 
-case class D2WContext(entity: EOEntity, task: String, previousTask: String, propertyKey: String)
+case class D2WContext(entity: EOEntity, task: String, previousTask: Option[String], propertyKey:  Option[String], pageConfiguration: Either[String,String])
 case class RuleResult(key: String, eovalue: EOValue)
 
 
