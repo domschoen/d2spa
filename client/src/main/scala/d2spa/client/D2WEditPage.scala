@@ -18,7 +18,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -33,7 +33,7 @@ object D2WEditPage {
         val eo = eoOpt.get
         val eoProperties: Set[String] = eo.values.keySet.map(_.toString)
         println("eo properties " + eoProperties)
-        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.d2wContext.propertyKey.get).toSet
+        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.name).toSet
         displayPropertyKeysKeys -- eoProperties
       } else Set()
       val missingInit = p.proxy().entityMetaDatas.isEmpty
@@ -59,7 +59,7 @@ object D2WEditPage {
       val hasPk = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)}).isDefined
       if (hasPk) {
         Callback.log(s"Save: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(Save(entity,eo)))
+          $.props >>= (_.proxy.dispatchCB(Save(entity.name,eo)))
       } else {
         Callback.log(s"Save: $entity") >>
           $.props >>= (_.proxy.dispatchCB(NewEO(entity,eo)))
@@ -77,10 +77,11 @@ object D2WEditPage {
       EO(Map())
     }*/
 
-    def isEdit(p: Props) = p.task.equals(TaskDefine.edit)
+    def isEdit(p: Props) = p.d2wContext.task.equals(TaskDefine.edit)
 
 
-    def entityMetaDataFromProps(p: Props): EntityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.entity)).get
+    def entityMetaDataFromProps(p: Props): EntityMetaData =
+      p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.d2wContext.entityName)).get
 
     def displayPropertyKeysFromProps(p: Props) = {
       val entityMetaData = entityMetaDataFromProps(p)
@@ -89,8 +90,8 @@ object D2WEditPage {
     }
 
     def render(p: Props) = {
-      val entityName = p.entity
-      println("Render Edit page for entity: " + entityName + " and task " + p.task)
+      val entityName = p.d2wContext.entityName
+      println("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
         val entityMetaData = entityMetaDataFromProps(p)
@@ -99,13 +100,13 @@ object D2WEditPage {
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val eo = p.proxy.value.eo.getOrElse( {
           val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
-            x.d2wContext.propertyKey.get -> EOValue(typeV = x.typeV)
+            x.name -> EOValue(typeV = x.typeV)
           }).toMap
           EO(entity,valueMap,None)
         })
         println("Edit page EO " + eo)
         <.div(
-          <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
+          <.div(^.id:="b",MenuHeader(p.router,p.d2wContext.entityName,p.proxy)),
           <.div(^.id:="a",
             {
               if (eo.validationError.isDefined) {
@@ -146,13 +147,13 @@ object D2WEditPage {
                                   case Some(ruleResult) => {
                                     ruleResult.eovalue.stringV.get
                                   }
-                                  case _ => property.d2wContext.propertyKey.get
+                                  case _ => property.name
                                 }
                                 <.span(displayString)
                               }
                             ),
                             <.td(^.className :="query d2wAttributeValueCell",
-                              D2WComponentInstaller(p.router,property, eo, p.proxy)
+                              D2WComponentInstaller(p.router, p.d2wContext, property, eo, p.proxy)
                             )
                           )
                         )
@@ -177,8 +178,8 @@ object D2WEditPage {
     //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, entity, task, proxy))
+    component(Props(ctl, d2wContext, proxy))
   }
 }

@@ -100,8 +100,8 @@ class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelR
 
 class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
 
-  private def zoomToEntity(entity: EOEntity, rw: ModelRW[M, List[EntityMetaData]]): Option[ModelRW[M, EntityMetaData]] = {
-    rw.value.indexWhere(n => n.entity.name.equals(entity.name)) match {
+  private def zoomToEntity(entityName: String, rw: ModelRW[M, List[EntityMetaData]]): Option[ModelRW[M, EntityMetaData]] = {
+    rw.value.indexWhere(n => n.entity.name.equals(entityName)) match {
       case -1 =>
         // should not happen!
         None
@@ -111,7 +111,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     }
   }
   private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, Task]): Option[ModelRW[M, PropertyMetaInfo]] = {
-    rw.value.displayPropertyKeys.indexWhere(n => n.d2wContext.propertyKey == property.d2wContext.propertyKey) match {
+    rw.value.displayPropertyKeys.indexWhere(n => n.name == property.name) match {
       case -1 =>
         // should not happen!
         None
@@ -148,13 +148,13 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case FetchMetaDataForMenu(task, entity) =>
+    case FetchMetaDataForMenu(task, entityName) =>
       println("InitMetaData ")
-      value.indexWhere(n => n.entity.name.equals(entity.name)) match {
+      value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entity.name).call().map(SetMetaDataForMenu(task, _))))
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
         case _ =>
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEntity(task,entity.name)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEntity(task,entityName)))
       }
 
     case SetMetaDataForMenu(task, entityMetaData) =>
@@ -173,11 +173,12 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
     case SetRuleResults(property, ruleResultByKey) =>
       println("Rule Results " + ruleResultByKey)
-      val d2wContext = property.d2wContext
-      val entity = d2wContext.entity
-      val task = d2wContext.task
-      val propertyKey = d2wContext.propertyKey
-      val entityWriter = zoomToEntity(entity,modelRW)
+      //val d2wContext = property.d2wContext
+      //val entity = d2wContext.entity
+      //val task = d2wContext.task
+      val propertyKey = property.name
+      val task = property.task
+      val entityWriter = zoomToEntity(property.entityName,modelRW)
       entityWriter match {
         case Some(erw) => zoomToTask(task, erw) match {
           case Some(trw) => {
@@ -239,7 +240,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
     case DeletedEO(deletedEO) =>
       println("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
-      val eos = value(entityName)ђƒ
+      val eos = value(entityName)
       val deletedEOPk = EOValueUtils.pk(deletedEO).get
 
       val newEos = eos.filterNot(o => {
@@ -269,7 +270,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
       println("eo created " + eo)
       updated(
         Ready(eo),
-        Effect.action(FetchMetaDataForMenu("edit", eo.entity))
+        Effect.action(FetchMetaDataForMenu("edit", eo.entity.name))
       )
     case InspectEO(fromTask, eo) =>
       updated(
@@ -288,21 +289,21 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallEditPage(fromTask,eo))
       )
-    case NewEOPage(selectedEntity) =>
+    case NewEOPage(selectedEntityName) =>
       updated(
         Empty,
-        Effect.action(FetchMetaDataForMenu("edit",selectedEntity)) // from edit ?
+        Effect.action(FetchMetaDataForMenu("edit", selectedEntityName)) // from edit ?
       )
 
 
-    case UpdateEOValueForProperty(eo, entity, property, newEOValue) =>
-      println("Update EO Property: for entity " + entity + " property: " + property + " " + newEOValue)
+    case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
+      println("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       println("EO: " + eo)
-
-      updated(Ready(eo.copy(values = (eo.values - property.d2wContext.propertyKey) + (property.d2wContext.propertyKey -> newEOValue))))
+      val propertyName = property.name
+      updated(Ready(eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))))
   }
 }
 
@@ -327,25 +328,25 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       println("Set Menus " + menus)
       updated(Ready(menus),Effect.action(FetchEOModel))
 
-    case SelectMenu(selectedEntity) =>
-      println("selectedEntity " + selectedEntity)
+    case SelectMenu(entityName) =>
+      println("selectedEntity " + entityName)
       updated(
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "query"))),
-        Effect.action(SetupQueryPageForEntity(selectedEntity))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = entityName, task = "query"))),
+        Effect.action(SetupQueryPageForEntity(entityName))
       )
     case SetPreviousPage(selectedEntity) =>
       val previousTask = value.get.d2wContext.previousTask
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = previousTask))),
-        Effect(AfterEffectRouter.setPageForTaskAndEntity(previousTask, selectedEntity.name))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = previousTask.get))),
+        Effect(AfterEffectRouter.setPageForTaskAndEntity(previousTask.get, selectedEntity.name))
       )
 
-    case Save(selectedEntity, eo) =>
+    case Save(selectedEntityName, eo) =>
       println("SAVE " + eo)
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = selectedEntityName, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
         Effect(AjaxClient[Api].updateEO(eo).call().map(newEO => {
           val onError = newEO.validationError.isDefined
@@ -362,7 +363,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       println("SAVE " + eo)
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = "inspect"))),
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = selectedEntity.name, task = "inspect"))),
         // Update the DB and dispatch the result withing UpdatedEO action
         Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map(newEO => {
           val onError = newEO.validationError.isDefined
@@ -380,20 +381,20 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       println("Inspect page for entity " + eo)
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "inspect"))),
-        Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entity.name))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = eo.entity.name, previousTask = Some(fromTask), task = "inspect"))),
+        Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entityName))
       )
     case InstallEditPage(fromTask, eo) =>
       println("Edit page for entity " + eo)
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = eo.entity, previousTask = fromTask, task = "edit"))),
-        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entity.name))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = eo.entity.name, previousTask = Some(fromTask), task = "edit"))),
+        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entityName))
       )
 
     case ShowPage(selectedEntity, selectedTask) =>
       updated(
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entity = selectedEntity, task = selectedTask))),
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = selectedEntity.name, task = selectedTask))),
         Effect(AfterEffectRouter.setListPageForEntity(selectedEntity.name))
       )
   }
@@ -413,13 +414,13 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
     //
 
-    case SetupQueryPageForEntity(selectedEntity) =>
+    case SetupQueryPageForEntity(selectedEntityName) =>
       updated(
         List(),
-        Effect.action(FetchMetaDataForMenu("query", selectedEntity))
+        Effect.action(FetchMetaDataForMenu("query", selectedEntityName))
       )
 
-    case UpdateQueryProperty(entity, queryValue) =>
+    case UpdateQueryProperty(entityName, queryValue) =>
       updated(queryValue :: value)
   }
 }

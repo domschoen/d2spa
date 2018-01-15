@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.shared.{EO, PropertyMetaInfo, ValueType}
+import d2spa.shared.{D2WContext, EO, PropertyMetaInfo, ValueType}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -20,20 +20,20 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 object ERD2WEditNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
       val eo = p.eo
-      val propertyName = p.property.d2wContext.propertyKey.get
+      val propertyName = p.property.name
       val eoValue = eo.values(propertyName)
       val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateEOValueForProperty(eo,entity,p.property,
+          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
+              p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName, p.property,
             EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))} )
       )
     }
@@ -43,7 +43,7 @@ object ERD2WEditNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, eo, proxy))
 
 }
 

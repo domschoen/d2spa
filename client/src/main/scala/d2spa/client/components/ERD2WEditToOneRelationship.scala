@@ -28,7 +28,7 @@ object ERD2WEditToOneRelationship   {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit])  {
@@ -39,17 +39,20 @@ object ERD2WEditToOneRelationship   {
       val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
-      val entity = p.property.d2wContext.entity
-      val propertyName = p.property.d2wContext.propertyKey.get
+      val entityName = p.d2wContext.entityName
+      val eomodel = p.proxy.value.eomodel.get
+      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+      val propertyName = p.property.name
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
       log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
-      val eomodel = p.proxy.value.eomodel.get
       log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+
+      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireRules(p.property, Map(
-        RuleKeys.keyWhenRelationship -> p.property.d2wContext)))) >>
+        RuleKeys.keyWhenRelationship -> d2wContext)))) >>
             Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
     }
 
@@ -76,9 +79,11 @@ object ERD2WEditToOneRelationship   {
     }
 
     def render(p: Props) = {
-      val entity = p.property.d2wContext.entity
+      val entityName = p.d2wContext.entityName
+      val eomodel = p.proxy.value.eomodel.get
+      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val eo = p.eo
-      val propertyName = p.property.d2wContext.propertyKey.get
+      val propertyName = p.property.name
       //println("Edit To One Relationship " + eo)
       val keyWhenRelationshipRuleOpt = p.property.ruleKeyValues.find(r => {
         r.key.equals(RuleKeys.keyWhenRelationship)
@@ -109,7 +114,7 @@ object ERD2WEditToOneRelationship   {
                 }
                 <.div(
                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entity, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.currentTarget.value))))
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.currentTarget.value))))
                   },
                   {
                       val tupleOpts = eos map (x => {
@@ -152,5 +157,5 @@ object ERD2WEditToOneRelationship   {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, eo, proxy))
 }

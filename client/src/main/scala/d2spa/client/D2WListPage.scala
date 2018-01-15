@@ -17,23 +17,24 @@ import diode.data.Ready
 
 object D2WListPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      println("entity " + props.entity)
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(props.entity)) < 0
+      val entityName = props.d2wContext.entityName
+      println("D2WListPage mounted for entity " + entityName)
+      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(props.entity)))
+      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
     }
 
 
 
-    def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
-      Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(SetupQueryPageForEntity(entity)))
+    def returnAction (router: RouterCtl[TaskAppPage],entityName: String) = {
+      Callback.log(s"Search: $entityName") >>
+        $.props >>= (_.proxy.dispatchCB(SetupQueryPageForEntity(entityName)))
     }
     def inspectEO (eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
@@ -52,7 +53,7 @@ object D2WListPage {
 
 
     def render(p: Props) = {
-      val entityName = p.entity
+      val entityName = p.d2wContext.entityName
       println("Render List page for entity: " + entityName)
       val menuModelPot = p.proxy.value.menuModel
       menuModelPot match {
@@ -68,7 +69,7 @@ object D2WListPage {
               val displayPropertyKeys = task.displayPropertyKeys
               println("list task displayPropertyKeys " + displayPropertyKeys )
               <.div(
-                <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
+                <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
                 <.div(^.id:="a",
                   {
                     val eoOnError = eos.find(x => (x.validationError.isDefined))
@@ -83,7 +84,7 @@ object D2WListPage {
                         <.td(^.className := "listHeaderEntityName",
                           <.span(^.className := "attribute",eos.size + " " + entityMetaData.displayName)
                         ),
-                        <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entity))))
+                        <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entityName))))
                       )
                     ),
                     <.tbody(
@@ -100,7 +101,7 @@ object D2WListPage {
                                       case Some(ruleResult) => {
                                         ruleResult.eovalue.stringV.get
                                       }
-                                      case _ => property.d2wContext.propertyKey.get
+                                      case _ => property.name
                                     }
                                     <.span(^.className :="listRepetitionColumnHeader",displayString)
                                   }
@@ -117,10 +118,13 @@ object D2WListPage {
                                     <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
                                   ),
                                   displayPropertyKeys toTagMod (
-                                    property =>
+                                    property => {
+                                      val propertyD2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
                                       <.td(^.className := "list1",
-                                        D2WComponentInstaller(p.router,property,eo, p.proxy)
+                                        D2WComponentInstaller(p.router, propertyD2wContext, property,eo, p.proxy)
                                       )
+
+                                    }
                                   ),
                                   <.td(<.img(^.className := "IconButton",^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
 
@@ -136,7 +140,7 @@ object D2WListPage {
               )
             case _ =>
               <.div(
-                <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
+                <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName, p.proxy)),
                 <.div(^.id:="a",""
                 )
               )
@@ -144,7 +148,7 @@ object D2WListPage {
         }
         case _ => {
           <.div(
-            <.div(^.id:="b",MenuHeader(p.router,p.entity,p.proxy)),
+            <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName, p.proxy)),
             <.div(^.id:="a",""
             )
           )
@@ -159,9 +163,9 @@ object D2WListPage {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], entity: String, task: String, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, entity, task, proxy))
+    component(Props(ctl, d2wContext, proxy))
   }
 }
 

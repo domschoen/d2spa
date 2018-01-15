@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.shared.{EO, EOValueUtils}
+import d2spa.shared.{D2WContext, EO, EOValueUtils}
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
@@ -15,14 +15,14 @@ import d2spa.shared.PropertyMetaInfo
 object D2WDisplayNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
       val eo = p.eo
-      val propertyName = p.property.d2wContext.propertyKey.get
+      val propertyName = p.property.name
       val eoValue = eo.values(propertyName)
       val value = EOValueUtils.juiceString(eoValue)
       <.div(
@@ -35,6 +35,6 @@ object D2WDisplayNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,eo, proxy))
 
 }

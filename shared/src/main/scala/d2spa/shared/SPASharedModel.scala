@@ -108,7 +108,7 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 
-case class D2WContext(entity: EOEntity, task: String, previousTask: Option[String], propertyKey:  Option[String], pageConfiguration: Either[String,String])
+case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[String,String]] = None)
 case class RuleResult(key: String, eovalue: EOValue)
 
 
@@ -117,7 +117,7 @@ case class RuleResult(key: String, eovalue: EOValue)
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 // Property
-case class PropertyMetaInfo(typeV: String = "stringV", d2wContext: D2WContext, ruleKeyValues: List[RuleResult] = List())
+case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String, ruleKeyValues: List[RuleResult] = List())
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 

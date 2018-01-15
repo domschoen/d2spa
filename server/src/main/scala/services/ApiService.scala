@@ -56,7 +56,6 @@ case class FetchedEORelationship (
 
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
-  val usesD2SPAServer = config.getBoolean("d2spa.usesD2SPAServer").getOrElse(true)
   val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
@@ -187,7 +186,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   override def getMenus(): Future[Menus] = {
     println("get Menus")
 
-    if (usesD2SPAServer) {
       val fetchedEOModel = eomodel()
       val url = d2spaServerBaseUrl + "/Menu.json";
       val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
@@ -229,34 +227,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           Menus(List(),D2WContext(null,null,null,null),showDebugButton)
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(firstChildEntity,"query",null,null),showDebugButton)
+          Menus(mainMenus.toList,D2WContext(firstChildEntity.name,"query",null,null),showDebugButton)
         }
       }
 
-    } else {
 
-      val data = Menus(
-        List(
-          MainMenu(1, "Project Management",
-            List(
-              Menu(2, "Project", EOEntity("Project","id",List())),
-              Menu(3, "Customer", EOEntity("Customer","id",List()))
-            )
-          )
-        ),
-        D2WContext(EOEntity("Project","id",List()), "query", null, null),
-        showDebugButton
-      )
-      Future(data)
-    }
   }
 
 
   def fireRuleFuture(d2WContext: D2WContext, key: String) : Future[WSResponse] = {
-    val entityOpt = if (d2WContext.entity == null) None else Some(d2WContext.entity.name)
+    val entityName = d2WContext.entityName
     val taskOpt = if (d2WContext.task == null) None else Some(d2WContext.task)
-    val propertyKeyOpt = if (d2WContext.propertyKey == null) None else Some(d2WContext.propertyKey)
-    fireRuleFuture(entityOpt, taskOpt,propertyKeyOpt,key)
+    fireRuleFuture(Some(entityName), taskOpt, d2WContext.propertyKey, key)
   }
 
   def fireRuleFuture(entity: String, task: String, key: String) : Future[WSResponse] = {
@@ -313,7 +295,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
         PropertyMetaInfo(
           attributeType._2,
-          D2WContext(entity, task, null, propertyKey),
+          propertyKey,
+          entity.name,
+          task,
           List(
             RuleResult(propertyDisplayName._1, EOValueUtils.stringV(propertyDisplayName._2)),
             RuleResult(propertyComponentName._1,EOValueUtils.stringV(propertyComponentName._2))
@@ -412,7 +396,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           }
           RuleResult(key, value)
         }
-      )
+      ).toList
     }
     result
   }

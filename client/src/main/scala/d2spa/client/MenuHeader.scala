@@ -30,18 +30,18 @@ object MenuHeader {
       Callback.when(props.proxy().menuModel.isEmpty)(props.proxy.dispatchCB(InitMenu))
     }*/
 
-    def selectMenu(entity: EOEntity) = {
+    def selectMenu(entityName: String) = {
       println("selectMenu")
 
-      Callback.log(s"Menu selected: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(SelectMenu(entity)))
+      Callback.log(s"Menu selected: $entityName") >>
+        $.props >>= (_.proxy.dispatchCB(SelectMenu(entityName)))
     }
 
     def newEO(entity: EOEntity) = {
       println("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(NewEOPage(entity)))
+        $.props >>= (_.proxy.dispatchCB(NewEOPage(entity.name)))
     }
 
 
@@ -58,7 +58,7 @@ object MenuHeader {
                   menu => {
                     <.li(style.item, GlobalStyles.menuItem, (style.active).when(p.entity.equals(menu.entity.name)),
                       <.div(GlobalStyles.menuInputGroup,
-                        <.div(GlobalStyles.menuLabel, menu.entity.name, ^.onClick --> selectMenu(menu.entity)),
+                        <.div(GlobalStyles.menuLabel, menu.entity.name, ^.onClick --> selectMenu(menu.entity.name)),
                         <.div(GlobalStyles.menuAddon, <.i(^.className := "fa fa-plus"), ^.onClick --> newEO(menu.entity))
                       )
                     )

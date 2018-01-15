@@ -40,12 +40,12 @@ case class FetchObjectsForEntity(entity: EOEntity) extends Action
 case class FetchedObjectsForEntity(entity: EOEntity, eos: Seq[EO]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class FetchMetaDataForMenu(task: String, entity: EOEntity) extends Action
+case class FetchMetaDataForMenu(task: String, entityName: String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
 
-case class NewEOPage(entity: EOEntity) extends Action
+case class NewEOPage(entityName: String) extends Action
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action
@@ -57,12 +57,12 @@ case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
 
-case class SelectMenu(entity: EOEntity) extends Action
-case class Save(entity: EOEntity, eo: EO) extends Action
+case class SelectMenu(entityName: String) extends Action
+case class Save(entityName: String, eo: EO) extends Action
 case class NewEO(entity: EOEntity, eo: EO) extends Action
 
-case class UpdateQueryProperty(entity: EOEntity, queryValue: QueryValue) extends Action
-case class UpdateEOValueForProperty(eo: EO, entity: EOEntity, property: PropertyMetaInfo, value: EOValue) extends Action
+case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
+case class UpdateEOValueForProperty(eo: EO, entityName: String, property: PropertyMetaInfo, value: EOValue) extends Action
 
 case class Search(entity: EOEntity) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
@@ -83,7 +83,7 @@ case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResu
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action
-case class SetupQueryPageForEntity(entity: EOEntity) extends Action
+case class SetupQueryPageForEntity(entityName: String) extends Action
 
 case object SwithDebugMode extends Action
 

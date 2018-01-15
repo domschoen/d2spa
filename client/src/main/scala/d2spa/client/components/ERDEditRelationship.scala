@@ -15,31 +15,31 @@ import d2spa.shared.{PropertyMetaInfo, QueryValue, D2WContext, RuleKeys, QueryOp
 
 object ERDEditRelationship  {
 
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.d2wContext.propertyKey.get))
+      val d2wContext = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
       val dataNotFetched = !AppModel.rulesContainsKey(props.property,RuleKeys.keyWhenRelationship)
       Callback.when(dataNotFetched)(props.proxy.dispatchCB(FireRules(props.property, Map(
-        RuleKeys.keyWhenRelationship -> props.property.d2wContext,
-        RuleKeys.displayNameForKeyWhenRelationship  -> props.property.d2wContext))))
+        RuleKeys.keyWhenRelationship -> d2wContext,
+        RuleKeys.displayNameForKeyWhenRelationship  -> d2wContext))))
     }
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
+      val entityName = p.d2wContext.entityName
       val displayNameForKeyWhenRelationship = AppModel.ruleStringValueForKey(p.property,RuleKeys.displayNameForKeyWhenRelationship)
-      val queryKey = p.property.d2wContext.propertyKey + "." + AppModel.ruleStringValueForKey(p.property,RuleKeys.keyWhenRelationship)
+      val queryKey = p.property.name + "." + AppModel.ruleStringValueForKey(p.property,RuleKeys.keyWhenRelationship)
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
       <.div(
         <.span(pretext),
         <.input(^.id := "toOneTextField", ^.value := value,
-          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
+          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
       )
     }
   }
@@ -49,5 +49,5 @@ object ERDEditRelationship  {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, proxy))
 }

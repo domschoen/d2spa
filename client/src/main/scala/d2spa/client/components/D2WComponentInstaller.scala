@@ -16,7 +16,7 @@ import d2spa.client.SPAMain.TaskAppPage
 
 
 object D2WComponentInstaller  {
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -37,19 +37,19 @@ object D2WComponentInstaller  {
               case Some(componentName) => {
                 val displayedComponentName = if (p.proxy.value.isDebugMode) componentName else ""
                 componentName match {
-                  case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WEditString" => <.span(ERD2WEditString(p.router, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, property, eo, p.proxy),displayedComponentName)
-                  case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, property, eo, p.proxy),displayedComponentName)
-                  case "ERDList" => <.span(ERDList(p.router, property, eo, p.proxy),displayedComponentName)
+                  case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
+                  case "ERD2WEditString" => <.span(ERD2WEditString(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
+                  case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
+                  case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
+                  case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
+                  case "ERDList" => <.span(ERDList(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
                   case _ => <.span("Component not found: " + componentName)
                 }
               }
-              case _ => <.span("Rule Result with empty value for property " + property.d2wContext.propertyKey)
+              case _ => <.span("Rule Result with empty value for property " + property.name)
             }
           }
-          case _ => <.span("No component Rule found for property " + property.d2wContext.propertyKey)
+          case _ => <.span("No component Rule found for property " + property.name)
         }
       }
       )
@@ -60,5 +60,5 @@ object D2WComponentInstaller  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, property, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, eo, proxy))
 }

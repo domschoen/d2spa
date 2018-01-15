@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client.AppModel
-import d2spa.shared.{PropertyMetaInfo, QueryOperator, RuleKeys}
+import d2spa.shared.{D2WContext, PropertyMetaInfo, QueryOperator, RuleKeys}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react.{ReactEventFromInput, _}
@@ -20,19 +20,19 @@ import d2spa.shared.{ EOValue, EOKeyValueQualifier, PropertyMetaInfo, QueryValue
 object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
 //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entity = p.proxy.value.menuModel.get.d2wContext.entity
-      val propertyKey = p.property.d2wContext.propertyKey.get
+      val entityName = p.d2wContext.entityName
+      val propertyKey = p.property.name
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(propertyKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entity,
+          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,
             QueryValue(propertyKey,e.target.value,QueryOperator.Match)))} )
       )
     }
@@ -42,5 +42,5 @@ object ERD2WQueryStringOperator  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl,property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,proxy))
 }
