@@ -110,9 +110,10 @@ case class Menu(id:Int, title: String, entity: EOEntity)
 
 
 
-trait FireAction
-case class HydrateDestinationEOs(eoRefs: List[EORef], displayPropertyKeys: FireRule) extends FireAction
-case class FireRule(rhs: D2WContext, key: String) extends FireAction
+trait D2WAction
+case class HydrateDestinationEOs(eoRefs: List[EORef], displayPropertyKeys: FireRule) extends D2WAction
+case class FireRule(rhs: D2WContext, key: String) extends D2WAction
+case class CompleteEO(eo:EO, d2wContext: D2WContext) extends D2WAction
 
 case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[FireRule,String]] = None)
 case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)

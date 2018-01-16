@@ -51,8 +51,12 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
 
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireRules(p.property, Map(
-        RuleKeys.keyWhenRelationship -> d2wContext)))) >>
+      val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireActions(
+        p.property, List(
+          keyWhenRelationshipFireRule,
+          HydrateDestinationEOs(List(),keyWhenRelationshipFireRule)
+        ))) >>
             Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
     }
 

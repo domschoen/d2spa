@@ -21,7 +21,10 @@ case class CustomData()
 
 
 
-case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData], eos: Map[String, Seq[EO]], eo: Pot[EO], queryValues: List[QueryValue])
+case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
+                       eos: Map[String, Map[Int,EO]],
+                       eo: Pot[EO],
+                       queryValues: List[QueryValue])
 
 
 // Generic Part
@@ -53,7 +56,6 @@ case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action
 
 case class EOCreated(eo:EO) extends Action
-case class CompleteEO(eo:EO, missingKeys:Set[String]) extends Action
 
 case object InitMenuSelection extends Action
 
