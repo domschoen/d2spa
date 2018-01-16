@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, FetchObjectsForEntity, FireRules}
+import d2spa.client._
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client.logger.log
 import d2spa.shared._
@@ -57,12 +57,23 @@ object ERDList {
       // - pageConfiguration = <listConfigurationName>
 
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
-      val displayPKeysContext = D2WContext(destinationEntity.name, d2spa.shared.TaskDefine.list , None, None, Some(Left("listConfigurationName")))
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireRules(p.property, Map(
-          RuleKeys.keyWhenRelationship -> d2wContext,
-          RuleKeys.pageConfiguration -> displayPKeysContext
-      )))) >>
-        Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
+      val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
+      val displayPKeysContext = D2WContext(destinationEntity.name, d2spa.shared.TaskDefine.list , None, None, Some(Left(fireListConfiguration)))
+      val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
+
+
+      // hydrated destination EOs are simply stored in MegaContent eos
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(
+        FireActions(
+          p.property,
+          List(
+            FireRule(d2wContext, RuleKeys.keyWhenRelationship),
+            fireListConfiguration,
+            fireListDisplayPropertyKeys,
+            HydrateDestinationEOs(List(),fireListDisplayPropertyKeys)
+          )
+          )
+        ))
     }
 
     def render(p: Props) = {

@@ -167,9 +167,36 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       println("SetMetaData " + entityMetaData)
       updated(entityMetaData :: value)
 
-    case FireRules(property, rules) =>
-      println("FireRules " )
-      effectOnly(Effect(AjaxClient[Api].fireRules(rules).call().map(SetRuleResults(property,_))))
+
+    case FireActions(property: PropertyMetaInfo, actions: List[FireAction]) =>
+      println("FireActions " )
+      // take first actions and call FireActions again with the rest
+      val fireAction = actions.head
+      val remainingActions = actions.tail
+      fireAction match {
+        case FireRule(rhs, key) =>
+          // convert any rhs depending on previous results
+          val newRhs = if (rhs.pageConfiguration.isDefined && rhs.pageConfiguration.get.isLeft) {
+            rhs.copy(pageConfiguration = Some(Right("real value")))
+          } else rhs
+          effectOnly(Effect(AjaxClient[Api].fireRule(FireRule(newRhs,key)).call().map(SetRuleResult(property,_,remainingActions))))
+        case HydrateDestinationEOs(eoRefs, displayPropertyKeys) =>
+          // get displayPropertyKeys from previous rule results
+          val missingKeys: Set[String] = Set() // To be implemented
+          effectOnly(Effect(AjaxClient[Api].hydrateEORefs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(entity, _, remainingActions))))
+
+      }
+
+
+    // hydrated destination EOs are simply stored in MegaContent eos
+    case SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[FireAction]) =>
+      // Some update
+      updated(
+        updatedModelForEntityNamed(eoses,entity.name),
+        Effect.action(FireActions(property, actions))
+      )
+
+
 
     case SetRuleResults(property, ruleResultByKey) =>
       println("Rule Results " + ruleResultByKey)
@@ -210,10 +237,13 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
       println("Fetch Entity " + entity)
       effectOnly(Effect(AjaxClient[Api].search(entity, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(entity, _))))
 
-    case FetchedObjectsForEntity(entity, eoses) =>
+    case FetchedObjectsForEntity(entity, eoses, actions) =>
       println("FetchedObjectsForEntity Entity " + entity)
       //println("FetchedObjectsForEntity eos " + eos)
-      updated(updatedModelForEntityNamed(eoses,entity.name))
+      updated(
+        updatedModelForEntityNamed(eoses,entity.name))
+        Effect.action(FireActions(property, actions))
+      )
 
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)

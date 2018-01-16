@@ -4,6 +4,8 @@ import diode._
 import diode.data._
 import diode.util._
 import d2spa.shared._
+import boopickle.DefaultBasic._
+
 /**
   * Created by dschoen on 01.05.17.
   */
@@ -36,8 +38,8 @@ case class RefreshEO(eo:EO) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
-case class FetchObjectsForEntity(entity: EOEntity) extends Action
-case class FetchedObjectsForEntity(entity: EOEntity, eos: Seq[EO]) extends Action
+case class FetchObjectsForEntity(property: ) extends Action
+case class FetchedObjectsForEntity(entity: EOEntity, eos: Seq[EO], actions: List[FireAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entityName: String) extends Action
@@ -78,8 +80,14 @@ object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
 
-case class FireRules(property: PropertyMetaInfo, rules: Map[String,D2WContext]) extends Action
+
+
+case class FireActions(property: PropertyMetaInfo, actions: List[FireAction])
+
+//implicit val fireActionPickler = CompositePickler[FireAction].
+
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
+case class SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[FireAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action

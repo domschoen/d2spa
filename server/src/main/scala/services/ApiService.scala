@@ -369,38 +369,60 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val result = for {
       f <- futureSequece
     } yield {
-      f.map(response => {
-          val jsObj = response.json.asInstanceOf[JsObject]
-          val key = jsObj.keys.toSeq(0)
-
-          println("Rule response: " + jsObj)
-
-          val value = if (key.equals(RuleKeys.destinationEos)) {
-            // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=destinationEos
-            val rules = (jsObj \ RuleKeys.destinationEos).get.asInstanceOf[JsArray].value
-            println("Rule response value: " + rules.getClass.getName)
-            val eoRefs = rules.map (x => {
-              //println("x: " + x + " x " + x.getClass.getName)
-                val jsObj = x.asInstanceOf[JsObject]
-                val entityName = jsObj.value("entity").asInstanceOf[JsString].value
-                val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
-                val id = jsObj.value(pkAttributeName).asInstanceOf[JsNumber].value.intValue()
-
-                EORef(entityName,id)
-              })
-              // val eoRefs = eoRefJsSuccesses.filter(x => x.isSuccess).map(_.get)
-              println("EoRefs " + eoRefs)
-              EOValueUtils.eosV(eoRefs.toSeq)
-          } else {
-              EOValueUtils.stringV(jsObj.values.toSeq(0).asOpt[String].get)
-          }
-          RuleResult(key, value)
-        }
-      ).toList
+      f.map(ruleResultWithResponse(_)).toList
     }
     result
   }
 
+
+  def ruleResultWithResponse(rule: FireRule, response: WSResponse) = {
+    val jsObj = response.json.asInstanceOf[JsObject]
+    val key = jsObj.keys.toSeq(0)
+
+    println("Rule response: " + jsObj)
+
+    val value = if (key.equals(RuleKeys.destinationEos)) {
+      // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=destinationEos
+      /* Response:
+      {
+        "destinationEos": [
+          {
+            "id": 1,
+            "entity": "Customer"
+          }
+        ]
+      }
+       */
+      val rules = (jsObj \ RuleKeys.destinationEos).get.asInstanceOf[JsArray].value
+      println("Rule response value: " + rules.getClass.getName)
+      val eoRefs = rules.map (x => {
+        //println("x: " + x + " x " + x.getClass.getName)
+        val jsObj = x.asInstanceOf[JsObject]
+        val entityName = jsObj.value("entity").asInstanceOf[JsString].value
+        val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
+        val id = jsObj.value(pkAttributeName).asInstanceOf[JsNumber].value.intValue()
+
+        EORef(entityName,id)
+      })
+      // val eoRefs = eoRefJsSuccesses.filter(x => x.isSuccess).map(_.get)
+      println("EoRefs " + eoRefs)
+      EOValueUtils.eosV(eoRefs.toSeq)
+    } else {
+      // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship
+      /* Response:
+      {
+         "keyWhenRelationship": "name"
+      }
+       */
+      EOValueUtils.stringV(jsObj.values.toSeq(0).asOpt[String].get)
+    }
+    RuleResult(rule.rhs, rule.key, value)
+  }
+
+  def fireRule(rule: FireRule): Future[RuleResult] = {
+    val f = fireRuleFuture(rule.rhs, rule.key)
+    f.map(ruleResultWithResponse(rule,_))
+  }
 
   def search(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
     println("Search for entity: " + entity.name + " queryValues " + queryValues)

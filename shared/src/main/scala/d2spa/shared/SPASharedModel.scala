@@ -26,6 +26,7 @@ object RuleKeys {
   val displayPropertyKeys = "displayPropertyKeys"
   val destinationEos = "destinationEos"
   val pkAttributeName = "pkAttributeName"
+  val listConfigurationName = "listConfigurationName"
   val pageConfiguration = "pageConfiguration"
 }
 
@@ -108,9 +109,14 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 
-case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[String,String]] = None)
-case class RuleResult(key: String, eovalue: EOValue)
 
+trait FireAction
+case class HydrateDestinationEOs(eoRefs: List[EORef], displayPropertyKeys: FireRule) extends FireAction
+case class FireRule(rhs: D2WContext, key: String) extends FireAction
+
+case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[FireRule,String]] = None)
+case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
+case class RuleValue(stringV: String, stringsV: List[String])
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
