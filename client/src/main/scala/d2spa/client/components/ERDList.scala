@@ -58,6 +58,7 @@ object ERDList {
 
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
+      val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
       val displayPKeysContext = D2WContext(destinationEntity.name, d2spa.shared.TaskDefine.list , None, None, Some(Left(fireListConfiguration)))
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
 
@@ -68,12 +69,12 @@ object ERDList {
           p.property,
           List(
             FireRule(d2wContext, RuleKeys.keyWhenRelationship),
+            fireDisplayPropertyKeys,
             fireListConfiguration,
             fireListDisplayPropertyKeys,
             // in order to have an EO completed with all attributes for the task,
             // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            CompleteEO(p.eo, p.d2wContext),
-
+            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
             // Hydrate has 2 parts
             // 1) which eos
             // 2) which propertyKeys
@@ -89,7 +90,7 @@ object ERDList {
             //   1) property eos as eorefs (entity, In qualifier)
             //   2) displayPropertyKeys (fireRule is used)
             // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-            HydrateDestinationEOs(List(),fireListDisplayPropertyKeys)
+            Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),WateringScope(Some(fireListDisplayPropertyKeys)))
           )
           )
         ))

@@ -168,7 +168,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value)
 
 
-    case FireActions(property: PropertyMetaInfo, actions: List[FireAction]) =>
+    case FireActions(property: PropertyMetaInfo, actions: List[D2WAction]) =>
       println("FireActions " )
       // take first actions and call FireActions again with the rest
       val fireAction = actions.head
@@ -180,16 +180,53 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
             rhs.copy(pageConfiguration = Some(Right("real value")))
           } else rhs
           effectOnly(Effect(AjaxClient[Api].fireRule(FireRule(newRhs,key)).call().map(SetRuleResult(property,_,remainingActions))))
-        case HydrateDestinationEOs(eoRefs, displayPropertyKeys) =>
-          // get displayPropertyKeys from previous rule results
-          val missingKeys: Set[String] = Set() // To be implemented
-          effectOnly(Effect(AjaxClient[Api].hydrateEORefs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(entity, _, remainingActions))))
 
+        case Hydration(drySubstrate,  wateringScope) =>
+          // get displayPropertyKeys from previous rule results
+          val fireRule = wateringScope.fireRule.get
+          val ruleKey = fireRule.key
+          val ruleRhs = fireRule.rhs
+          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(property.ruleKeyValues,ruleRhs,ruleKey)
+          ruleResultOpt match {
+            case Some(RuleResult(rhs,key,value)) => {
+
+              val ruleValue = property.ruleKeyValues
+              val missingKeys: Set[String] = ruleKey match {
+                case RuleKeys.keyWhenRelationship =>
+                  Set(value.stringV)
+                case RuleKeys.displayPropertyKeys =>
+                  value.stringsV.toSet
+              }
+              drySubstrate match {
+                case DrySubstrate(_ , Some(eo), _) =>
+                  // completeEO ends up with a MegaContent eo update
+                  effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO(_, property, remainingActions))))
+                case DrySubstrate(Some(eorefsdef), _ , _) =>
+                  eorefsdef match {
+                    case EORefsDefinition(Some(eoakp)) =>
+                      val eovalueOpt = EOValueUtils.valueForKey(eoakp.eo, eoakp.keyPath)
+                      eovalueOpt match {
+                        case Some(eovalue) =>
+                          val eoRefs = eovalue.eosV
+                          effectOnly(Effect(AjaxClient[Api].hydrateEORefs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, property, remainingActions))))
+
+                        case _ => effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+                      }
+                    case _ => effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+                  }
+                case DrySubstrate(_ , _ , Some(fs)) =>
+                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , property, remainingActions))))
+
+                case _ =>  effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+              }
+            }
+            case _ =>  effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+          }
       }
 
 
     // hydrated destination EOs are simply stored in MegaContent eos
-    case SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[FireAction]) =>
+    case SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[D2WAction]) =>
       // Some update
       updated(
         updatedModelForEntityNamed(eoses,entity.name),
@@ -205,15 +242,17 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       //val task = d2wContext.task
       val propertyKey = property.name
       val task = property.task
+
+      // rule results are stored in EntityMetaData -> Task -> property
       val entityWriter = zoomToEntity(property.entityName,modelRW)
       entityWriter match {
         case Some(erw) => zoomToTask(task, erw) match {
           case Some(trw) => {
             zoomToProperty(property, trw) match {
-              case Some(prw) => {
+              case Some(propWriter) => {
                 println("newEOValue " + ruleResultByKey)
-                println("prw " + prw)
-                ModelUpdate(prw.updated(prw.value.copy(ruleKeyValues = ruleResultsWith(prw.value.ruleKeyValues,ruleResultByKey))))
+                println("prw " + propWriter)
+                ModelUpdate(propWriter.updated(propWriter.value.copy(ruleKeyValues = ruleResultsWith(propWriter.value.ruleKeyValues,ruleResultByKey))))
               }
               case None => noChange
             }
@@ -233,11 +272,8 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
   }
 
   override def handle = {
-    case FetchObjectsForEntity(entity) =>
-      println("Fetch Entity " + entity)
-      effectOnly(Effect(AjaxClient[Api].search(entity, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(entity, _))))
 
-    case FetchedObjectsForEntity(entity, eoses, actions) =>
+    case FetchedObjectsForEntity(eoses, property, actions) =>
       println("FetchedObjectsForEntity Entity " + entity)
       //println("FetchedObjectsForEntity eos " + eos)
       updated(
@@ -307,12 +343,12 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(InstallInspectPage(fromTask,eo))
       )
-    case CompleteEO(eo, missingKeys) =>
-      println("CompleteEO for missingKeys " + missingKeys)
-      effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO)))
-    case RefreshEO(eo) =>
+    case RefreshEO(eo, property, actions) =>
       println("Refreshed EO " + eo)
-      updated(Ready(eo))
+      updated(
+        Ready(eo),
+        Effect.action(FireActions(property,actions))
+      )
 
     case EditEO(fromTask, eo) =>
       updated(

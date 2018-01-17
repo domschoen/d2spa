@@ -52,12 +52,14 @@ object ERD2WEditToOneRelationship   {
 
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
+      val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireActions(
         p.property, List(
           keyWhenRelationshipFireRule,
-          HydrateDestinationEOs(List(),keyWhenRelationshipFireRule)
-        ))) >>
-            Callback.when(true)(p.proxy.dispatchCB(FetchObjectsForEntity(destinationEntity)))
+          Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+          Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipFireRule)))
+        ))))
     }
 
 

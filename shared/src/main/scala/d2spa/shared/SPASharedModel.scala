@@ -109,11 +109,15 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 
+case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EO] = None, fetchSpecification: Option[FetchSpecification] = None)
+case class WateringScope(fireRule: Option[FireRule] = None)
+case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
+case class EOsAtKeyPath(eo: EO, keyPath: String)
+case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
 trait D2WAction
-case class HydrateDestinationEOs(eoRefs: List[EORef], displayPropertyKeys: FireRule) extends D2WAction
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
-case class CompleteEO(eo:EO, d2wContext: D2WContext) extends D2WAction
+case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 
 case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[FireRule,String]] = None)
 case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
@@ -150,4 +154,9 @@ object EOModelUtils {
   }
 
   def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
+}
+
+object RuleUtils {
+  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.rhs.equals(rhs) && r.key.equals(key)})
+
 }

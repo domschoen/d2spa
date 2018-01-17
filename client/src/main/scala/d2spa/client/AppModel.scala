@@ -37,12 +37,11 @@ case object InitClient extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
-case class RefreshEO(eo:EO) extends Action
+case class RefreshEO(eo:EO, property: PropertyMetaInfo, actions: List[D2WAction]) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
-case class FetchObjectsForEntity(property: ) extends Action
-case class FetchedObjectsForEntity(entity: EOEntity, eos: Seq[EO], actions: List[FireAction]) extends Action
+case class FetchedObjectsForEntity(eos: Seq[EO], property: PropertyMetaInfo, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
 case class FetchMetaDataForMenu(task: String, entityName: String) extends Action
@@ -84,12 +83,12 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 
 
 
-case class FireActions(property: PropertyMetaInfo, actions: List[FireAction])
+case class FireActions(property: PropertyMetaInfo, actions: List[D2WAction])
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
 case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
-case class SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[FireAction]) extends Action
+case class SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[D2WAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action
