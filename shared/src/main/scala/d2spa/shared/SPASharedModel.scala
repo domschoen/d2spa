@@ -80,6 +80,14 @@ object EOValueUtils {
       None
   }
 
+  // case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
+  def completeEoWithEo(existingEO: EO, refreshedEO: EO) : EO = {
+    val existingValues = existingEO.values
+    val refreshedValues = refreshedEO.values
+    val newValues = existingValues ++ refreshedValues
+    existingEO.copy(values = newValues)
+  }
+
   def pk(eo:EO) = {
     val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
     eoValue match {
@@ -115,9 +123,6 @@ case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
 case class EOsAtKeyPath(eo: EO, keyPath: String)
 case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
-trait D2WAction
-case class FireRule(rhs: D2WContext, key: String) extends D2WAction
-case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 
 case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[FireRule,String]] = None)
 case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
@@ -128,7 +133,7 @@ case class RuleValue(stringV: String, stringsV: List[String])
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 // Property
-case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String, ruleKeyValues: List[RuleResult] = List())
+case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String, ruleResults: List[RuleResult] = List())
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 
@@ -158,5 +163,12 @@ object EOModelUtils {
 
 object RuleUtils {
   def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.rhs.equals(rhs) && r.key.equals(key)})
+
+  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
+    val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
+    if (result.isDefined) Some(result.get.value.stringV) else None
+  }
+  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
+
 
 }

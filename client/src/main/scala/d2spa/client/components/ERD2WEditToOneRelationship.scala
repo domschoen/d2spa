@@ -33,16 +33,17 @@ object ERD2WEditToOneRelationship   {
 
   class Backend($ : BackendScope[Props, Unit])  {
     def mounted(p: Props) = {
-
-      //val destinationEntity = EOModelUtilsdes
       log.debug("ERD2WEditToOneRelationship mounted")
-      val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
+
+      val propertyName = p.property.name
+      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
       val entityName = p.d2wContext.entityName
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val propertyName = p.property.name
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
       log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
@@ -50,16 +51,19 @@ object ERD2WEditToOneRelationship   {
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
 
-      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
       val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(FireActions(
-        p.property, List(
-          keyWhenRelationshipFireRule,
-          Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
-          Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipFireRule)))
-        ))))
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(
+        FireActions(
+          p.property,
+          List[D2WAction](
+            //keyWhenRelationshipFireRule//,
+            //Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+            //Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipFireRule)))
+          )
+        )
+      ))
     }
 
 
@@ -83,6 +87,7 @@ object ERD2WEditToOneRelationship   {
       })
       if (optEO.isDefined) Some(EORef(entity.name, EOValueUtils.pk(optEO.get).get)) else None
     }
+    def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName
@@ -90,16 +95,16 @@ object ERD2WEditToOneRelationship   {
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val eo = p.eo
       val propertyName = p.property.name
+      val properyD2WContext = d2wContext(p)
+
       //println("Edit To One Relationship " + eo)
-      val keyWhenRelationshipRuleOpt = p.property.ruleKeyValues.find(r => {
-        r.key.equals(RuleKeys.keyWhenRelationship)
-      })
+      val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
+
       keyWhenRelationshipRuleOpt match {
-        case Some(keyWhenRelationshipRule) => {
-          val keyWhenRelationship = keyWhenRelationshipRule.eovalue.stringV.get
+        case Some(keyWhenRelationship) => {
           val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
           val eoCache = p.proxy.value.eos
-          val destinationEOs = if (eoCache.contains(destinationEntity.name)) Some(eoCache(destinationEntity.name)) else None
+          val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
           <.div(
             //{
               //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)

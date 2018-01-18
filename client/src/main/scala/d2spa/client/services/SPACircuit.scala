@@ -14,6 +14,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client._
+import d2spa.client.logger._
 
 /*import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -140,11 +141,12 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 
   def ruleResultsWith(base: List[RuleResult], addOn: List[RuleResult]): List[RuleResult] = {
-    val baseMap = base.map(x => (x.key,x.eovalue)).toMap
-    val addOnMap = addOn.map(x => (x.key,x.eovalue)).toMap
+    val baseMap = base.map(x => (x.rhs,x)).toMap
+    val addOnMap = addOn.map(x => (x.rhs,x)).toMap
     val mixMap = baseMap ++ addOnMap
-    mixMap.map(x => {RuleResult(x._1,x._2)}).toList
+    mixMap.values.toList
   }
+
 
   // handle actions
   override def handle = {
@@ -179,7 +181,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           val newRhs = if (rhs.pageConfiguration.isDefined && rhs.pageConfiguration.get.isLeft) {
             rhs.copy(pageConfiguration = Some(Right("real value")))
           } else rhs
-          effectOnly(Effect(AjaxClient[Api].fireRule(FireRule(newRhs,key)).call().map(SetRuleResult(property,_,remainingActions))))
+          effectOnly(Effect(AjaxClient[Api].fireRule(FireRule(newRhs,key)).call().map(rr => SetRuleResults(List(rr), property, remainingActions))))
 
         case Hydration(drySubstrate,  wateringScope) =>
           // get displayPropertyKeys from previous rule results
@@ -225,18 +227,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       }
 
 
-    // hydrated destination EOs are simply stored in MegaContent eos
-    case SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[D2WAction]) =>
-      // Some update
-      updated(
-        updatedModelForEntityNamed(eoses,entity.name),
-        Effect.action(FireActions(property, actions))
-      )
 
 
-
-    case SetRuleResults(property, ruleResultByKey) =>
-      println("Rule Results " + ruleResultByKey)
+    // many rules
+    case SetRuleResults(ruleResults, property, actions: List[D2WAction]) =>
+      println("Rule Results " + ruleResults)
       //val d2wContext = property.d2wContext
       //val entity = d2wContext.entity
       //val task = d2wContext.task
@@ -250,9 +245,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           case Some(trw) => {
             zoomToProperty(property, trw) match {
               case Some(propWriter) => {
-                println("newEOValue " + ruleResultByKey)
-                println("prw " + propWriter)
-                ModelUpdate(propWriter.updated(propWriter.value.copy(ruleKeyValues = ruleResultsWith(propWriter.value.ruleKeyValues,ruleResultByKey))))
+                ModelUpdate(propWriter.updated(propWriter.value.copy(ruleKeyValues = ruleResultsWith(propWriter.value.ruleKeyValues,ruleResults))))
+                effectOnly(Effect.action(FireActions(property, actions)))
               }
               case None => noChange
             }
@@ -265,26 +259,62 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 }
 
-class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHandler(modelRW) {
+// hydrated destination EOs are simply stored in MegaContent eos
+class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends ActionHandler(modelRW) {
 
-  def updatedModelForEntityNamed(eos: Seq[EO], entityName: String): Map[String, Seq[EO]] = {
-    value + (entityName -> eos)
+  // eo chache is stored as:
+  // Map of entityName -> Map of id -> eo
+  // eos: Map[String, Map[Int,EO]],
+
+  def updatedModelForEntityNamed(eos: Seq[EO]): Map[String, Map[Int,EO]] = {
+    if (eos.isEmpty) {
+      value
+    } else {
+      val entity = eos.head.entity
+      val pkAttributeName = entity.pkAttributeName
+      val entityMap = value(entity.name)
+
+      val refreshedEOs = eos.map(eo => {
+        val pkOpt = EOValueUtils.pk(eo)
+        pkOpt match {
+          case Some(pk) => Some((pk,eo))
+          case _ => None
+        }
+      }).flatten.toMap
+      val refreshedPks = refreshedEOs.keySet
+      val existingPks = entityMap.keySet
+
+      val newPks = refreshedPks -- existingPks
+      val newAndUpdateMap = refreshedPks.map(id => {
+        val refreshedEO = refreshedEOs(id)
+        if (newPks.contains(id)) {
+          (id, refreshedEO)
+        } else {
+          // Complete EOs !
+          val existingEO = entityMap(id)
+          EOValueUtils.completeEoWithEo(existingEO,refreshedEO)
+        }
+      }).toMap
+      val newEntityMap = entityMap ++ newAndUpdateMap
+
+      value + (entity.name -> newEntityMap)
+    }
   }
 
   override def handle = {
 
     case FetchedObjectsForEntity(eoses, property, actions) =>
-      println("FetchedObjectsForEntity Entity " + entity)
+      println("FetchedObjectsForEntity property " + property)
       //println("FetchedObjectsForEntity eos " + eos)
       updated(
-        updatedModelForEntityNamed(eoses,entity.name))
+        updatedModelForEntityNamed(eoses),
         Effect.action(FireActions(property, actions))
       )
 
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)
       updated(
-        updatedModelForEntityNamed(eoses,entity.name),
+        updatedModelForEntityNamed(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entity.name))
       )
     case DeleteEOFromList(fromTask, eo) =>
@@ -307,23 +337,25 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Seq[EO]]]) extends ActionHan
       println("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
       val eos = value(entityName)
-      val deletedEOPk = EOValueUtils.pk(deletedEO).get
+      val eoPk = EOValueUtils.pk(deletedEO).get
 
-      val newEos = eos.filterNot(o => {
-        val pk = EOValueUtils.pk(o)
-        pk.isDefined && pk.get.equals(deletedEOPk)})
-      updated(updatedModelForEntityNamed(newEos,entityName))
+      val entityMap = value(entityName)
+      val newEntityMap = entityMap - eoPk
+      val newValue = value + (entityName -> newEntityMap)
+      updated(newValue)
 
+
+    // set error on eo
     case UpdateEOsForEOOnError(eoOnError) =>
       val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
       val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
       val entityName = eoOnError.entity.name
       val eos = value(entityName)
-      val deletedEOPk = EOValueUtils.pk(eoWithDisplayableError).get
-      val newEos = eos.map(o => {
-        val pk = EOValueUtils.pk(o)
-        if (pk.isDefined && pk.get.equals(deletedEOPk)) eoWithDisplayableError else o})
-      updated(updatedModelForEntityNamed(newEos,entityName))
+      val eoPk = EOValueUtils.pk(eoWithDisplayableError).get
+      val entityMap = value(entityName)
+      val newEntityMap = entityMap + (eoPk -> eoWithDisplayableError)
+      val newValue = value + (entityName -> newEntityMap)
+      updated(newValue)
 
 
 }
@@ -474,7 +506,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     case Search(selectedEntity) =>
       println("Search: for entity " + selectedEntity + " with query values " + value)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity, value).call().map(SearchResult(selectedEntity, _))))
+      effectOnly(Effect(AjaxClient[Api].search(selectedEntity.name, value).call().map(SearchResult(selectedEntity, _))))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
     //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))

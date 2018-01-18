@@ -81,14 +81,16 @@ object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
 
+trait D2WAction extends diode.Action
+case class FireRule(rhs: D2WContext, key: String) extends D2WAction
+case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 
 
 case class FireActions(property: PropertyMetaInfo, actions: List[D2WAction])
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
-case class SetRuleResults(property: PropertyMetaInfo, ruleResults: List[RuleResult]) extends Action
-case class SetRuleResult(property: PropertyMetaInfo, ruleResult: RuleResult, actions: List[D2WAction]) extends Action
+case class SetRuleResults(ruleResults: List[RuleResult], property: PropertyMetaInfo, actions: List[D2WAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action
@@ -124,16 +126,13 @@ object AppModel {
     )
   )
 
-
-
-
-  def ruleStringValueForKey(property: PropertyMetaInfo, key:String) = {
-    val result = property.ruleKeyValues.find(r => {r.key.equals(key)})
-    if (result.isDefined) result.head.eovalue.stringV.get else ""
-  }
-  def rulesContainsKey(property: PropertyMetaInfo, key:String) = property.ruleKeyValues.find(r => {r.key.equals(key)}).isDefined
-
 }
 
+object EOCacheUtils {
+  def objectsForEntityNamed(eos: Map[String, Map[Int,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
+    val entityEOs = eos(entityName).values.toList
+    if (entityEOs.isEmpty) None else Some(entityEOs)
+  } else None
+}
 
 
