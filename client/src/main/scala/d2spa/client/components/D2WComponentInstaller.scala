@@ -30,7 +30,8 @@ object D2WComponentInstaller  {
         val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
         val componentNameFound =  RuleUtils.ruleStringValueForContextAndKey(property,d2wContext,RuleKeys.componentName)
         componentNameFound match {
-          case Some(Some(componentName)) => {
+          //case Some(Some(componentName)) => {
+          case Some(componentName) => {
             val displayedComponentName = if (p.proxy.value.isDebugMode) componentName else ""
             componentName match {
               case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)

@@ -136,5 +136,5 @@ object EOCacheUtils {
 }
 
 object FireRuleConverter {
-  def toRuleFault(fireRule: FireRule) = RuleFault(fireRule.rhs,fireRule.key)
+  def toRuleFault(fireRule: FireRule) = RuleFault(RuleUtils.convertD2WContextToFullFledged(fireRule.rhs),fireRule.key)
 }

@@ -74,7 +74,8 @@ object D2WQueryPage {
                                 val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
                                 val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.displayNameForProperty)
                                 displayNameFound match {
-                                  case Some(Some(stringValue)) => stringValue
+                                  //case Some(Some(stringValue)) => stringValue
+                                  case Some(stringValue) => stringValue
                                   case _ => ""
                                 }
                               }
@@ -85,7 +86,8 @@ object D2WQueryPage {
                                   val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(property.name))
                                   val componentNameFound = RuleUtils.ruleStringValueForContextAndKey(property,propertyD2WContext, RuleKeys.componentName)
                                   componentNameFound match {
-                                    case Some(Some(componentName)) =>
+                                    //case Some(Some(componentName)) =>
+                                    case Some(componentName) =>
                                       componentName match {
 
                                         case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, propertyD2WContext, property, p.proxy)

@@ -41,8 +41,8 @@ object ERDEditRelationship  {
       val propertyName = p.property.name
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
 
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.displayNameForKeyWhenRelationship).get.get
-      val keyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship).get.get
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.displayNameForKeyWhenRelationship).get
+      val keyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship).get
 
       val queryKey = p.property.name + "." + keyWhenRelationship
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
