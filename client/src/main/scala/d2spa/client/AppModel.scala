@@ -86,7 +86,7 @@ case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 
 
-case class FireActions(property: PropertyMetaInfo, actions: List[D2WAction])
+case class FireActions(property: PropertyMetaInfo, actions: List[D2WAction]) extends Action
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
@@ -135,4 +135,6 @@ object EOCacheUtils {
   } else None
 }
 
-
+object FireRuleConverter {
+  def toRuleFault(fireRule: FireRule) = RuleFault(fireRule.rhs,fireRule.key)
+}

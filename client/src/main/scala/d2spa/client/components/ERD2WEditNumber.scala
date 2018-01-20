@@ -33,7 +33,7 @@ object ERD2WEditNumber {
       <.div(
         <.input(^.id := "description", ^.value := value,
           ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-              p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName, p.property,
+              p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property,
             EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))} )
       )
     }

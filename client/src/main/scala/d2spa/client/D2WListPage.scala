@@ -27,7 +27,7 @@ object D2WListPage {
       val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
+      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName.get)))
     }
 
 
@@ -53,7 +53,7 @@ object D2WListPage {
 
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
       println("Render List page for entity: " + entityName)
       val menuModelPot = p.proxy.value.menuModel
       menuModelPot match {
@@ -62,10 +62,11 @@ object D2WListPage {
           val task = entityMetaData.listTask
           val entity = entityMetaData.entity
           //val eos = if (task.eos.isReady) task.eos.get else Vector()
-          val eosPot = if (p.proxy.value.eos.contains(entityName)) Some(p.proxy.value.eos(entityName)) else None
+          val eosPot: Option[Map[Int, EO]] = if (p.proxy.value.eos.contains(entityName)) Some(p.proxy.value.eos(entityName)) else None
           eosPot match {
-            case Some(eos) =>
-              println("list task inside " + eos )
+            case Some(eosByID) =>
+              println("list task inside " + eosByID )
+              val eos = eosByID.values.toList
               val displayPropertyKeys = task.displayPropertyKeys
               println("list task displayPropertyKeys " + displayPropertyKeys )
               <.div(
@@ -93,20 +94,21 @@ object D2WListPage {
                           <.table(^.className :="listRepetition",
                             <.tbody(
                               <.tr(^.className :="listRepetitionColumnHeader",
-                                <.td(),
-                                displayPropertyKeys toTagMod (property =>
-                                  <.td(^.className :="listRepetitionColumnHeader",{
-                                    val displayNameFound = property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.displayNameForProperty)})
-                                    val displayString = displayNameFound match {
-                                      case Some(ruleResult) => {
-                                        ruleResult.eovalue.stringV.get
+                                <.td(), {
+                                  displayPropertyKeys toTagMod (property =>
+                                    <.td(^.className :="listRepetitionColumnHeader", {
+                                      val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
+                                      val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.keyWhenRelationship)
+                                      val displayString = displayNameFound match {
+                                        case Some(Some(stringValue)) => {
+                                          stringValue
+                                        }
+                                        case _ => property.name
                                       }
-                                      case _ => property.name
-                                    }
-                                    <.span(^.className :="listRepetitionColumnHeader",displayString)
-                                  }
+                                      <.span(^.className :="listRepetitionColumnHeader",displayString)
+                                    })
                                   )
-                                  )
+                                }
                               )
                             ),
                             <.tbody(
@@ -140,7 +142,7 @@ object D2WListPage {
               )
             case _ =>
               <.div(
-                <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName, p.proxy)),
+                <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
                 <.div(^.id:="a",""
                 )
               )
@@ -148,7 +150,7 @@ object D2WListPage {
         }
         case _ => {
           <.div(
-            <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName, p.proxy)),
+            <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
             <.div(^.id:="a",""
             )
           )

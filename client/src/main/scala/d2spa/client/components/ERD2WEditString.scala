@@ -36,7 +36,7 @@ object ERD2WEditString  {
       <.div(
         <.input(^.id := "description", ^.value := value,
           ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName, p.property, EOValue(stringV = Some(e.target.value))))} )
+            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property, EOValue(stringV = Some(e.target.value))))} )
       )
     }
   }

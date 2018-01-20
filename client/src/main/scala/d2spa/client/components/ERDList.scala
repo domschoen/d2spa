@@ -36,13 +36,15 @@ object ERDList {
     def mounted(p: Props) = {
       //val destinationEntity = EOModelUtilsdes
       log.debug("ERD2WEditToOneRelationship mounted")
-      val dataNotFetched = !AppModel.rulesContainsKey(p.property,RuleKeys.keyWhenRelationship)
-      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
       val eomodel = p.proxy.value.eomodel.get
-
       val entityName = p.property.entityName
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val propertyName = p.property.name
+
+      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
       log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
 
@@ -56,10 +58,12 @@ object ERDList {
       // - entity.name = 'Project'
       // - pageConfiguration = <listConfigurationName>
 
-      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
       val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-      val displayPKeysContext = D2WContext(destinationEntity.name, d2spa.shared.TaskDefine.list , None, None, Some(Left(fireListConfiguration)))
+      val displayPKeysContext = D2WContext(
+        Some(destinationEntity.name),
+        Some(d2spa.shared.TaskDefine.list) , None, None,
+        Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
 
 
@@ -74,7 +78,7 @@ object ERDList {
             fireListDisplayPropertyKeys,
             // in order to have an EO completed with all attributes for the task,
             // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys)))),
             // Hydrate has 2 parts
             // 1) which eos
             // 2) which propertyKeys
@@ -90,7 +94,9 @@ object ERDList {
             //   1) property eos as eorefs (entity, In qualifier)
             //   2) displayPropertyKeys (fireRule is used)
             // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-            Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),WateringScope(Some(fireListDisplayPropertyKeys)))
+            Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),
+              WateringScope(Some(
+                FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys))))
           )
           )
         ))

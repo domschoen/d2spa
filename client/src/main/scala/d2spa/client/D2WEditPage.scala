@@ -22,37 +22,6 @@ object D2WEditPage {
 
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(p: Props) = {
-      println("D2WEditPage mounted")
-      val eoOpt = p.proxy.value.eo
-      //println("EO before calculation of nonExistingPropertValues " + eoOpt)
-      val nonExistingPropertValues: Set[String] = if (!eoOpt.isEmpty) {
-        // If new eo, it is ok if not all attribute are set
-        // We verify we have all data needed by the displayPropertyKeys and if not we fetch them
-        val displayPropertyKeys = displayPropertyKeysFromProps(p)
-        val eo = eoOpt.get
-        val eoProperties: Set[String] = eo.values.keySet.map(_.toString)
-        println("eo properties " + eoProperties)
-        val displayPropertyKeysKeys: Set[String] = displayPropertyKeys.map(x => x.name).toSet
-        displayPropertyKeysKeys -- eoProperties
-      } else Set()
-      val missingInit = p.proxy().entityMetaDatas.isEmpty
-      val missingEOKeys = nonExistingPropertValues.size > 0
-      println("D2WEditPage nonExistingPropertValues " + nonExistingPropertValues)
-      val isEmptyEOModel = p.proxy.value.eomodel.isEmpty
-      println("D2WEditPage missingEOKeys " + isEmptyEOModel)
-
-      Callback.when(missingEOKeys)(p.proxy.dispatchCB(CompleteEO(eoOpt.get,nonExistingPropertValues)))
-
-
-      /*val needsCallback =  missingInit || missingEOKeys
-
-
-      Callback.when(needsCallback)(p.proxy.dispatchCB(
-        if (missingInit && missingEOKeys)
-          InitMenuAndEO(eoOpt.get, nonExistingPropertValues)
-        else if (missingInit && !missingEOKeys) InitMenu else CompleteEO(eoOpt.get,nonExistingPropertValues)))*/
-    }
 
 
     def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
@@ -90,7 +59,8 @@ object D2WEditPage {
     }
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
+
       println("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
@@ -98,15 +68,16 @@ object D2WEditPage {
         val displayPropertyKeys = displayPropertyKeysFromProps(p)
         val entity = entityMetaData.entity
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
+        val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
         val eo = p.proxy.value.eo.getOrElse( {
-          val valueMap = entityMetaData.editTask.displayPropertyKeys.map (x => {
+          val valueMap = task.displayPropertyKeys.map (x => {
             x.name -> EOValue(typeV = x.typeV)
           }).toMap
           EO(entity,valueMap,None)
         })
         println("Edit page EO " + eo)
         <.div(
-          <.div(^.id:="b",MenuHeader(p.router,p.d2wContext.entityName,p.proxy)),
+          <.div(^.id:="b",MenuHeader(p.router,p.d2wContext.entityName.get,p.proxy)),
           <.div(^.id:="a",
             {
               if (eo.validationError.isDefined) {
@@ -142,10 +113,12 @@ object D2WEditPage {
                         displayPropertyKeys toTagMod (property =>
                           <.tr(^.className :="attribute",
                             <.th(^.className :="propertyName query",{
-                                val displayNameFound = property.ruleKeyValues.find(r => {r.key.equals(RuleKeys.displayNameForProperty)})
+                              val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
+                              val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.displayNameForProperty)
+
                                 val displayString = displayNameFound match {
-                                  case Some(ruleResult) => {
-                                    ruleResult.eovalue.stringV.get
+                                  case Some(Some(stringValule)) => {
+                                    stringValule
                                   }
                                   case _ => property.name
                                 }
@@ -174,8 +147,6 @@ object D2WEditPage {
 
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
-    //.componentWillMount(scope => scope.props.proxy.dispatchCB(SelectMenu(scope.props.entity)))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {

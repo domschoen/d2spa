@@ -26,33 +26,25 @@ object D2WComponentInstaller  {
       val property = p.property
 
       <.div({
-        val componentNameFound = property.ruleKeyValues.find(r => {
-          r.key.equals(RuleKeys.componentName)
-        })
+        val propertyName = p.property.name
+        val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
+        val componentNameFound =  RuleUtils.ruleStringValueForContextAndKey(property,d2wContext,RuleKeys.componentName)
         componentNameFound match {
-          case Some(ruleResult) => {
-            val componentNameOpt = ruleResult.eovalue.stringV
-
-            componentNameOpt match {
-              case Some(componentName) => {
-                val displayedComponentName = if (p.proxy.value.isDebugMode) componentName else ""
-                componentName match {
-                  case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WEditString" => <.span(ERD2WEditString(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case "ERDList" => <.span(ERDList(p.router, p.d2wContext, property, eo, p.proxy),displayedComponentName)
-                  case _ => <.span("Component not found: " + componentName)
-                }
-              }
-              case _ => <.span("Rule Result with empty value for property " + property.name)
+          case Some(Some(componentName)) => {
+            val displayedComponentName = if (p.proxy.value.isDebugMode) componentName else ""
+            componentName match {
+              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case "ERD2WEditString" => <.span(ERD2WEditString(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case "ERDList" => <.span(ERDList(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
+              case _ => <.span("Component not found: " + componentName)
             }
           }
-          case _ => <.span("No component Rule found for property " + property.name)
+          case _ => <.span("Rule Result with empty value for property " + property.name)
         }
-      }
-      )
+      })
     }
   }
 

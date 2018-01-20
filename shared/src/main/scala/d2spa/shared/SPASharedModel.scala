@@ -116,17 +116,18 @@ case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton:
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
+case class RuleFault(rhs: D2WContext, key: String)
 
 case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EO] = None, fetchSpecification: Option[FetchSpecification] = None)
-case class WateringScope(fireRule: Option[FireRule] = None)
+case class WateringScope(fireRule: Option[RuleFault] = None)
 case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
 case class EOsAtKeyPath(eo: EO, keyPath: String)
 case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
 
-case class D2WContext(entityName: String, task: String, previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[FireRule,String]] = None)
+case class D2WContext(entityName: Option[String], task: Option[String], previousTask: Option[String] = None, propertyKey:  Option[String] = None, pageConfiguration: Option[Either[RuleFault,String]] = None)
 case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
-case class RuleValue(stringV: String, stringsV: List[String])
+case class RuleValue(stringV: Option[String], stringsV: Option[List[String]])
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys

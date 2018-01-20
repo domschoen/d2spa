@@ -21,7 +21,7 @@ object D2WQueryPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
-      val entityName = props.d2wContext.entityName
+      val entityName = props.d2wContext.entityName.get
       println("D2WQueryPage " + entityName)
 
       val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
@@ -40,7 +40,7 @@ object D2WQueryPage {
 
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
       println("Render Query page for entity: " + entityName)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
@@ -70,19 +70,30 @@ object D2WQueryPage {
                         <.tbody(
                           displayPropertyKeys toTagMod (property =>
                             <.tr(^.className :="attribute",
-                              <.th(^.className :="propertyName query",
-                                property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.displayNameForProperty)}).head.eovalue.stringV.get
+                              <.th(^.className :="propertyName query",{
+                                val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
+                                val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.displayNameForProperty)
+                                displayNameFound match {
+                                  case Some(Some(stringValue)) => stringValue
+                                  case _ => ""
+                                }
+                              }
                               ),
                               // Component part
                               <.td(^.className :="query d2wAttributeValueCell",
                                 {
                                   val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(property.name))
-                                  val componentName = property.ruleKeyValues.filter(r => {r.key.equals(RuleKeys.componentName)}).head.eovalue.stringV.get
-                                  componentName match {
+                                  val componentNameFound = RuleUtils.ruleStringValueForContextAndKey(property,propertyD2WContext, RuleKeys.componentName)
+                                  componentNameFound match {
+                                    case Some(Some(componentName)) =>
+                                      componentName match {
 
-                                  case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, propertyD2WContext, property, p.proxy)
-                                  case "ERD2WQueryToOneField" => ERD2WQueryToOneField (p.router, propertyD2WContext, property, p.proxy)
-                                  case _ => "Component not found: " + componentName
+                                        case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, propertyD2WContext, property, p.proxy)
+                                        case "ERD2WQueryToOneField" => ERD2WQueryToOneField (p.router, propertyD2WContext, property, p.proxy)
+                                        case _ => "Component not found: " + componentName
+                                      }
+                                    case _ => "Component Name rule not found for property: " + property.name
+
                                   }
                                 }
                               )

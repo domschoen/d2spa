@@ -234,28 +234,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
-
-  def fireRuleFuture(d2WContext: D2WContext, key: String) : Future[WSResponse] = {
-    val entityName = d2WContext.entityName
-    val taskOpt = if (d2WContext.task == null) None else Some(d2WContext.task)
-    fireRuleFuture(Some(entityName), taskOpt, d2WContext.propertyKey, key)
-  }
-
-  def fireRuleFuture(entity: String, task: String, key: String) : Future[WSResponse] = {
-    fireRuleFuture(Some(entity),Some(task),None,key)
-  }
-  def fireRuleFuture(entity: String, task: String, propertyKey: String, key: String) : Future[WSResponse] = {
-    fireRuleFuture(Some(entity),Some(task),Some(propertyKey),key)
-  }
-
-
-
   val fireRuleArguments = List("entity","task","propertyKey","key")
 
-  def fireRuleFuture(entity: Option[String], task: Option[String], propertyKey: Option[String], key: String) : Future[WSResponse] = {
+  def fireRuleFuture(rhs: D2WContext, key: String) : Future[WSResponse] = {
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
-    val fireRuleValues = List(entity,task,propertyKey,Some(key))
+    val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
 
@@ -264,7 +248,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       .withRequestTimeout(10000.millis)
     request.get()
   }
-
 
   private def lift[T](futures: Seq[Future[T]]) =
     futures.map(_.map { Success(_) }.recover { case t => Failure(t) })
@@ -277,9 +260,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: EOEntity, task: String) = {
     val propertiesFutures = displayPropertyKeys.value.map( x => {
       val propertyKey = x.asOpt[String].get
-      val propertyDisplayNameFuture = fireRuleFuture(entity.name, task, propertyKey, "displayNameForProperty")
-      val componentNameFuture = fireRuleFuture(entity.name, task, propertyKey, "componentName")
-      val typeFuture = fireRuleFuture(entity.name, task, propertyKey, "attributeType")
+      val rhs = D2WContext(Some(entity.name),Some(task),Some(propertyKey))
+      val propertyDisplayNameFuture = fireRuleFuture(rhs, "displayNameForProperty")
+      val componentNameFuture = fireRuleFuture(rhs, "componentName")
+      val typeFuture = fireRuleFuture(rhs, "attributeType")
 
       val subResult = for {
         pDisplayName <- propertyDisplayNameFuture
@@ -292,15 +276,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
         println("<" + propertyComponentName + ">")
 
-
         PropertyMetaInfo(
           attributeType._2,
           propertyKey,
           entity.name,
           task,
           List(
-            RuleResult(propertyDisplayName._1, EOValueUtils.stringV(propertyDisplayName._2)),
-            RuleResult(propertyComponentName._1,EOValueUtils.stringV(propertyComponentName._2))
+            RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2), None)),
+            RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2), None))
           )
         )
       }
@@ -331,11 +314,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(entityName: String): Future[EntityMetaData] = {
     val fetchedEOModel = eomodel()
-      val entityDisplayNameFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayNameForEntity)
-      val queryDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.query, RuleKeys.displayPropertyKeys)
-      val editDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.edit, RuleKeys.displayPropertyKeys)
-      val listDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.list, RuleKeys.displayPropertyKeys)
-      val inspectDisplayPropertyKeysFuture = fireRuleFuture(entityName, TaskDefine.inspect, RuleKeys.displayPropertyKeys)
+      val entityDisplayNameFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayNameForEntity)
+      val queryDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.query)), RuleKeys.displayPropertyKeys)
+      val editDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayPropertyKeys)
+      val listDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.list)), RuleKeys.displayPropertyKeys)
+      val inspectDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.inspect)), RuleKeys.displayPropertyKeys)
 
       val result = for {
         r1 <- entityDisplayNameFuture
@@ -362,67 +345,48 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
+  case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
+
   // API method
-  def fireRules(rules: Map[String,D2WContext]): Future[List[RuleResult]] = {
-    val futures = rules.map{ case (key, d2wContext) => {fireRuleFuture(d2wContext, key)}}
+  def fireRules(rhs: D2WContext, keys: List[String]): Future[List[RuleResult]] = {
+    val futures = keys.map{ key => {fireRuleFuture(rhs, key)}}
     val futureSequece = Future sequence futures
     val result = for {
       f <- futureSequece
     } yield {
-      f.map(ruleResultWithResponse(_)).toList
+      f.map(ruleResultWithResponse(rhs,_)).toList
     }
     result
   }
 
+  def fireRule(rhs: D2WContext, key: String): Future[RuleResult] = {
+    val f = fireRuleFuture(rhs, key)
+    f.map(ruleResultWithResponse(rhs,_))
+  }
 
-  def ruleResultWithResponse(rule: FireRule, response: WSResponse) = {
+
+  def ruleResultWithResponse(rhs: D2WContext, response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
 
     println("Rule response: " + jsObj)
 
-    val value = if (key.equals(RuleKeys.destinationEos)) {
-      // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=destinationEos
-      /* Response:
-      {
-        "destinationEos": [
-          {
-            "id": 1,
-            "entity": "Customer"
-          }
-        ]
-      }
-       */
-      val rules = (jsObj \ RuleKeys.destinationEos).get.asInstanceOf[JsArray].value
-      println("Rule response value: " + rules.getClass.getName)
-      val eoRefs = rules.map (x => {
-        //println("x: " + x + " x " + x.getClass.getName)
-        val jsObj = x.asInstanceOf[JsObject]
-        val entityName = jsObj.value("entity").asInstanceOf[JsString].value
-        val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
-        val id = jsObj.value(pkAttributeName).asInstanceOf[JsNumber].value.intValue()
-
-        EORef(entityName,id)
-      })
-      // val eoRefs = eoRefJsSuccesses.filter(x => x.isSuccess).map(_.get)
-      println("EoRefs " + eoRefs)
-      EOValueUtils.eosV(eoRefs.toSeq)
-    } else {
       // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship
       /* Response:
       {
          "keyWhenRelationship": "name"
       }
        */
-      EOValueUtils.stringV(jsObj.values.toSeq(0).asOpt[String].get)
+    val values = jsObj.values.toList
+    val ruleValue = if (values.length == 1) {
+      RuleValue(Some(values.head.asOpt[String].get), None)
+    } else {
+      RuleValue(None, Some(values.map(_.asOpt[String].get)))
     }
-    RuleResult(rule.rhs, rule.key, value)
+
+    RuleResult(rhs, key, ruleValue)
   }
 
-  def fireRule(rule: FireRule): Future[RuleResult] = {
-    val f = fireRuleFuture(rule.rhs, rule.key)
-    f.map(ruleResultWithResponse(rule,_))
-  }
 
   def search(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
     println("Search for entity: " + entity.name + " queryValues " + queryValues)

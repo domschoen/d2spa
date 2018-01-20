@@ -13,7 +13,7 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
 import diode.data.Ready
 import d2spa.client.logger._
-
+import d2spa.shared.EOModelUtils
 
 sealed trait TodoPriority
 
@@ -41,7 +41,7 @@ object ERD2WEditToOneRelationship   {
 
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
@@ -51,16 +51,17 @@ object ERD2WEditToOneRelationship   {
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
 
+      val keyWhenRelationshipRuleFault = RuleFault(d2wContext, RuleKeys.keyWhenRelationship)
+      val fireDisplayPropertyKeys = RuleFault(d2wContext, RuleKeys.displayPropertyKeys)
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-      val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
           p.property,
           List[D2WAction](
-            //keyWhenRelationshipFireRule//,
-            //Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
-            //Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipFireRule)))
+            keyWhenRelationshipFireRule,
+            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+            Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipRuleFault)))
           )
         )
       ))
@@ -90,7 +91,7 @@ object ERD2WEditToOneRelationship   {
     def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val eo = p.eo
@@ -101,7 +102,7 @@ object ERD2WEditToOneRelationship   {
       val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
 
       keyWhenRelationshipRuleOpt match {
-        case Some(keyWhenRelationship) => {
+        case Some(Some(keyWhenRelationship)) => {
           val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
           val eoCache = p.proxy.value.eos
           val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)

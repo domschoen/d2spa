@@ -1,7 +1,7 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, FireActions}
-import d2spa.shared.{EOModelUtils, FireRule, RuleUtils}
+import d2spa.client.{AppModel, FireActions, FireRule}
+import d2spa.shared.{EOModelUtils, RuleUtils}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -34,26 +34,26 @@ object ERD2WQueryToOneField  {
     def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def mounted(p: Props) = {
-      val d2wContext = d2wContext(p)
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+      val currentD2wContext = d2wContext(p)
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, currentD2wContext, RuleKeys.keyWhenRelationship)
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
           p.property,
           List(
-            FireRule(d2wContext, RuleKeys.keyWhenRelationship),
-            FireRule(d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+            FireRule(currentD2wContext, RuleKeys.keyWhenRelationship),
+            FireRule(currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
           )
         )
       ))
     }
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName
+      val entityName = p.d2wContext.entityName.get
       //val eomodel = p.proxy.value.eomodel.get
       //val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val d2wContext = d2wContext(p)
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
-      val queryKey = p.property.name + "." + RuleUtils.ruleStringValueForContextAndKey(p.property,d2wContext,RuleKeys.keyWhenRelationship)
+      val currentD2wContext = d2wContext(p)
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+      val queryKey = p.property.name + "." + RuleUtils.ruleStringValueForContextAndKey(p.property,currentD2wContext,RuleKeys.keyWhenRelationship)
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
