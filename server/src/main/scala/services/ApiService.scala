@@ -4,7 +4,7 @@ import java.util.{Date, UUID}
 
 import com.fasterxml.jackson.core.JsonParseException
 import d2spa.shared
-import d2spa.shared._
+import d2spa.shared.{RuleResult, _}
 import play.api.Configuration
 import play.api.libs.ws._
 import play.api.Play.current
@@ -227,7 +227,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           Menus(List(),D2WContext(null,null,null,null),showDebugButton)
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(firstChildEntity.name,"query",null,null),showDebugButton)
+          Menus(mainMenus.toList,D2WContext(Some(firstChildEntity.name),Some("query")),showDebugButton)
         }
       }
 
@@ -282,8 +282,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           entity.name,
           task,
           List(
-            RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2), None)),
-            RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2), None))
+            //RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2), None)),
+            //RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2), None))
+            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, propertyDisplayName._2),
+            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, propertyComponentName._2)
           )
         )
       }
@@ -384,14 +386,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       RuleValue(None, Some(values.map(_.asOpt[String].get)))
     }
 
-    RuleResult(rhs, key, ruleValue)
+    //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue)
+    RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
+  def hydrateEORefs(eo: Seq[d2spa.shared.EORef],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
+    Future(Seq())
+  }
 
-  def search(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
-    println("Search for entity: " + entity.name + " queryValues " + queryValues)
+  def search(entityName: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+    println("Search for entity: " + entityName + " queryValues " + queryValues)
     //if (usesD2SPAServer) {
-      searchOnD2SPAServer(entity, queryValues)
+      searchOnD2SPAServer(entityName, queryValues)
     //} else {
       // to be restored
       // searchOnOnlineCountryWs(qualifiers)
@@ -411,9 +417,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
 
-  def searchOnD2SPAServer(entity: EOEntity, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+  def searchOnD2SPAServer(entityName: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+    val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
+
     val qualifierSuffix = if (queryValues == null || queryValues.isEmpty) "" else "?" + qualifiersUrlPart(queryValues)
-    val url = d2spaServerBaseUrl + "/" + entity.name + ".json" + qualifierSuffix
+    val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     println("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
