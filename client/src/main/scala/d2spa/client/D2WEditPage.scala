@@ -68,7 +68,7 @@ object D2WEditPage {
         println("entityMetaDatas not empty")
 
         val entityMetaData = entityMetaDataFromProps(p)
-        log.debug("Entity meta Data " + metaDatas)
+        //log.debug("Entity meta Data " + metaDatas)
         val displayPropertyKeys = displayPropertyKeysFromProps(p)
         val entity = entityMetaData.entity
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"

@@ -92,12 +92,15 @@ object ERD2WEditToOneRelationship   {
     def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def render(p: Props) = {
+      log.debug("ERD2WEditToOneRelationship render")
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val eo = p.eo
       val propertyName = p.property.name
       val properyD2WContext = d2wContext(p)
+
+      log.debug("+ rules " + p.property.ruleResults)
 
       //println("Edit To One Relationship " + eo)
       val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)

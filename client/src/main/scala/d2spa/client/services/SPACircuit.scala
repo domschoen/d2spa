@@ -140,11 +140,18 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     }
   }
 
+  // case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
+
   def ruleResultsWith(base: List[RuleResult], addOn: List[RuleResult]): List[RuleResult] = {
-    val baseMap = base.map(x => (x.rhs,x)).toMap
-    val addOnMap = addOn.map(x => (x.rhs,x)).toMap
+    println("Mix base " + base)
+    println("+ addOn  " + addOn)
+
+    val baseMap = base.map(x => ((x.rhs, x.key),x)).toMap
+    val addOnMap = addOn.map(x => ((x.rhs, x.key),x)).toMap
     val mixMap = baseMap ++ addOnMap
-    mixMap.values.toList
+    val result = mixMap.values.toList
+    println("result   " + result)
+    result
   }
 
 
@@ -177,6 +184,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       val remainingActions = actions.tail
       fireAction match {
         case FireRule(rhs, key) =>
+          println("Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
           val newRhs = if (rhs.pageConfiguration.isDefined && rhs.pageConfiguration.get.isLeft) {
             rhs.copy(pageConfiguration = Some(Right("real value")))
@@ -240,6 +248,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       val propertyKey = property.name
       val task = property.task
 
+
+
       // rule results are stored in EntityMetaData -> Task -> property
       val entityWriter = zoomToEntity(property.entityName,modelRW)
       entityWriter match {
@@ -248,7 +258,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
             zoomToProperty(property, trw) match {
               case Some(propWriter) => {
                 ModelUpdate(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))))
-                effectOnly(Effect.action(FireActions(property, actions)))
+                //effectOnly(Effect.action(FireActions(property, actions)))
               }
               case None => noChange
             }
