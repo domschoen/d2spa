@@ -135,9 +135,8 @@ case class D2WContext(entityName: Option[String],
                       previousTask: Option[String] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
-//case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
-case class RuleResult(rhs: D2WContextFullFledged, key: String, value: String)
-case class RuleValue(stringV: Option[String], stringsV: Option[List[String]])
+case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
+case class RuleValue(stringV: Option[String], stringsV: List[String] = List())
 
 
 // Kind of cache of entity task d2w rules
@@ -189,13 +188,25 @@ object RuleUtils {
     if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
   )
 
-  //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.rhs.equals(rhs) && r.key.equals(key)})
-  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
+
+  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
+    if (!a.entityName.equals(b.entityName)) return false
+    if (!a.task.equals(b.task)) return false
+    if (!a.propertyKey.equals(b.propertyKey)) return false
+    if (b.pageConfiguration.isDefined && b.pageConfiguration.get.isLeft) return false
+    val comparableValue = if (b.pageConfiguration.isDefined) Some(b.pageConfiguration.get.right.get) else None
+    if (!a.pageConfiguration.equals(comparableValue)) return false
+    return true
+  }
+
+
+  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
+  //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
 
   def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
     val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
-    //if (result.isDefined) Some(result.get.value.stringV) else None
-    if (result.isDefined) Some(result.get.value) else None
+    if (result.isDefined) Some(result.get.value.stringV) else None
+    //if (result.isDefined) Some(result.get.value) else None
   }
   def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
 

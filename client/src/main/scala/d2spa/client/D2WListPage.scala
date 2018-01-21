@@ -100,8 +100,8 @@ object D2WListPage {
                                       val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
                                       val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.keyWhenRelationship)
                                       val displayString = displayNameFound match {
-                                        //case Some(Some(stringValue)) => {
-                                        case Some(stringValue) => {
+                                        case Some(Some(stringValue)) => {
+                                        //case Some(stringValue) => {
                                           stringValue
                                         }
                                         case _ => property.name

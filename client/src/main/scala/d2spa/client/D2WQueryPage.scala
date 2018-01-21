@@ -13,6 +13,7 @@ import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{ERD2WQueryStringOperator, ERD2WQueryToOneField}
 import d2spa.shared._
+import d2spa.client.logger._
 
 object D2WQueryPage {
 
@@ -74,8 +75,8 @@ object D2WQueryPage {
                                 val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
                                 val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.displayNameForProperty)
                                 displayNameFound match {
-                                  //case Some(Some(stringValue)) => stringValue
-                                  case Some(stringValue) => stringValue
+                                  case Some(Some(stringValue)) => stringValue
+                                  //case Some(stringValue) => stringValue
                                   case _ => ""
                                 }
                               }
@@ -84,10 +85,13 @@ object D2WQueryPage {
                               <.td(^.className :="query d2wAttributeValueCell",
                                 {
                                   val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(property.name))
+                                  log.debug("property name" + property.name)
+                                  log.debug("property propertyD2WContext" + propertyD2WContext)
+                                  log.debug("property ruleResults" + property.ruleResults)
                                   val componentNameFound = RuleUtils.ruleStringValueForContextAndKey(property,propertyD2WContext, RuleKeys.componentName)
                                   componentNameFound match {
-                                    //case Some(Some(componentName)) =>
-                                    case Some(componentName) =>
+                                    case Some(Some(componentName)) =>
+                                    //case Some(componentName) =>
                                       componentName match {
 
                                         case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, propertyD2WContext, property, p.proxy)

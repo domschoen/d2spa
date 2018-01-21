@@ -195,11 +195,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
               val ruleValue = property.ruleResults
               val missingKeys: Set[String] = ruleKey match {
                 case RuleKeys.keyWhenRelationship =>
-                  //Set(value.stringV.get)
-                  Set(value)
+                  Set(value.stringV.get)
+                  //Set(value)
                 case RuleKeys.displayPropertyKeys =>
-                  //value.stringsV.get.toSet
-                  Set(value)
+                  value.stringsV.toSet
+                  //Set(value)
               }
               drySubstrate match {
                 case DrySubstrate(_ , Some(eo), _) =>
@@ -272,42 +272,56 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
     if (eos.isEmpty) {
       value
     } else {
-      // subPart
-      Map()
+      subPart(eos)
     }
   }
 
-/*
+
   def subPart(eos: Seq[EO]) = {
-    val entity = eos.head.entity
-    val pkAttributeName = entity.pkAttributeName
-    val entityMap = value(entity.name)
+    val anyHead = eos.headOption
+    anyHead match {
+      case Some(head) =>
+        val entity = head.entity
+        val pkAttributeName = entity.pkAttributeName
+        val entityMap = value(entity.name)
 
-    val refreshedEOs = eos.map(eo => {
-      val pkOpt = EOValueUtils.pk(eo)
-      pkOpt match {
-        case Some(pk) => Some((pk,eo))
-        case _ => None
-      }
-    }).flatten.toMap
-    val refreshedPks = refreshedEOs.keySet
-    val existingPks = entityMap.keySet
+        // we create a Map with eo and id
+        val refreshedEOs = eos.map(eo => {
+          val pkOpt = EOValueUtils.pk(eo)
+          pkOpt match {
+            case Some(pk) => Some((pk,eo))
+            case _ => None
+          }
+        }).flatten.toMap
 
-    val newPks = refreshedPks -- existingPks
-    val newAndUpdateMap = refreshedPks.map(id => {
-      val refreshedEO = refreshedEOs(id)
-      if (newPks.contains(id)) {
-        (id, refreshedEO)
-      } else {
-        // Complete EOs !
-        val existingEO = entityMap(id)
-        EOValueUtils.completeEoWithEo(existingEO,refreshedEO)
-      }
-    }).toMap
-    val newEntityMap = entityMap ++ newAndUpdateMap
+        // work with new and eo to be updated
+        val refreshedPks = refreshedEOs.keySet
+        val existingPks = entityMap.keySet
 
-    value + (entity.name -> newEntityMap)
-  }*/
+        val newPks = refreshedPks -- existingPks
+
+        // Iterate on eos
+        val newAndUpdateMap = refreshedPks.map(id => {
+          val refreshedEO = refreshedEOs(id)
+
+          // 2 cases:
+          // new
+          if (newPks.contains(id)) {
+            (id, refreshedEO)
+          } else {
+            // existing -> to be updated
+            // Complete EOs !
+            val existingEO = entityMap(id)
+            (id, EOValueUtils.completeEoWithEo(existingEO,refreshedEO))
+          }
+        }).toMap
+        val newEntityMap = entityMap ++ newAndUpdateMap
+
+        value + (entity.name -> newEntityMap)
+      case _ => Map.empty[String, Map[Int,EO]]
+    }
+  }
+
   override def handle = {
 
     case FetchedObjectsForEntity(eoses, property, actions) =>

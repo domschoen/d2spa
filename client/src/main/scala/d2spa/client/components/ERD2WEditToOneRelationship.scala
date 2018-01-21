@@ -103,8 +103,8 @@ object ERD2WEditToOneRelationship   {
       val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
 
       keyWhenRelationshipRuleOpt match {
-        //case Some(Some(keyWhenRelationship)) => {
-        case Some(keyWhenRelationship) => {
+        case Some(Some(keyWhenRelationship)) => {
+        //case Some(keyWhenRelationship) => {
           val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
           val eoCache = p.proxy.value.eos
           val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)

@@ -237,11 +237,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   val fireRuleArguments = List("entity","task","propertyKey","key")
 
   def fireRuleFuture(rhs: D2WContext, key: String) : Future[WSResponse] = {
+    println("Fire Rule for key " + key + " rhs:" + rhs)
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
     val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
+
+    println("Args : " + arguments)
 
     val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
@@ -260,7 +263,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: EOEntity, task: String) = {
     val propertiesFutures = displayPropertyKeys.value.map( x => {
       val propertyKey = x.asOpt[String].get
-      val rhs = D2WContext(Some(entity.name),Some(task),Some(propertyKey))
+      val rhs = D2WContext(Some(entity.name),Some(task),None,Some(propertyKey))
       val propertyDisplayNameFuture = fireRuleFuture(rhs, "displayNameForProperty")
       val componentNameFuture = fireRuleFuture(rhs, "componentName")
       val typeFuture = fireRuleFuture(rhs, "attributeType")
@@ -282,10 +285,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           entity.name,
           task,
           List(
-            //RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2), None)),
-            //RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2), None))
-            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, propertyDisplayName._2),
-            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, propertyComponentName._2)
+            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2))),
+            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, RuleValue(Some(propertyComponentName._2)))
+            //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, propertyDisplayName._2),
+            //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, propertyComponentName._2)
           )
         )
       }
@@ -381,13 +384,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
        */
     val values = jsObj.values.toList
     val ruleValue = if (values.length == 1) {
-      RuleValue(Some(values.head.asOpt[String].get), None)
+      RuleValue(Some(values.head.asOpt[String].get))
     } else {
-      RuleValue(None, Some(values.map(_.asOpt[String].get)))
+      RuleValue(None, values.map(_.asOpt[String].get))
     }
 
-    //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue)
-    RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
+    RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue)
+    //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
   def hydrateEORefs(eo: Seq[d2spa.shared.EORef],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
