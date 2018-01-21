@@ -272,7 +272,9 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
     if (eos.isEmpty) {
       value
     } else {
-      subPart(eos)
+      val result : Map[String, Map[Int,EO]] = subPart(eos)
+      println("storing result as :" + result)
+      result
     }
   }
 
@@ -283,7 +285,8 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       case Some(head) =>
         val entity = head.entity
         val pkAttributeName = entity.pkAttributeName
-        val entityMap = value(entity.name)
+        val entityName = entity.name
+        val entityMap = if (value.contains(entityName)) value(entity.name) else Map.empty[Int,EO]
 
         // we create a Map with eo and id
         val refreshedEOs = eos.map(eo => {

@@ -13,6 +13,7 @@ import scala.scalajs.js
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 import scala.collection.immutable.Set
+import d2spa.client.logger._
 
 import d2spa.client.SPAMain.{TaskAppPage}
 
@@ -46,11 +47,11 @@ object D2WEditPage {
       EO(Map())
     }*/
 
-    def isEdit(p: Props) = p.d2wContext.task.equals(TaskDefine.edit)
+    def isEdit(p: Props) = p.d2wContext.task.get.equals(TaskDefine.edit)
 
 
     def entityMetaDataFromProps(p: Props): EntityMetaData =
-      p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.d2wContext.entityName)).get
+      p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.d2wContext.entityName.get)).get
 
     def displayPropertyKeysFromProps(p: Props) = {
       val entityMetaData = entityMetaDataFromProps(p)
@@ -64,11 +65,15 @@ object D2WEditPage {
       println("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
+        println("entityMetaDatas not empty")
+
         val entityMetaData = entityMetaDataFromProps(p)
+        log.debug("Entity meta Data " + metaDatas)
         val displayPropertyKeys = displayPropertyKeysFromProps(p)
         val entity = entityMetaData.entity
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
+        println("prox eo " + p.proxy.value.eo)
         val eo = p.proxy.value.eo.getOrElse( {
           val valueMap = task.displayPropertyKeys.map (x => {
             x.name -> EOValue(typeV = x.typeV)

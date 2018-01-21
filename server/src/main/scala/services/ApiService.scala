@@ -465,6 +465,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
         eos ::= EO(entity,valuesMap,None)
       }
+      println("Search: eos created " + eos)
+
       eos.toSeq
     }
   }
