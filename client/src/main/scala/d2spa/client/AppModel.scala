@@ -133,6 +133,12 @@ object EOCacheUtils {
     val entityEOs = eos(entityName).values.toList
     if (entityEOs.isEmpty) None else Some(entityEOs)
   } else None
+
+  def objectForEntityNamedAndPk(eos: Map[String, Map[Int,EO]], entityName: String, pk: Int): Option[EO] = if (eos.contains(entityName)) {
+    val entityEOById = eos(entityName)
+
+    if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
+  } else None
 }
 
 object FireRuleConverter {
