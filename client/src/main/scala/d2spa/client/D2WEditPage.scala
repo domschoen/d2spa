@@ -24,6 +24,16 @@ object D2WEditPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
+    def mounted(props: Props) = {
+      val entityName = props.d2wContext.entityName.get
+      println("D2WQueryPage " + entityName)
+
+      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
+      println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
+
+      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
+    }
 
     def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
       val hasPk = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)}).isDefined
@@ -64,7 +74,9 @@ object D2WEditPage {
 
       println("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
       val metaDatas = p.proxy.value
-      if  (!metaDatas.entityMetaDatas.isEmpty) {
+      val entityMetaDataNotFetched = p.proxy.value.entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
+
+      if  (!entityMetaDataNotFetched) {
         println("entityMetaDatas not empty")
 
         val entityMetaData = entityMetaDataFromProps(p)
@@ -153,6 +165,7 @@ object D2WEditPage {
 
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
+    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {

@@ -234,13 +234,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
-  val fireRuleArguments = List("entity","task","propertyKey","key")
+  val fireRuleArguments = List("entity","task","propertyKey","pageConfiguration","key")
 
-  def fireRuleFuture(rhs: D2WContext, key: String) : Future[WSResponse] = {
+  def fireRuleFuture(rhs: D2WContextFullFledged, key: String) : Future[WSResponse] = {
     println("Fire Rule for key " + key + " rhs:" + rhs)
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
-    val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, Some(key))
+    val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, rhs.pageConfiguration, Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
 
@@ -260,10 +260,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
 
 
-  def propertyMetaInfosForTask(displayPropertyKeys: JsArray, entity: EOEntity, task: String) = {
-    val propertiesFutures = displayPropertyKeys.value.map( x => {
-      val propertyKey = x.asOpt[String].get
-      val rhs = D2WContext(Some(entity.name),Some(task),None,Some(propertyKey))
+  def propertyMetaInfosForTask(displayPropertyKeys: Seq[String], entity: EOEntity, task: String) = {
+    val propertiesFutures = displayPropertyKeys.map( propertyKey => {
+      val rhs = D2WContextFullFledged(Some(entity.name),Some(task),None,Some(propertyKey))
       val propertyDisplayNameFuture = fireRuleFuture(rhs, "displayNameForProperty")
       val componentNameFuture = fireRuleFuture(rhs, "componentName")
       val typeFuture = fireRuleFuture(rhs, "attributeType")
@@ -273,9 +272,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         pComponentName <- componentNameFuture
         ptype <- typeFuture
       } yield {
-        val propertyDisplayName = fromResponseToString(pDisplayName)
-        val propertyComponentName = fromResponseToString(pComponentName)
-        val attributeType = fromResponseToString(ptype)
+        val propertyDisplayName = fromRuleResponseToString(pDisplayName)
+        val propertyComponentName = fromRuleResponseToString(pComponentName)
+        val attributeType = fromRuleResponseToString(ptype)
 
         println("<" + propertyComponentName + ">")
 
@@ -285,8 +284,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           entity.name,
           task,
           List(
-            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2))),
-            RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, RuleValue(Some(propertyComponentName._2)))
+            RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2))),
+            RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2)))
             //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyDisplayName._1, propertyDisplayName._2),
             //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), propertyComponentName._1, propertyComponentName._2)
           )
@@ -299,17 +298,32 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     properties
   }
 
-  def fromResponseToString(response: WSResponse) = {
+  def fromRuleResponseToString(response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
-    (jsObj.keys.toSeq(0), jsObj.values.toSeq(0).asOpt[String].get)
+    val key = jsObj.keys.toSeq(0)
+    val valueOpt = jsObj.values.toSeq(0).asOpt[String]
+    val value = valueOpt match {
+      case Some(astring) => astring
+      case _ => ""
+    }
+    (key, value)
+  }
+  def fromRuleResponseToKeyAndArray(response: WSResponse) = {
+    val jsObj = response.json.asInstanceOf[JsObject]
+    val key = jsObj.keys.toSeq(0)
+    val valueOpt = jsObj.values.toSeq(0).asOpt[JsArray]
+    val value = valueOpt match {
+      case Some(jsarray) => jsarray.value.map(x => x.asOpt[String].get)
+      case _ => Seq.empty[String]
+    }
+    (key, value)
   }
 
 
   def fromResponseToMetaInfo(response: WSResponse, entity: EOEntity, task: String) = {
-    val displayPropertyKeysJson = response.json
-    val array = displayPropertyKeysJson.asInstanceOf[JsArray]
+    val displayPropertyKeys = fromRuleResponseToKeyAndArray(response)
     //System.out.println("--- " + task + " --- " + array)
-    propertyMetaInfosForTask(array, entity, task)
+    propertyMetaInfosForTask(displayPropertyKeys._2, entity, task)
   }
 
   // To create the result, it needs to issue multiple query on the D2W rule system
@@ -319,11 +333,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(entityName: String): Future[EntityMetaData] = {
     val fetchedEOModel = eomodel()
-      val entityDisplayNameFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayNameForEntity)
-      val queryDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.query)), RuleKeys.displayPropertyKeys)
-      val editDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayPropertyKeys)
-      val listDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.list)), RuleKeys.displayPropertyKeys)
-      val inspectDisplayPropertyKeysFuture = fireRuleFuture(D2WContext(Some(entityName), Some(TaskDefine.inspect)), RuleKeys.displayPropertyKeys)
+      val entityDisplayNameFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayNameForEntity)
+      val queryDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.query)), RuleKeys.displayPropertyKeys)
+      val editDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayPropertyKeys)
+      val listDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.list)), RuleKeys.displayPropertyKeys)
+      val inspectDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.inspect)), RuleKeys.displayPropertyKeys)
 
       val result = for {
         r1 <- entityDisplayNameFuture
@@ -332,7 +346,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         inspectDisplayPropertyKeys <- inspectDisplayPropertyKeysFuture
         editDisplayPropertyKeys <- editDisplayPropertyKeysFuture
       } yield {
-        val entityDisplayName = fromResponseToString(r1)
+        val entityDisplayName = fromRuleResponseToString(r1)
         println("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
         val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
 
@@ -353,7 +367,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
   // API method
-  def fireRules(rhs: D2WContext, keys: List[String]): Future[List[RuleResult]] = {
+  def fireRules(rhs: D2WContextFullFledged, keys: List[String]): Future[List[RuleResult]] = {
     val futures = keys.map{ key => {fireRuleFuture(rhs, key)}}
     val futureSequece = Future sequence futures
     val result = for {
@@ -364,13 +378,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     result
   }
 
-  def fireRule(rhs: D2WContext, key: String): Future[RuleResult] = {
+  def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {
     val f = fireRuleFuture(rhs, key)
     f.map(ruleResultWithResponse(rhs,_))
   }
 
 
-  def ruleResultWithResponse(rhs: D2WContext, response: WSResponse) = {
+  def ruleResultWithResponse(rhs: D2WContextFullFledged, response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
 
@@ -389,7 +403,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       RuleValue(None, values.map(_.asOpt[String].get))
     }
 
-    RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue)
+    RuleResult(rhs, key, ruleValue)
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 

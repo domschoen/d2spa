@@ -53,8 +53,13 @@ object ERD2WQueryToOneField  {
       //val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val currentD2wContext = d2wContext(p)
       val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+      val whereDisplayText = displayNameForKeyWhenRelationship match {
+        case Some(Some(text)) => text
+        case _ => ""
+      }
+
       val queryKey = p.property.name + "." + RuleUtils.ruleStringValueForContextAndKey(p.property,currentD2wContext,RuleKeys.keyWhenRelationship)
-      val pretext = "where " + displayNameForKeyWhenRelationship + " is "
+      val pretext = "where " + whereDisplayText + " is "
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
       <.div(

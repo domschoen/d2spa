@@ -35,7 +35,7 @@ object ERDList {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(p: Props) = {
       //val destinationEntity = EOModelUtilsdes
-      log.debug("ERD2WEditToOneRelationship mounted")
+      log.debug("ERDList mounted")
       val eomodel = p.proxy.value.eomodel.get
       val entityName = p.property.entityName
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
@@ -43,28 +43,33 @@ object ERDList {
 
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
       val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
-      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+      log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
+      log.debug("ERDList mounted: entity" + entity)
+      log.debug("ERDList mounted: entity" + propertyName)
 
-      log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
+      log.debug("ERDList mounted: eomodel" + eomodel)
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+      log.debug("ERDList mounted: destinationEntity" + destinationEntity)
 
       // listConfigurationName
       // Then with D2WContext:
       // - task = 'list'
       // - entity.name = 'Project'
       // - pageConfiguration = <listConfigurationName>
+      log.debug("ERDList mounted: d2wContext" + d2wContext)
 
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-      val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+      log.debug("ERDList mounted: fireListConfiguration" + fireListConfiguration)
+      val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
+      log.debug("ERDList mounted: fireDisplayPropertyKeys" + fireDisplayPropertyKeys)
       val displayPKeysContext = D2WContext(
         Some(destinationEntity.name),
         Some(d2spa.shared.TaskDefine.list) , None, None,
         Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
+      log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
+      log.debug("ERDList mounted: fireListDisplayPropertyKeys" + fireListDisplayPropertyKeys)
 
 
       // hydrated destination EOs are simply stored in MegaContent eos
@@ -73,30 +78,7 @@ object ERDList {
           p.property,
           List(
             FireRule(d2wContext, RuleKeys.keyWhenRelationship),
-            fireDisplayPropertyKeys,
-            fireListConfiguration,
-            fireListDisplayPropertyKeys,
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys)))),
-            // Hydrate has 2 parts
-            // 1) which eos
-            // 2) which propertyKeys
-            // Example:
-            // - ToOne:
-            //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
-            //   2) one property, the keyWhenRelationship (fireRule is used)
-            // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
-            //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
-            //         First solution seems better. Fetch spec is stored in the eomodel
-            //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
-            // - ERDList:
-            //   1) property eos as eorefs (entity, In qualifier)
-            //   2) displayPropertyKeys (fireRule is used)
-            // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-            Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),
-              WateringScope(Some(
-                FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys))))
+            fireDisplayPropertyKeys
           )
           )
         ))

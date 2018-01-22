@@ -194,8 +194,14 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
         case Hydration(drySubstrate,  wateringScope) =>
           // get displayPropertyKeys from previous rule results
           val fireRule = wateringScope.fireRule.get
+          log.debug("Hydration watering scope " + fireRule)
           val ruleKey = fireRule.key
+          log.debug("Hydration watering rule key " + ruleKey)
+
           val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(fireRule.rhs)
+          log.debug("Hydration d2wcontext " + ruleRhs)
+          log.debug("Hydration property rule results " + property.ruleResults)
+
           val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(property.ruleResults,ruleRhs,ruleKey)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
           ruleResultOpt match {
