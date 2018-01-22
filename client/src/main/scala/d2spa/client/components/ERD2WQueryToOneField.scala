@@ -31,7 +31,7 @@ object ERD2WQueryToOneField  {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
-    def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
+    def d2wContext(props: Props) = props.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def mounted(p: Props) = {
       val currentD2wContext = d2wContext(p)

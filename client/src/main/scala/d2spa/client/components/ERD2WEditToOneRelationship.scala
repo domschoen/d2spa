@@ -89,7 +89,7 @@ object ERD2WEditToOneRelationship   {
       })
       if (optEO.isDefined) Some(EORef(entity.name, EOValueUtils.pk(optEO.get).get)) else None
     }
-    def d2wContext(props: Props) = props.proxy.value.menuModel.get.d2wContext.copy(propertyKey = Some(props.property.name))
+    def d2wContext(props: Props) = props.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def render(p: Props) = {
       log.debug("ERD2WEditToOneRelationship render")
@@ -98,7 +98,9 @@ object ERD2WEditToOneRelationship   {
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val eo = p.eo
       val propertyName = p.property.name
+      //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
       val properyD2WContext = d2wContext(p)
+
 
       log.debug("+ rules " + p.property.ruleResults)
 

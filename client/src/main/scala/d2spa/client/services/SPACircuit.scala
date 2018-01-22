@@ -197,6 +197,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           val ruleKey = fireRule.key
           val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(fireRule.rhs)
           val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(property.ruleResults,ruleRhs,ruleKey)
+          log.debug("Hydration with scope defined by rule " + ruleResultOpt)
           ruleResultOpt match {
             case Some(RuleResult(rhs,key,value)) => {
 
@@ -257,8 +258,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           case Some(trw) => {
             zoomToProperty(property, trw) match {
               case Some(propWriter) => {
-                ModelUpdate(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))))
-                //effectOnly(Effect.action(FireActions(property, actions)))
+                ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
+                Effect.action(FireActions(property, actions)))
               }
               case None => noChange
             }

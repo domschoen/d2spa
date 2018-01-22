@@ -204,6 +204,7 @@ object RuleUtils {
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
 
   def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
+    println("Looking for "  + d2wContext)
     val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
     if (result.isDefined) Some(result.get.value.stringV) else None
     //if (result.isDefined) Some(result.get.value) else None
