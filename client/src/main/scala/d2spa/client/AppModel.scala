@@ -54,8 +54,6 @@ case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action
 
-case class EOCreated(eo:EO) extends Action
-
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
@@ -86,7 +84,7 @@ case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 
 
-case class FireActions(property: PropertyMetaInfo, actions: List[D2WAction]) extends Action
+case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 

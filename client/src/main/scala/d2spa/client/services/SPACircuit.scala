@@ -177,8 +177,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value)
 
 
-    case FireActions(property: PropertyMetaInfo, actions: List[D2WAction]) =>
-      println("FireActions " )
+    case FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) =>
+      println("FireActions " + actions)
       // take first actions and call FireActions again with the rest
       val fireAction = actions.head
       val remainingActions = actions.tail
@@ -186,9 +186,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
         case FireRule(rhs, key) =>
           println("Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
-          val newRhs = if (rhs.pageConfiguration.isDefined && rhs.pageConfiguration.get.isLeft) {
-            rhs.copy(pageConfiguration = Some(Right("real value")))
-          } else rhs
+          val newRhs = RuleUtils.convertD2WContextToFullFledged(rhs)
           effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr => SetRuleResults(List(rr), property, remainingActions))))
 
         case Hydration(drySubstrate,  wateringScope) =>
@@ -405,12 +403,6 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
 class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case EOCreated(eo) =>
-      println("eo created " + eo)
-      updated(
-        Ready(eo),
-        Effect.action(FetchMetaDataForMenu("edit", eo.entity.name))
-      )
     case InspectEO(fromTask, eo) =>
       updated(
         Ready(eo),

@@ -144,7 +144,7 @@ object D2WListPage {
             case _ =>
               <.div(
                 <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
-                <.div(^.id:="a",""
+                <.div(^.id:="a","No matching " + entityName + " records found."
                 )
               )
           }
@@ -152,7 +152,7 @@ object D2WListPage {
         case _ => {
           <.div(
             <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
-            <.div(^.id:="a",""
+            <.div(^.id:="a","No matching " + entityName + " records found."
             )
           )
         }

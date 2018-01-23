@@ -272,9 +272,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         pComponentName <- componentNameFuture
         ptype <- typeFuture
       } yield {
-        val propertyDisplayName = fromRuleResponseToString(pDisplayName)
-        val propertyComponentName = fromRuleResponseToString(pComponentName)
-        val attributeType = fromRuleResponseToString(ptype)
+        val propertyDisplayName = fromRuleResponseToKeyAndString(pDisplayName)
+        val propertyComponentName = fromRuleResponseToKeyAndString(pComponentName)
+        val attributeType = fromRuleResponseToKeyAndString(ptype)
 
         println("<" + propertyComponentName + ">")
 
@@ -298,7 +298,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     properties
   }
 
-  def fromRuleResponseToString(response: WSResponse) = {
+  def fromRuleResponseToKeyAndString(response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
     val valueOpt = jsObj.values.toSeq(0).asOpt[String]
@@ -346,7 +346,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         inspectDisplayPropertyKeys <- inspectDisplayPropertyKeysFuture
         editDisplayPropertyKeys <- editDisplayPropertyKeysFuture
       } yield {
-        val entityDisplayName = fromRuleResponseToString(r1)
+        val entityDisplayName = fromRuleResponseToKeyAndString(r1)
         println("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
         val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
 
@@ -396,11 +396,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
          "keyWhenRelationship": "name"
       }
        */
-    val values = jsObj.values.toList
-    val ruleValue = if (values.length == 1) {
-      RuleValue(Some(values.head.asOpt[String].get))
+    val jsvalue = jsObj.values.toSeq(0)
+    val ruleValue = if (jsvalue.asOpt[JsArray].isDefined) {
+      val (key, value) = fromRuleResponseToKeyAndArray(response)
+      RuleValue(stringsV = value.toList)
     } else {
-      RuleValue(None, values.map(_.asOpt[String].get))
+      val (key, value) = fromRuleResponseToKeyAndString(response)
+      RuleValue(Some(value))
     }
 
     RuleResult(rhs, key, ruleValue)

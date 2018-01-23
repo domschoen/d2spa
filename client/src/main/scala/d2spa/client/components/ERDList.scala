@@ -77,29 +77,24 @@ object ERDList {
         FireActions(
           p.property,
           List(
-            FireRule(d2wContext, RuleKeys.keyWhenRelationship),
-            fireDisplayPropertyKeys,
-              fireListConfiguration,
+            fireListConfiguration,
             fireListDisplayPropertyKeys,
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys)))),
-            // Hydrate has 2 parts
-            // 1) which eos
-            // 2) which propertyKeys
-            // Example:
-            // - ToOne:
-            //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
-            //   2) one property, the keyWhenRelationship (fireRule is used)
-            // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
-            //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
-            //         First solution seems better. Fetch spec is stored in the eomodel
-            //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
-            // - ERDList:
-            //   1) property eos as eorefs (entity, In qualifier)
-            //   2) displayPropertyKeys (fireRule is used)
-            // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-            Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),
+              // Hydrate has 2 parts
+              // 1) which eos
+              // 2) which propertyKeys
+              // Example:
+              // - ToOne:
+              //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
+              //   2) one property, the keyWhenRelationship (fireRule is used)
+              // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
+              //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
+              //         First solution seems better. Fetch spec is stored in the eomodel
+              //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
+              // - ERDList:
+              //   1) property eos as eorefs (entity, In qualifier)
+              //   2) displayPropertyKeys (fireRule is used)
+              // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
+              Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),
               WateringScope(Some(
                 FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys))))
           )

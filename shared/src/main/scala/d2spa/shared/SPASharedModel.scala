@@ -136,15 +136,20 @@ case class D2WContext(entityName: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
-case class RuleValue(stringV: Option[String], stringsV: List[String] = List())
+case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
 
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
+sealed trait RulesContainer {
+  def ruleResults: List[RuleResult]
+}
+
 // Property
-case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String, ruleResults: List[RuleResult] = List())
+case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String,
+                            override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 
@@ -155,7 +160,7 @@ case class QueryValue(key: String,value: String, operator: String)
 
 // Task
 //case class Task(task: String, displayPropertyKeys: List[PropertyMetaInfo])
-case class Task(displayPropertyKeys: List[PropertyMetaInfo])
+case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
 
 /// Important NOTE: Seems that Map is not supported in case classes managed by boopickle
@@ -171,6 +176,22 @@ object EOModelUtils {
 
   def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
 }
+
+
+object EntityMetaDataUtils {
+
+  def taskWithTaskName(entityMetaData: EntityMetaData, taskName: String) = {
+    taskName match {
+      case TaskDefine.edit => entityMetaData.editTask
+      case TaskDefine.inspect => entityMetaData.inspectTask
+      case TaskDefine.list => entityMetaData.listTask
+      case TaskDefine.query => entityMetaData.queryTask
+      case _ =>  entityMetaData.queryTask
+    }
+  }
+
+}
+
 
 object RuleUtils {
   def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(

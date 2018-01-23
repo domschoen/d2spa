@@ -24,15 +24,36 @@ object D2WEditPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
-    def mounted(props: Props) = {
-      val entityName = props.d2wContext.entityName.get
-      println("D2WQueryPage " + entityName)
+    def getTask(p: Props, entityName: String, taskName: String) = {
+      val entityMetaData = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
+      EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
+    }
 
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
+    def willmounted(p: Props) = {
+      val entityName = p.d2wContext.entityName.get
+      println("D2WQueryPage " + entityName)
+      val taskName = p.d2wContext.task.get
+
+      val entityMetaDataOpt = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
+      val entityMetaDataNotFetched = entityMetaDataOpt.isEmpty
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
+      val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
+
+      Callback.when(entityMetaDataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName))) >>
+        Callback.when(true)(p.proxy.dispatchCB(
+          FireActions(
+            getTask(p,entityName,taskName),
+          List(
+            fireDisplayPropertyKeys,
+            // in order to have an EO completed with all attributes for the task,
+            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys)))),
+          )
+        )
+      ))
+
     }
 
     def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
@@ -165,7 +186,7 @@ object D2WEditPage {
 
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
