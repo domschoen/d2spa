@@ -409,7 +409,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
-  def hydrateEORefs(eo: Seq[d2spa.shared.EORef],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
+  def hydrateEOs(eo: Seq[EO],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
     Future(Seq())
   }
 

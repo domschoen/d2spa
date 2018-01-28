@@ -49,7 +49,7 @@ object D2WEditPage {
             fireDisplayPropertyKeys,
             // in order to have an EO completed with all attributes for the task,
             // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys)))),
+            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
           )
         )
       ))
@@ -189,8 +189,8 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
-    component(Props(ctl, d2wContext, proxy))
+    component(Props(ctl, d2wContext, eo, proxy))
   }
 }

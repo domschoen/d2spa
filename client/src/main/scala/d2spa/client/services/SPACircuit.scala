@@ -163,11 +163,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
         case -1 =>
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
         case _ =>
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEntity(task,entityName)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityName)))
       }
 
     case SetMetaDataForMenu(task, entityMetaData) =>
-      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEntity(task, entityMetaData.entity.name)))
+      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityMetaData.entity.name)))
 
     case InitMetaData(entity) =>
       println("InitMetaData ")
@@ -187,7 +187,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           println("Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
           val newRhs = RuleUtils.convertD2WContextToFullFledged(rhs)
-          effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr => SetRuleResults(List(rr), property, remainingActions))))
+          effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr => SetRuleResults(List(rr), rulesContainer, remainingActions))))
 
         case Hydration(drySubstrate,  wateringScope) =>
           // get displayPropertyKeys from previous rule results
@@ -198,14 +198,14 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
           val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(fireRule.rhs)
           log.debug("Hydration d2wcontext " + ruleRhs)
-          log.debug("Hydration property rule results " + property.ruleResults)
+          log.debug("Hydration property rule results " + rulesContainer.ruleResults)
 
-          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(property.ruleResults,ruleRhs,ruleKey)
+          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
           ruleResultOpt match {
             case Some(RuleResult(rhs,key,value)) => {
 
-              val ruleValue = property.ruleResults
+              val ruleValue = rulesContainer.ruleResults
               val missingKeys: Set[String] = ruleKey match {
                 case RuleKeys.keyWhenRelationship =>
                   Set(value.stringV.get)
@@ -217,7 +217,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
               drySubstrate match {
                 case DrySubstrate(_ , Some(eo), _) =>
                   // completeEO ends up with a MegaContent eo update
-                  effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO(_, property, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO(_, rulesContainer, remainingActions))))
                 case DrySubstrate(Some(eorefsdef), _ , _) =>
                   eorefsdef match {
                     case EORefsDefinition(Some(eoakp)) =>
@@ -225,52 +225,60 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
                       eovalueOpt match {
                         case Some(eovalue) =>
                           val eoRefs = eovalue.eosV
-                          effectOnly(Effect(AjaxClient[Api].hydrateEORefs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, property, remainingActions))))
+                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, rulesContainer, remainingActions))))
 
-                        case _ => effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+                        case _ => effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
                       }
-                    case _ => effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+                    case _ => effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
-                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , property, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , rulesContainer, remainingActions))))
 
-                case _ =>  effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+                case _ =>  effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
               }
             }
-            case _ =>  effectOnly(Effect.action(FireActions(property,remainingActions))) // we skip the action ....
+            case _ =>  effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
           }
       }
 
 
 
+      //case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String,
+      //                            override val ruleResults: List[RuleResult] = List()) extends RulesContainer
+      //case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
     // many rules
-    case SetRuleResults(ruleResults, property, actions: List[D2WAction]) =>
+    case SetRuleResults(ruleResults, rulesContainer, actions: List[D2WAction]) =>
       println("Rule Results " + ruleResults)
       //val d2wContext = property.d2wContext
       //val entity = d2wContext.entity
       //val task = d2wContext.task
-      val propertyKey = property.name
-      val task = property.task
+      rulesContainer match {
+        case property: PropertyMetaInfo =>
+          val propertyKey = property.name
+          val task = property.task
 
 
 
-      // rule results are stored in EntityMetaData -> Task -> property
-      val entityWriter = zoomToEntity(property.entityName,modelRW)
-      entityWriter match {
-        case Some(erw) => zoomToTask(task, erw) match {
-          case Some(trw) => {
-            zoomToProperty(property, trw) match {
-              case Some(propWriter) => {
-                ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
-                Effect.action(FireActions(property, actions)))
+          // rule results are stored in EntityMetaData -> Task -> property
+          val entityWriter = zoomToEntity(property.entityName,modelRW)
+          entityWriter match {
+            case Some(erw) => zoomToTask(task, erw) match {
+              case Some(trw) => {
+                zoomToProperty(property, trw) match {
+                  case Some(propWriter) => {
+                    ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
+                      Effect.action(FireActions(property, actions)))
+                  }
+                  case None => noChange
+                }
               }
-              case None => noChange
+              case None     => noChange
             }
+            case None     => noChange
           }
-          case None     => noChange
-        }
-        case None     => noChange
+        case task: Task => noChange // but no there is change, TBD
+
       }
 
   }
@@ -466,11 +474,13 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect.action(SetupQueryPageForEntity(entityName))
       )
     case SetPreviousPage(selectedEntity) =>
-      val previousTask = value.get.d2wContext.previousTask
+      val previousTaskOpt = value.get.d2wContext.previousTask
+      val previousTask = previousTaskOpt.get
+
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.get)))),
-        Effect(AfterEffectRouter.setPageForTaskAndEntity(previousTask.get, selectedEntity.name))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
+        Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, selectedEntity.name))
       )
 
     case Save(selectedEntityName, eo) =>
@@ -510,19 +520,22 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
     case InstallInspectPage(fromTask, eo) =>
       println("Inspect page for entity " + eo)
+      val pk = EOValueUtils.pk(eo).get
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(
-          entityName = Some(eo.entity.name),
-          previousTask = Some(fromTask), task = Some("inspect")))),
-        Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entityName.get))
+          entityName = Some(eo.entity.name), // previousTask = Some(fromTask),
+           task = Some("inspect")))),
+        Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entityName.get, pk))
       )
     case InstallEditPage(fromTask, eo) =>
       println("Edit page for entity " + eo)
+      val pk = EOValueUtils.pk(eo).get
       updated(
         // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(eo.entity.name), previousTask = Some(fromTask), task = Some("edit")))),
-        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entityName.get))
+        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(eo.entity.name), // previousTask = Some(fromTask),
+          task = Some("edit")))),
+        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entityName.get,pk))
       )
 
     case ShowPage(selectedEntity, selectedTask) =>

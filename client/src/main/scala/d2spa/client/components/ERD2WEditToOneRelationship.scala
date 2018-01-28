@@ -78,7 +78,19 @@ object ERD2WEditToOneRelationship   {
       }
     }
 
-    def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
+    def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
+      //println("id " + id + " class " + id.getClass.getName)
+      if (id.equals("None")) None
+      val idAsInt = id.toInt
+      val pkAttributeName = entity.pkAttributeName
+      val optEO = eos.find(eo => {
+        val optPk = EOValueUtils.pk(eo)
+        optPk.isDefined && optPk.get.equals(idAsInt)
+      })
+          optEO
+    }
+
+    /*def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
       //println("id " + id + " class " + id.getClass.getName)
       if (id.equals("None")) None
       val idAsInt = id.toInt
@@ -88,7 +100,7 @@ object ERD2WEditToOneRelationship   {
         optPk.isDefined && optPk.get.equals(idAsInt)
       })
       if (optEO.isDefined) Some(EORef(entity.name, EOValueUtils.pk(optEO.get).get)) else None
-    }
+    }*/
     def d2wContext(props: Props) = props.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def render(p: Props) = {
@@ -126,14 +138,14 @@ object ERD2WEditToOneRelationship   {
                 val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
                 val defaultValue = destinationEO match {
                   case Some(EOValue(_,_,_,eoV,_)) => eoV match {
-                    case Some(EORef(_,id)) => id.toString()
+                    case Some(eo) => EOValueUtils.pk(eo).get.toString
                     case _ => "None"
                   }
                   case _ => "None"
                 }
                 <.div(
                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoRefWith(eos, destinationEntity, e.currentTarget.value))))
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
                   },
                   {
                       val tupleOpts = eos map (x => {

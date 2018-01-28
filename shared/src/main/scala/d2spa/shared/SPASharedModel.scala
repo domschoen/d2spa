@@ -40,14 +40,22 @@ object ValueType {
 case class EOKeyValueQualifier(key: String,value: String)
 
 //case class DateValue(value: java.util.Date) extends EOValue
-case class EOValue(typeV: String = "stringV", stringV: Option[String] = None, intV: Option[Int] = None, eoV: Option[EORef] = None, eosV: Seq[EORef] = Seq())
+case class EOValue(typeV: String = "stringV", stringV: Option[String] = None, intV: Option[Int] = None, eoV: Option[EO] = None, eosV: Seq[EO] = Seq())
 
 object EOValueUtils {
   def stringV(value: String) = EOValue(stringV = if (value == null) None else Some(value))
-  def eoV(value: EORef) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
-  def eosV(value: Seq[EORef]) = EOValue(typeV=ValueType.eosV, eosV = value)
+  def eoV(value: EO) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
+  def eosV(value: Seq[EO]) = EOValue(typeV=ValueType.eosV, eosV = value)
   def intV(value: Int) = EOValue(typeV=ValueType.intV, intV = Some(value))
 
+
+  //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
+  def dryEOWith(eomodel: EOModel, entityName: String, pk: Int) = {
+    val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+    val pkAttributeName = entity.pkAttributeName
+    val pkValue = intV(pk)
+    EO(entity,Map(pkAttributeName -> pkValue))
+  }
 
   def juiceString(value: EOValue) : String = if (value == null) "" else {
     value.typeV match {
@@ -109,7 +117,7 @@ case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
 case class EORelationship(name: String, destinationEntityName: String)
 
-case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
+case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String] = None)
 //case class EORef(entityName: String, id: Int)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
@@ -124,20 +132,19 @@ case class EOsAtKeyPath(eo: EO, keyPath: String)
 case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
+case class PreviousTask(task: String, pk: Option[Int])
 
 case class D2WContextFullFledged(entityName: Option[String],
                       task: Option[String],
-                      previousTask: Option[String] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[String] = None)
 case class D2WContext(entityName: Option[String],
                       task: Option[String],
-                      previousTask: Option[String] = None,
+                      previousTask: Option[PreviousTask] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
-
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys
@@ -197,14 +204,13 @@ object RuleUtils {
   def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
     d2wContext.entityName,
     d2wContext.task,
-    d2wContext.previousTask,
     d2wContext.propertyKey,
     if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
   )
   def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
     d2wContext.entityName,
     d2wContext.task,
-    d2wContext.previousTask,
+    None,
     d2wContext.propertyKey,
     if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
   )

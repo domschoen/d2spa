@@ -3,26 +3,38 @@ package d2spa.client
 import scala.concurrent.Future
 import japgolly.scalajs.react.extra.router._
 import d2spa.client.SPAMain.{EditPage, InspectPage, ListPage, QueryPage, TaskAppPage}
-import d2spa.shared.EOEntity
+import d2spa.shared.{EO, EOEntity, EOValueUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEntity( task: String, entity: String) : Future[diode.NoAction.type] =
+  def setPageForTaskAndEOAndEntity(task: String, pkOpt: Option[Int], entity: String) : Future[diode.NoAction.type] =
     task match {
       case "query" => setRouterToPage(QueryPage(entity))
       case "list" => setRouterToPage(ListPage(entity))
-      case "edit" => setRouterToPage(EditPage(entity))
-      case "inspect" => setRouterToPage(InspectPage(entity))
+      case "edit" => {
+            pkOpt match {
+              case Some(pk) => setRouterToPage(EditPage(entity, pk))
+              case _ => setRouterToPage(QueryPage(entity))
+            }
+      }
+        // To be refactored : same code as above
+      case "inspect" => {
+            pkOpt match {
+              case Some(pk) => setRouterToPage(InspectPage(entity, pk))
+              case _ => setRouterToPage(QueryPage(entity))
+            }
+
+      }
       case _ => setRouterToPage(QueryPage(entity))
     }
 
   def setQueryPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(QueryPage(entity))
   def setListPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(ListPage(entity))
-  def setEditPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(EditPage(entity))
-  def setInspectPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(InspectPage(entity))
+  def setEditPageForEntity( entity: String, pk: Int) : Future[diode.NoAction.type] = setRouterToPage(EditPage(entity, pk))
+  def setInspectPageForEntity( entity: String, pk: Int) : Future[diode.NoAction.type] = setRouterToPage(InspectPage(entity, pk))
 
 
   def setRouterToPage(page: TaskAppPage): Future[diode.NoAction.type] = {

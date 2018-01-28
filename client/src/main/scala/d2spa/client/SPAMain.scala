@@ -14,7 +14,8 @@ import CssSettings._
 
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
-import d2spa.shared.D2WContext
+import d2spa.shared.{D2WContext, EOValueUtils}
+import diode.react.ModelProxy
 
 @JSExportTopLevel("SPAMain")
 object SPAMain extends js.JSApp {
@@ -34,6 +35,13 @@ object SPAMain extends js.JSApp {
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
   object TaskAppPage {
+
+    def eoWithProxyAndPk(p: ModelProxy[MegaContent], entityName: String, pk: Int) = {
+        val theeomodel = p.value.eomodel.get
+        EOValueUtils.dryEOWith(theeomodel,entityName, pk)
+    }
+
+
 
     val routes = RouterConfigDsl[TaskAppPage].buildRule { dsl =>
       import dsl._
@@ -64,13 +72,13 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int).caseClass[EditPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), p ))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), eoWithProxyAndPk(p, m.entity, m.pk), p ))
             }
         )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), EO(m.pk), Some("inspect")), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")),eoWithProxyAndPk(p, m.entity, m.pk), p))
             }
           )
         )
