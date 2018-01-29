@@ -108,12 +108,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       (JsPath \ "parent").lazyReadNullable(menuItemReads)
     )(MenuItem.apply _)
 
-// case class EORef(entity: String, displayName: String, pk: Int)
-
-  implicit val eoRefReads: Reads[EORef] = (
-      (JsPath \ "entityName").read[String] and
-      (JsPath \ "id").read[Int]
-    ) (EORef.apply _)
 
 
   var _eomodelF: Option[Future[EOModel]] = None
@@ -473,7 +467,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               println("destinationEntity " + destinationEntity)
               val pkName = destinationEntity.pkAttributeName
               val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
-              valuesMap += (key -> EOValue(typeV = ValueType.eoV, eoV = Some(EORef(destinationEntityName,pk))))
+              val eo = EOValueUtils.dryEOWithEntity(destinationEntity,pk)
+              valuesMap += (key -> EOValue(typeV = ValueType.eoV, eoV = Some(eo)))
             case _ =>
               valuesMap += (key -> EOValue(stringV = Some("not supported")))
 
@@ -560,10 +555,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
       case ValueType.eoV => {
         value.eoV match {
-          case Some(eoRef) =>
-            val eoRef = value.eoV.get
-            val pkAttributeName = pkAttributeNameForEntityNamed(eoRef.entityName)
-            JsObject( Seq( pkAttributeName -> JsNumber(eoRef.id), "type" -> JsString(eoRef.entityName)))
+          case Some(eo) =>
+            val entityName = eo.entity.name
+            val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
+            val pk = EOValueUtils.pk(eo).get
+            JsObject( Seq( pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
           case _ => JsNull
         }
       }
@@ -707,15 +703,15 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           val newValue = if (value.isInstanceOf[play.api.libs.json.JsArray]) {
             val seqJsValues = value.asInstanceOf[play.api.libs.json.JsArray].value
             // {"id":1,"type":"Project"}
-            val eoRefs = seqJsValues.map (x => {
+            val eos = seqJsValues.map (x => {
               val jsEO = x.asInstanceOf[JsObject].fields.toList.toMap
               val entityName = jsEO("type").asInstanceOf[JsString].value
               val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-              EORef(entityName,id)
+              EOValueUtils.dryEOWith(eomodel(),entityName,id)
             })
-            EOValueUtils.eosV(eoRefs)
+            EOValueUtils.eosV(eos)
           } else if (value.isInstanceOf[JsString]) {
             val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
             EOValueUtils.stringV(stringV)

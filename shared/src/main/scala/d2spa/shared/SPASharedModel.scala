@@ -52,11 +52,13 @@ object EOValueUtils {
   //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
   def dryEOWith(eomodel: EOModel, entityName: String, pk: Int) = {
     val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+    dryEOWithEntity(entity,pk)
+  }
+  def dryEOWithEntity(entity: EOEntity, pk: Int) = {
     val pkAttributeName = entity.pkAttributeName
     val pkValue = intV(pk)
-    EO(entity,Map(pkAttributeName -> pkValue))
+    EO(entity, Map(pkAttributeName -> pkValue))
   }
-
   def juiceString(value: EOValue) : String = if (value == null) "" else {
     value.typeV match {
       case ValueType.stringV => if (value.stringV.isDefined) value.stringV.get else ""
