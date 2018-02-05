@@ -256,7 +256,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def propertyMetaInfosForTask(displayPropertyKeys: Seq[String], entity: EOEntity, task: String) = {
     val propertiesFutures = displayPropertyKeys.map( propertyKey => {
-      val rhs = D2WContextFullFledged(Some(entity.name),Some(task),None,Some(propertyKey))
+      val rhs = D2WContextFullFledged(Some(entity.name),Some(task),Some(propertyKey))
       val propertyDisplayNameFuture = fireRuleFuture(rhs, "displayNameForProperty")
       val componentNameFuture = fireRuleFuture(rhs, "componentName")
       val typeFuture = fireRuleFuture(rhs, "attributeType")

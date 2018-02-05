@@ -56,3 +56,6 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 ### Nice to have
   - Limit the number of characters according to eomodel size and display a message explaining it
   - Enable the save only if all mandatory attributes are present. Display a message explaining that
+
+## Learning React
+  - [HOC](https://reactjs.org/docs/higher-order-components.html)
