@@ -106,13 +106,9 @@ object D2WEditPage {
         val entity = entityMetaData.entity
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
-        println("prox eo " + p.proxy.value.eo)
-        val eo = p.proxy.value.eo.getOrElse( {
-          val valueMap = task.displayPropertyKeys.map (x => {
-            x.name -> EOValue(typeV = x.typeV)
-          }).toMap
-          EO(entity,valueMap,None)
-        })
+        val eo = p.eo
+        println("prox eo " + eo)
+
         println("Edit page EO " + eo)
         <.div(
           <.div(^.id:="b",MenuHeader(p.router,p.d2wContext.entityName.get,p.proxy)),
@@ -130,7 +126,7 @@ object D2WEditPage {
               <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
               <.span(^.className :="buttonsbar",
                 if (isEdit(p)) {
-                  <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,entity,p.proxy.value.eo.get))
+                  <.img(^.src := "/assets/images/ButtonSave.gif",^.onClick --> save(p.router,entity,eo))
                 } else {
                   " "
                 },

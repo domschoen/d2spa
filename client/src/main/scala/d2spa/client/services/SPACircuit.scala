@@ -41,7 +41,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOsHandler(zoomTo(_.content.eos)),
-    new EOHandler(zoomTo(_.content.eo)),
+    //new EOHandler(zoomTo(_.content.eo)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
     new EOModelHandler(zoomTo(_.content.eomodel))
     //new MegaDataHandler(zoomTo(_.content))
@@ -291,6 +291,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
   // Map of entityName -> Map of id -> eo
   // eos: Map[String, Map[Int,EO]],
 
+  // Entity Name is retreived from the eos
   def updatedModelForEntityNamed(eos: Seq[EO]): Map[String, Map[Int,EO]] = {
     if (eos.isEmpty) {
       value
@@ -404,49 +405,44 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       val newValue = value + (entityName -> newEntityMap)
       updated(newValue)
 
-
-}
-
-}
-class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
-
-  override def handle = {
     case InspectEO(fromTask, eo) =>
-      updated(
-        Ready(eo),
+      log.debug("InspectEO " + eo)
+      effectOnly(
         Effect.action(InstallInspectPage(fromTask,eo))
       )
     case RefreshEO(eo, property, actions) =>
-      println("Refreshed EO " + eo)
-      updated(
-        Ready(eo),
+      log.debug("Refreshed EO " + eo)
+      effectOnly(
         Effect.action(FireActions(property,actions))
       )
 
     case EditEO(fromTask, eo) =>
-      updated(
-        Ready(eo),
+      log.debug("EditEO: " + eo)
+      effectOnly(
         Effect.action(InstallEditPage(fromTask,eo))
       )
     case NewEOPage(selectedEntityName) =>
-      updated(
-        Empty,
+      log.debug("NewEOPage: " +selectedEntityName)
+      effectOnly(
         Effect.action(FetchMetaDataForMenu("edit", selectedEntityName)) // from edit ?
       )
 
 
     case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
-      println("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
+      log.debug("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       println("EO: " + eo)
       val propertyName = property.name
-      updated(Ready(eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))))
+      val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
+      updated(updatedModelForEntityNamed(Seq(newEO)))
+
+
   }
+
 }
 
-//       updated(value.copy(d2wContext = value.d2wContext.copy(entity = entity, task = "list")), )
 
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 

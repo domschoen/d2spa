@@ -360,17 +360,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
-  // API method
-  def fireRules(rhs: D2WContextFullFledged, keys: List[String]): Future[List[RuleResult]] = {
-    val futures = keys.map{ key => {fireRuleFuture(rhs, key)}}
-    val futureSequece = Future sequence futures
-    val result = for {
-      f <- futureSequece
-    } yield {
-      f.map(ruleResultWithResponse(rhs,_)).toList
-    }
-    result
-  }
 
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {
     val f = fireRuleFuture(rhs, key)

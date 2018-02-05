@@ -23,7 +23,7 @@ case class CustomData()
 
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
                        eos: Map[String, Map[Int,EO]],
-                       eo: Pot[EO],
+                       //eo: Pot[EO],
                        queryValues: List[QueryValue])
 
 
@@ -119,7 +119,6 @@ object AppModel {
       Empty,
       List(),
       Map(),
-      Empty,
       List()
     )
   )
