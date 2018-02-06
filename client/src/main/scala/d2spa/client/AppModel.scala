@@ -44,12 +44,12 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class FetchMetaDataForMenu(task: String, entityName: String) extends Action
+case class SetPageForTaskAndEntity(task: String, entityName: String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
 
-case class NewEOPage(entityName: String) extends Action
+case class SetNewEOPage(entityName: String) extends Action
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action

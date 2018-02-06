@@ -59,6 +59,11 @@ object EOValueUtils {
     val pkValue = intV(pk)
     EO(entity, Map(pkAttributeName -> pkValue))
   }
+  def dryEOWithEntity(entity: EOEntity) = {
+    EO(entity, Map())
+  }
+
+
   def juiceString(value: EOValue) : String = if (value == null) "" else {
     value.typeV match {
       case ValueType.stringV => if (value.stringV.isDefined) value.stringV.get else ""

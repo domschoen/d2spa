@@ -157,7 +157,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case FetchMetaDataForMenu(task, entityName) =>
+    case SetPageForTaskAndEntity(task, entityName) =>
       println("InitMetaData ")
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
@@ -421,10 +421,11 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       effectOnly(
         Effect.action(InstallEditPage(fromTask,eo))
       )
-    case NewEOPage(selectedEntityName) =>
+    case SetNewEOPage(selectedEntityName) =>
       log.debug("NewEOPage: " +selectedEntityName)
+
       effectOnly(
-        Effect.action(FetchMetaDataForMenu("edit", selectedEntityName)) // from edit ?
+        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName)) // from edit ?
       )
 
 
@@ -559,7 +560,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     case SetupQueryPageForEntity(selectedEntityName) =>
       updated(
         List(),
-        Effect.action(FetchMetaDataForMenu("query", selectedEntityName))
+        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName))
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>

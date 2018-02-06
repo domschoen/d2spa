@@ -32,6 +32,7 @@ object SPAMain extends js.JSApp {
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
   case class EditPage(entity: String, pk: Int) extends TaskAppPage
+  case class NewEOPage(entity: String) extends TaskAppPage
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
   object TaskAppPage {
@@ -72,16 +73,23 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int).caseClass[EditPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), eoWithProxyAndPk(p, m.entity, m.pk), p ))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), Some(eoWithProxyAndPk(p, m.entity, m.pk)), p ))
             }
         )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")),eoWithProxyAndPk(p, m.entity, m.pk), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), Some(eoWithProxyAndPk(p, m.entity, m.pk)), p))
             }
           )
+        | dynamicRouteCT(("#task/edit/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
+          (m, ctl) => {
+            AfterEffectRouter.setCtl(ctl)
+            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")),None, p))
+          }
         )
+      )
+
     }
 
   }

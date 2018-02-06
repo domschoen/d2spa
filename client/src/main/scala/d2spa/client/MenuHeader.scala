@@ -41,7 +41,7 @@ object MenuHeader {
       println("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(NewEOPage(entity.name)))
+        $.props >>= (_.proxy.dispatchCB(SetNewEOPage(entity.name)))
     }
 
 

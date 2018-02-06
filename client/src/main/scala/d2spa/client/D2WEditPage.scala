@@ -19,7 +19,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: Option[EO], proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -39,18 +39,18 @@ object D2WEditPage {
       println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
-
+      val actionList = if (p.eo.isDefined) List(
+        fireDisplayPropertyKeys,
+        // in order to have an EO completed with all attributes for the task,
+        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+        Hydration(DrySubstrate(eo = p.eo),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+      ) else List(fireDisplayPropertyKeys)
 
       Callback.when(entityMetaDataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName))) >>
         Callback.when(true)(p.proxy.dispatchCB(
           FireActions(
             getTask(p,entityName,taskName),
-          List(
-            fireDisplayPropertyKeys,
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-          )
+            actionList
         )
       ))
 
@@ -106,7 +106,7 @@ object D2WEditPage {
         val entity = entityMetaData.entity
         val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
         val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
-        val eo = p.eo
+        val eo = p.eo.getOrElse(EOValueUtils.dryEOWithEntity(entity))
         println("prox eo " + eo)
 
         println("Edit page EO " + eo)
@@ -185,7 +185,7 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: Option[EO], proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, eo, proxy))
   }
