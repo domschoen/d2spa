@@ -1,7 +1,8 @@
 package d2spa.client.components
 
 
-import d2spa.shared.D2WContext
+import d2spa.client.EOCacheUtils
+import d2spa.shared.{D2WContext, EOValueUtils}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -29,14 +30,13 @@ object ERD2WEditString  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val eo = p.eo
+      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
       val propertyName = p.property.name
-      val eoValue = eo.values(propertyName)
-      val value = if (eoValue.stringV.isDefined) eoValue.stringV.get else ""
+      val value = EOValueUtils.stringValueForKey(eo,propertyName)
       <.div(
         <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property, EOValue(stringV = Some(e.target.value))))} )
+              ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property, EOValue(stringV = Some(e.target.value))))} )
       )
     }
   }

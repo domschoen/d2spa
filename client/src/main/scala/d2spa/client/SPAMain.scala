@@ -85,7 +85,7 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
-            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")),None, p))
+            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")), Some(eoWithProxyAndPk(p, m.entity, -1)), p))
           }
         )
       )

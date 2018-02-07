@@ -1,6 +1,7 @@
 package d2spa.client.components
 
-import d2spa.shared.{D2WContext, EO, PropertyMetaInfo, ValueType}
+import d2spa.client.EOCacheUtils
+import d2spa.shared._
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -26,10 +27,9 @@ object ERD2WEditNumber {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val eo = p.eo
+      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
       val propertyName = p.property.name
-      val eoValue = eo.values(propertyName)
-      val value = if (eoValue.intV.isDefined) eoValue.intV.get.toString else ""
+      val value = EOValueUtils.stringValueForKey(eo,propertyName)
       <.div(
         <.input(^.id := "description", ^.value := value,
           ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>

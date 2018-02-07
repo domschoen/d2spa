@@ -103,15 +103,10 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      val eoFault = p.eo
+      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
       val propertyName = p.property.name
-      println("ERDList propertyKey: " + propertyName)
-      println("ERDList eo.values: " + eoFault.values)
-      val eoCache = p.proxy.value.eos
-      val eoOpt = EOCacheUtils.objectForEntityNamedAndPk(eoCache,eoFault.entity.name,EOValueUtils.pk(eoFault).get)
-      println("ERDList eoOpt " + eoOpt)
 
-      val eoValue = if (eoOpt.isDefined && eoOpt.get.values.contains(propertyName)) Some(eoOpt.get.values(propertyName)) else None
+      val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
       val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
       //val size = 1
       <.div(size + "Projects " + propertyName)

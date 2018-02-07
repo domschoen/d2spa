@@ -44,7 +44,7 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class SetPageForTaskAndEntity(task: String, entityName: String) extends Action
+case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
@@ -136,7 +136,19 @@ object EOCacheUtils {
 
     if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
   } else None
+
+  def outOfCacheEOUsingPkFromEO(eos: Map[String, Map[Int,EO]], eo: EO): EO = {
+    val entity = eo.entity
+    val pkOpt = EOValueUtils.pk(eo)
+    val pk = pkOpt.getOrElse(-1)
+    val eoOpt = EOCacheUtils.objectForEntityNamedAndPk(eos,entity.name,pk)
+    eoOpt match {
+      case Some(anEO) => anEO
+      case _ => EOValueUtils.dryEOWithEntity(entity,-1)
+    }
+  }
 }
+
 
 object FireRuleConverter {
   def toRuleFault(fireRule: FireRule) = RuleFault(RuleUtils.convertD2WContextToFullFledged(fireRule.rhs),fireRule.key)

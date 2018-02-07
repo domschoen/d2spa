@@ -108,7 +108,7 @@ object ERD2WEditToOneRelationship   {
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val eo = p.eo
+      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
       val propertyName = p.property.name
       //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
       val properyD2WContext = d2wContext(p)

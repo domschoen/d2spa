@@ -157,13 +157,13 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(task, entityName) =>
+    case SetPageForTaskAndEntity(task, entityName, pk) =>
       println("InitMetaData ")
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
         case _ =>
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityName)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pk, entityName)))
       }
 
     case SetMetaDataForMenu(task, entityMetaData) =>
@@ -317,7 +317,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
           val pkOpt = EOValueUtils.pk(eo)
           pkOpt match {
             case Some(pk) => Some((pk,eo))
-            case _ => None
+            case _ => Some((-1,eo))
           }
         }).flatten.toMap
 
@@ -425,7 +425,7 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       log.debug("NewEOPage: " +selectedEntityName)
 
       effectOnly(
-        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName)) // from edit ?
+        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName, None)) // from edit ?
       )
 
 
@@ -560,7 +560,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     case SetupQueryPageForEntity(selectedEntityName) =>
       updated(
         List(),
-        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName))
+        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, None))
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>
