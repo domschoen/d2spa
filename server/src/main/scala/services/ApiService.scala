@@ -231,14 +231,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   val fireRuleArguments = List("entity","task","propertyKey","pageConfiguration","key")
 
   def fireRuleFuture(rhs: D2WContextFullFledged, key: String) : Future[WSResponse] = {
-    println("Fire Rule for key " + key + " rhs:" + rhs)
+    //println("Fire Rule for key " + key + " rhs:" + rhs)
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
     val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, rhs.pageConfiguration, Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
 
-    println("Args : " + arguments)
+    //println("Args : " + arguments)
 
     val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
@@ -598,7 +598,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
 
   def newEO(entity: EOEntity, eo: EO): Future[EO] = {
-    println("Update EO: " + eo)
+    println("New EO: " + eo)
 
     val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
 

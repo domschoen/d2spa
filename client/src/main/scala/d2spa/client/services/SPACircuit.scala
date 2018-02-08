@@ -41,7 +41,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOsHandler(zoomTo(_.content.eos)),
-    //new EOHandler(zoomTo(_.content.eo)),
+    new InsertedEOsHandler(zoomTo(_.content.insertedEOs)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
     new EOModelHandler(zoomTo(_.content.eomodel))
     //new MegaDataHandler(zoomTo(_.content))
@@ -87,6 +87,15 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
     case SetEOModel(eomodel) =>
       updated(Ready(eomodel))
+
+
+    case SetNewEOPage(selectedEntityName) =>
+      log.debug("NewEOPage: " + selectedEntityName)
+      // Create the EO and set it in the cache
+      effectOnly(
+        Effect.action(CreateNewEOForEditPage(value.get, selectedEntityName)) // from edit ?
+      )
+
 
   }
 
@@ -296,14 +305,14 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
     if (eos.isEmpty) {
       value
     } else {
-      val result : Map[String, Map[Int,EO]] = subPart(eos)
+      val result : Map[String, Map[Int,EO]] = newUpdatedCache(eos)
       println("storing result as :" + result)
       result
     }
   }
 
 
-  def subPart(eos: Seq[EO]) = {
+  def newUpdatedCache(eos: Seq[EO]) = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
@@ -421,14 +430,6 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       effectOnly(
         Effect.action(InstallEditPage(fromTask,eo))
       )
-    case SetNewEOPage(selectedEntityName) =>
-      log.debug("NewEOPage: " +selectedEntityName)
-
-      effectOnly(
-        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName, None)) // from edit ?
-      )
-
-
     case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
       log.debug("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
@@ -438,7 +439,27 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       val propertyName = property.name
       val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
       updated(updatedModelForEntityNamed(Seq(newEO)))
+  }
 
+}
+
+class InsertedEOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends ActionHandler(modelRW) {
+
+  def newCacheByInserting(eo:EO) = {
+
+  }
+
+  override def handle = {
+    case CreateNewEOForEditPage(eomodel, selectedEntityName) =>
+      log.debug("CreateNewEOForEditPage: " + selectedEntityName)
+      // Create the EO and set it in the cache
+      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value, eomodel, selectedEntityName)
+      val pk = EOValueUtils.pk(newEO)
+
+      updated(
+        newValue,
+        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName, pk))
+      )
 
   }
 
@@ -498,7 +519,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         ))
       )
     case NewEO(selectedEntity, eo) =>
-      println("SAVE " + eo)
+      println("SAVE new eo " + eo)
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some("inspect")))),

@@ -30,14 +30,18 @@ object ERD2WEditString  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
-      val propertyName = p.property.name
-      val value = EOValueUtils.stringValueForKey(eo,propertyName)
-      <.div(
-        <.input(^.id := "description", ^.value := value,
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      eoOpt match {
+        case Some(eo) =>
+          val propertyName = p.property.name
+          val value = EOValueUtils.stringValueForKey(eo,propertyName)
+          <.div(
+            <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
                 p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property, EOValue(stringV = Some(e.target.value))))} )
-      )
+          )
+        case None => <.div("")
+      }
     }
   }
 

@@ -103,13 +103,17 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
-      val propertyName = p.property.name
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      eoOpt match {
+        case Some(eo) =>
+          val propertyName = p.property.name
 
-      val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
-      val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
-      //val size = 1
-      <.div(size + "Projects " + propertyName)
+          val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+          val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
+          //val size = 1
+          <.div(size + "Projects " + propertyName)
+        case None => <.div("")
+      }
     }
   }
 

@@ -50,18 +50,45 @@ object EOValueUtils {
 
 
   //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
-  def dryEOWith(eomodel: EOModel, entityName: String, pk: Int) = {
+  def dryEOWith(eomodel: EOModel, entityName: String, pk: Option[Int]) = {
     val entity = EOModelUtils.entityNamed(eomodel,entityName).get
     dryEOWithEntity(entity,pk)
   }
-  def dryEOWithEntity(entity: EOEntity, pk: Int) = {
-    val pkAttributeName = entity.pkAttributeName
-    val pkValue = intV(pk)
-    EO(entity, Map(pkAttributeName -> pkValue))
+
+  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int,EO]], eomodel: EOModel, entityName: String) : (Map[String, Map[Int,EO]],EO) = {
+    val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+    val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
+    insertedEOsForEntityOpt match {
+      case Some(insertedEOsForEntity) =>
+        val newMemID = insertedEOsForEntity.keySet.max + 1
+        val newEO = EO(entity,Map.empty[String, EOValue],Some(newMemID))
+        val newEntityMap = insertedEOsForEntity + (newMemID -> newEO)
+        val newInsertedEOs = insertedEOs + (entityName -> newEntityMap)
+        (newInsertedEOs,newEO)
+      case None =>
+        val newMemID = 1
+        val newEO = EO(entity,Map.empty[String, EOValue],Some(newMemID))
+        val newEntityMap = Map(newMemID -> newEO)
+        val newInsertedEOs = Map(entityName -> newEntityMap)
+        (newInsertedEOs,newEO)
+    }
   }
-  def dryEOWithEntity(entity: EOEntity) = {
-    EO(entity, Map())
+
+
+  // For creation of objects only ?
+  def dryEOWithEntity(entity: EOEntity, pk: Option[Int]) = {
+    pk match {
+      case Some(pk) =>
+        val pkAttributeName = entity.pkAttributeName
+        val pkValue = intV(pk)
+        val valueMap = Map(pkAttributeName -> pkValue)
+        EO(entity, valueMap)
+      case None =>
+        EO(entity,Map.empty[String, EOValue],Some(-1))
+    }
+
   }
+
 
 
   def juiceString(value: EOValue) : String = if (value == null) "" else {
@@ -103,6 +130,13 @@ object EOValueUtils {
     existingEO.copy(values = newValues)
   }
 
+  def isNew(eo:EO) = {
+    //val pk = EOValueUtils.pk(eo)
+    //(pk.isDefined && pk.get < 0) || pk.isEmpty
+    eo.memID.isDefined
+  }
+
+
   def pk(eo:EO) = {
     val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
     eoValue match {
@@ -124,7 +158,7 @@ case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
 case class EORelationship(name: String, destinationEntityName: String)
 
-case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String] = None)
+case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
 //case class EORef(entityName: String, id: Int)
 
 case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)

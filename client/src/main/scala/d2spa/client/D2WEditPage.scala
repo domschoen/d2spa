@@ -19,7 +19,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: Option[EO], proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -29,9 +29,10 @@ object D2WEditPage {
       EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
     }
 
+    // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
       val entityName = p.d2wContext.entityName.get
-      println("D2WQueryPage " + entityName)
+      println("D2WEditPage: will Mount " + entityName)
       val taskName = p.d2wContext.task.get
 
       val entityMetaDataOpt = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
@@ -40,11 +41,11 @@ object D2WEditPage {
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      val actionList = if (p.eo.isDefined) List(
+      val actionList = if (p.eo.memID.isDefined) List(
         fireDisplayPropertyKeys,
         // in order to have an EO completed with all attributes for the task,
         // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-        Hydration(DrySubstrate(eo = p.eo),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+        Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
       ) else List(fireDisplayPropertyKeys)
 
 
@@ -57,13 +58,13 @@ object D2WEditPage {
     }
 
     def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
-      val hasPk = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)}).isDefined
-      if (hasPk) {
-        Callback.log(s"Save: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(Save(entity.name,eo)))
+      val isNewEO = EOValueUtils.isNew(eo)
+      if (isNewEO) {
+        Callback.log(s"Save new EO: $entity") >>
+          $.props >>= (_.proxy.dispatchCB(NewEO(entity,eo)))
       } else {
         Callback.log(s"Save: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(NewEO(entity,eo)))
+          $.props >>= (_.proxy.dispatchCB(Save(entity.name,eo)))
       }
 
     }
@@ -91,7 +92,9 @@ object D2WEditPage {
     }
 
     def render(p: Props) = {
-      p.eo match {
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+
+      eoOpt match {
         case Some(eo) =>
           val entityName = p.d2wContext.entityName.get
 
@@ -108,7 +111,7 @@ object D2WEditPage {
             val entity = entityMetaData.entity
             val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
             val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
-            val eo = p.eo.getOrElse(EOValueUtils.dryEOWithEntity(entity))
+            val eo = p.eo
             println("prox eo " + eo)
 
             println("Edit page EO " + eo)
@@ -188,7 +191,7 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: Option[EO], proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = {
     println("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, eo, proxy))
   }

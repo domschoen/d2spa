@@ -37,7 +37,7 @@ object SPAMain extends js.JSApp {
 
   object TaskAppPage {
 
-    def eoWithProxyAndPk(p: ModelProxy[MegaContent], entityName: String, pk: Int) = {
+    def eoWithProxyAndPk(p: ModelProxy[MegaContent], entityName: String, pk: Option[Int]) = {
         val theeomodel = p.value.eomodel.get
         EOValueUtils.dryEOWith(theeomodel,entityName, pk)
     }
@@ -73,19 +73,19 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int).caseClass[EditPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), Some(eoWithProxyAndPk(p, m.entity, m.pk)), p ))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), eoWithProxyAndPk(p, m.entity, Some(m.pk)), p ))
             }
         )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), Some(eoWithProxyAndPk(p, m.entity, m.pk)), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), eoWithProxyAndPk(p, m.entity, Some(m.pk)), p))
             }
           )
         | dynamicRouteCT(("#task/edit/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
-            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")), Some(eoWithProxyAndPk(p, m.entity, -1)), p))
+            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")), eoWithProxyAndPk(p, m.entity, None), p))
           }
         )
       )

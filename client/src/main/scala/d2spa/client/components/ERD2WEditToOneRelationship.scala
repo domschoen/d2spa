@@ -108,76 +108,80 @@ object ERD2WEditToOneRelationship   {
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val eo = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.eos, p.eo)
-      val propertyName = p.property.name
-      //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
-      val properyD2WContext = d2wContext(p)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      eoOpt match {
+        case Some(eo) =>
+          val propertyName = p.property.name
+          //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
+          val properyD2WContext = d2wContext(p)
 
 
-      log.debug("+ rules " + p.property.ruleResults)
+          log.debug("+ rules " + p.property.ruleResults)
 
-      //println("Edit To One Relationship " + eo)
-      val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
+          //println("Edit To One Relationship " + eo)
+          val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
 
-      keyWhenRelationshipRuleOpt match {
-        case Some(Some(keyWhenRelationship)) => {
-        //case Some(keyWhenRelationship) => {
-          val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
-          val eoCache = p.proxy.value.eos
-          val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
-          <.div(
-            //{
-              //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
-           /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
-            <.div("entity " +entity),
-            <.div("propertyName " +propertyName)*/
+          keyWhenRelationshipRuleOpt match {
+            case Some(Some(keyWhenRelationship)) => {
+              //case Some(keyWhenRelationship) => {
+              val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
+              val eoCache = p.proxy.value.eos
+              val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
+              <.div(
+                //{
+                //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+                /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
+                 <.div("entity " +entity),
+                 <.div("propertyName " +propertyName)*/
 
-            destinationEOs match {
-              case Some(eos) => {
-                println("eoRefs " + eos)
-                val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
-                val defaultValue = destinationEO match {
-                  case Some(EOValue(_,_,_,eoV,_)) => eoV match {
-                    case Some(eo) => EOValueUtils.pk(eo).get.toString
-                    case _ => "None"
-                  }
-                  case _ => "None"
-                }
-                <.div(
-                  <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
-                  },
-                  {
-                      val tupleOpts = eos map (x => {
-
-                        val id = EOValueUtils.pk(x)
-                        println("id " + id + " for eo: " + x)
-                        if (id.isDefined) {
-                          val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
-                          Some((id.get.toString,displayName))
-                        } else None
-                      })
-                      // remove None
-                      val tupleValids = tupleOpts.flatten.toList
-                      val tuplesWithNone = ("None", "- none -") :: tupleValids
-                      println("valid tuples " + tupleValids)
-                      tuplesWithNone toTagMod (eo => {
-                          <.option(^.value := eo._1, eo._2)
-                      })
+                destinationEOs match {
+                  case Some(eos) => {
+                    println("eoRefs " + eos)
+                    val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
+                    val defaultValue = destinationEO match {
+                      case Some(EOValue(_,_,_,eoV,_)) => eoV match {
+                        case Some(eo) => EOValueUtils.pk(eo).get.toString
+                        case _ => "None"
+                      }
+                      case _ => "None"
                     }
-                  )
-                )
-              }
-              case _ => {
-                <.div("No eos for destination entity " + destinationEntity)
-              }
-            }
+                    <.div(
+                      <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
+                        p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
+                      },
+                        {
+                          val tupleOpts = eos map (x => {
 
-          )
-        }
-        case _ => {
-          <.div("keyWhenRelationshipRule is None")
-        }
+                            val id = EOValueUtils.pk(x)
+                            println("id " + id + " for eo: " + x)
+                            if (id.isDefined) {
+                              val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
+                              Some((id.get.toString,displayName))
+                            } else None
+                          })
+                          // remove None
+                          val tupleValids = tupleOpts.flatten.toList
+                          val tuplesWithNone = ("None", "- none -") :: tupleValids
+                          println("valid tuples " + tupleValids)
+                          tuplesWithNone toTagMod (eo => {
+                            <.option(^.value := eo._1, eo._2)
+                          })
+                        }
+                      )
+                    )
+                  }
+                  case _ => {
+                    <.div("No eos for destination entity " + destinationEntity)
+                  }
+                }
+
+              )
+            }
+            case _ => {
+              <.div("keyWhenRelationshipRule is None")
+            }
+          }
+        case None => <.div("")
       }
     }
   }

@@ -23,7 +23,7 @@ case class CustomData()
 
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
                        eos: Map[String, Map[Int,EO]],
-                       //eo: Pot[EO],
+                       insertedEOs: Map[String, Map[Int,EO]],
                        queryValues: List[QueryValue])
 
 
@@ -45,6 +45,7 @@ case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer,
 
 case class InitMetaData(entity: String) extends Action
 case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
+case class CreateNewEOForEditPage(eomodel: EOModel, entityName: String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
@@ -119,6 +120,7 @@ object AppModel {
       Empty,
       List(),
       Map(),
+      Map(),
       List()
     )
   )
@@ -137,14 +139,18 @@ object EOCacheUtils {
     if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
   } else None
 
-  def outOfCacheEOUsingPkFromEO(eos: Map[String, Map[Int,EO]], eo: EO): EO = {
+  def outOfCacheEOUsingPkFromEO(cache: MegaContent, eo: EO): Option[EO] = {
     val entity = eo.entity
-    val pkOpt = EOValueUtils.pk(eo)
-    val pk = pkOpt.getOrElse(-1)
-    val eoOpt = EOCacheUtils.objectForEntityNamedAndPk(eos,entity.name,pk)
-    eoOpt match {
-      case Some(anEO) => anEO
-      case _ => EOValueUtils.dryEOWithEntity(entity,-1)
+    eo.memID match {
+      case Some(memID) =>
+        EOCacheUtils.objectForEntityNamedAndPk(cache.insertedEOs,entity.name,memID)
+      case None =>
+        val pkOpt = EOValueUtils.pk(eo)
+        pkOpt match {
+          case Some(pk) =>
+            EOCacheUtils.objectForEntityNamedAndPk(cache.eos,entity.name,pk)
+          case None => None
+        }
     }
   }
 }
