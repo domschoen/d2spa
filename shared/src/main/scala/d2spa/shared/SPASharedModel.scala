@@ -54,6 +54,10 @@ object EOValueUtils {
     val entity = EOModelUtils.entityNamed(eomodel,entityName).get
     dryEOWithEntity(entity,pk)
   }
+  def memEOWith(eomodel: EOModel, entityName: String, memID: Option[Int]) = {
+    val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+    EO(entity,Map.empty[String, EOValue],memID)
+  }
 
   def createAndInsertNewObject(insertedEOs: Map[String, Map[Int,EO]], eomodel: EOModel, entityName: String) : (Map[String, Map[Int,EO]],EO) = {
     val entity = EOModelUtils.entityNamed(eomodel,entityName).get
@@ -136,6 +140,11 @@ object EOValueUtils {
     eo.memID.isDefined
   }
 
+  def globalId(eo:EO) = {
+     if (isNew(eo)) {
+       eo.memID
+     } else pk(eo)
+  }
 
   def pk(eo:EO) = {
     val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})

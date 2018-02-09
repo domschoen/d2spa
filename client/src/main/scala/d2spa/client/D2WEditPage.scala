@@ -41,6 +41,8 @@ object D2WEditPage {
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
+      println("D2WEditPage: eo " + p.eo)
+
       val actionList = if (p.eo.memID.isDefined) List(
         fireDisplayPropertyKeys,
         // in order to have an EO completed with all attributes for the task,

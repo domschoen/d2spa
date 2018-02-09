@@ -2,7 +2,7 @@ package d2spa.client
 
 import scala.concurrent.Future
 import japgolly.scalajs.react.extra.router._
-import d2spa.client.SPAMain.{EditPage, InspectPage, ListPage, QueryPage, TaskAppPage, NewEOPage}
+import d2spa.client.SPAMain._
 import d2spa.shared.{EO, EOEntity, EOValueUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,7 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEOAndEntity(task: String, pkOpt: Option[Int], entity: String): Future[diode.NoAction.type] = {
+  def setPageForTaskAndEOAndEntity(task: String, pkOpt: Option[Int], memIDOpt: Option[Int], entity: String): Future[diode.NoAction.type] = {
 
 
     println("Set " + task + " page " + entity + " pk " + pkOpt)
@@ -20,7 +20,11 @@ object AfterEffectRouter {
       case "edit" => {
         pkOpt match {
           case Some(pk) => setRouterToPage(EditPage(entity, pk))
-          case _ => setRouterToPage(NewEOPage(entity))
+          case _ =>
+            memIDOpt match {
+              case Some(memID) => setRouterToPage(NewPage(entity, memID))
+              case _ => setRouterToPage(QueryPage(entity))
+            }
         }
       }
       // To be refactored : same code as above

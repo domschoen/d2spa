@@ -456,7 +456,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               println("destinationEntity " + destinationEntity)
               val pkName = destinationEntity.pkAttributeName
               val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
-              val eo = EOValueUtils.dryEOWithEntity(destinationEntity,pk)
+              val eo = EOValueUtils.dryEOWithEntity(destinationEntity,Some(pk))
               valuesMap += (key -> EOValue(typeV = ValueType.eoV, eoV = Some(eo)))
             case _ =>
               valuesMap += (key -> EOValue(stringV = Some("not supported")))
@@ -698,7 +698,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-              EOValueUtils.dryEOWith(eomodel(),entityName,id)
+              EOValueUtils.dryEOWith(eomodel(),entityName,Some(id))
             })
             EOValueUtils.eosV(eos)
           } else if (value.isInstanceOf[JsString]) {

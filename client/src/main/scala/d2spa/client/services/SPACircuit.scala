@@ -166,17 +166,17 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(task, entityName, pk) =>
+    case SetPageForTaskAndEntity(task, entityName, pk, memID) =>
       println("InitMetaData ")
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
         case _ =>
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pk, entityName)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pk, memID, entityName)))
       }
 
     case SetMetaDataForMenu(task, entityMetaData) =>
-      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityMetaData.entity.name)))
+      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, None, entityMetaData.entity.name)))
 
     case InitMetaData(entity) =>
       println("InitMetaData ")
@@ -454,11 +454,14 @@ class InsertedEOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) exten
       log.debug("CreateNewEOForEditPage: " + selectedEntityName)
       // Create the EO and set it in the cache
       val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value, eomodel, selectedEntityName)
-      val pk = EOValueUtils.pk(newEO)
+
+      log.debug("newValue " + newValue)
+      log.debug("newEO " + newEO)
+
 
       updated(
         newValue,
-        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName, pk))
+        Effect.action(SetPageForTaskAndEntity("edit", selectedEntityName, None, newEO.memID))
       )
 
   }
@@ -498,7 +501,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
-        Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, selectedEntity.name))
+        Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, None, selectedEntity.name))
       )
 
     case Save(selectedEntityName, eo) =>
@@ -581,7 +584,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     case SetupQueryPageForEntity(selectedEntityName) =>
       updated(
         List(),
-        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, None))
+        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, None, None))
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>

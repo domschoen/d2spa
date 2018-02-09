@@ -44,7 +44,7 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
+case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int], memID: Option[Int]) extends Action
 case class CreateNewEOForEditPage(eomodel: EOModel, entityName: String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
