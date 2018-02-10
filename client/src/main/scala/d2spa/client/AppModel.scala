@@ -44,13 +44,14 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int], memID: Option[Int]) extends Action
-case class CreateNewEOForEditPage(eomodel: EOModel, entityName: String) extends Action
+case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
 
-case class SetNewEOPage(entityName: String) extends Action
+case class SetNewEO(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class CreateNewEO(eomodel: EOModel,entityName: String,rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case class SetPreviousPage(entity: EOEntity) extends Action
@@ -83,7 +84,7 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 trait D2WAction extends diode.Action
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
-
+case class CreateMemID(eo: EO) extends D2WAction
 
 case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 

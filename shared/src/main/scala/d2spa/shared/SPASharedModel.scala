@@ -135,9 +135,9 @@ object EOValueUtils {
   }
 
   def isNew(eo:EO) = {
-    //val pk = EOValueUtils.pk(eo)
-    //(pk.isDefined && pk.get < 0) || pk.isEmpty
-    eo.memID.isDefined
+    val pk = EOValueUtils.pk(eo)
+    (pk.isDefined && pk.get < 0) || pk.isEmpty
+    //eo.memID.isDefined
   }
 
   def globalId(eo:EO) = {

@@ -42,13 +42,19 @@ object D2WEditPage {
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
       println("D2WEditPage: eo " + p.eo)
+      val isNew = EOValueUtils.isNew(p.eo)
 
-      val actionList = if (p.eo.memID.isDefined) List(
+      val actionList = if (isNew) List(
+        fireDisplayPropertyKeys,
+        // in order to have an EO completed with all attributes for the task,
+        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+        CreateMemID(p.eo)
+      ) else List(
         fireDisplayPropertyKeys,
         // in order to have an EO completed with all attributes for the task,
         // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
         Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-      ) else List(fireDisplayPropertyKeys)
+      )
 
 
       Callback.when(true)(p.proxy.dispatchCB(
