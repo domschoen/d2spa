@@ -349,7 +349,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val inspectProperties = fromResponseToMetaInfo(inspectDisplayPropertyKeys,entity,TaskDefine.inspect)
         val editProperties = fromResponseToMetaInfo(editDisplayPropertyKeys,entity,TaskDefine.edit)
 
-        val emd = EntityMetaData(entity, entityDisplayName._2, Task(queryProperties), Task(listProperties),Task(inspectProperties),Task(editProperties))
+        val emd = EntityMetaData(entity, entityDisplayName._2,
+          Task(TaskDefine.query, queryProperties),
+          Task(TaskDefine.list, listProperties),
+          Task(TaskDefine.inspect, inspectProperties),
+          Task(TaskDefine.edit,editProperties))
         emd
       }
       result

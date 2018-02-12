@@ -100,6 +100,7 @@ object D2WEditPage {
     }
 
     def render(p: Props) = {
+      log.debug("D2WEditPage: render look for eo out of cache: " + p.eo)
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
 
       eoOpt match {

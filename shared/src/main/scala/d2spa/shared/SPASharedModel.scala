@@ -88,7 +88,7 @@ object EOValueUtils {
         val valueMap = Map(pkAttributeName -> pkValue)
         EO(entity, valueMap)
       case None =>
-        EO(entity,Map.empty[String, EOValue],Some(-1))
+        EO(entity,Map.empty[String, EOValue],None)
     }
 
   }
@@ -217,7 +217,7 @@ case class QueryValue(key: String,value: String, operator: String)
 
 // Task
 //case class Task(task: String, displayPropertyKeys: List[PropertyMetaInfo])
-case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
+case class Task(name: String, displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
 
 /// Important NOTE: Seems that Map is not supported in case classes managed by boopickle

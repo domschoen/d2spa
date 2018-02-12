@@ -90,7 +90,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
 
     case SetNewEO(selectedEntityName, property, actions) =>
-      log.debug("NewEOPage: " + selectedEntityName)
+      println("NewEOPage: " + selectedEntityName)
       // Create the EO and set it in the cache
       effectOnly(
         Effect.action(CreateNewEO(value.get, selectedEntityName, property, actions)) // from edit ?
@@ -202,7 +202,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr => SetRuleResults(List(rr), rulesContainer, remainingActions))))
 
         case CreateMemID(eo) =>
-          println("CreateMemID " + eo)
+          println("CreateMemID: " + eo)
           effectOnly(Effect.action(SetNewEO(eo.entity.name,rulesContainer,remainingActions)))
         case Hydration(drySubstrate,  wateringScope) =>
           // get displayPropertyKeys from previous rule results
@@ -266,6 +266,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     // many rules
     case SetRuleResults(ruleResults, rulesContainer, actions: List[D2WAction]) =>
       println("Rule Results " + ruleResults)
+      println("Rule Container " + rulesContainer)
       //val d2wContext = property.d2wContext
       //val entity = d2wContext.entity
       //val task = d2wContext.task
@@ -293,7 +294,31 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
             }
             case None     => noChange
           }
-        case task: Task => noChange // but no there is change, TBD
+
+        // case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
+        case task: Task =>
+          val property = task.displayPropertyKeys.head
+          val propertyKey = property.name
+          val taskName = task.name
+
+          // rule results are stored in EntityMetaData -> Task -> property
+          val entityWriter = zoomToEntity(property.entityName,modelRW)
+          entityWriter match {
+            case Some(erw) => zoomToTask(taskName, erw) match {
+              case Some(trw) => {
+                zoomToProperty(property, trw) match {
+                  case Some(propWriter) => {
+                    ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
+                      Effect.action(FireActions(property, actions)))
+                  }
+                  case None => noChange
+                }
+              }
+              case None     => noChange
+            }
+            case None     => noChange
+          }
+
 
       }
 
@@ -458,7 +483,7 @@ class InsertedEOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) exten
 
   override def handle = {
     case CreateNewEO(eomodel, selectedEntityName, property, actions: List[D2WAction]) =>
-      log.debug("CreateNewEOForEditPage: " + selectedEntityName)
+      log.debug("CreateNewEO: " + selectedEntityName)
       // Create the EO and set it in the cache
       val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value, eomodel, selectedEntityName)
 
