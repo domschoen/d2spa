@@ -340,6 +340,12 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
         Ready(eo),
         Effect.action(FireActions(property,actions))
       )
+    case EditEO(fromTask, eo) =>
+      log.debug("EditEO: " + eo)
+      updated(
+        Ready(eo),
+        Effect.action(InstallEditPage(fromTask,eo))
+      )
 
   }
 }
@@ -493,11 +499,6 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(InstallInspectPage(fromTask,eo))
       )
 
-    case EditEO(fromTask, eo) =>
-      log.debug("EditEO: " + eo)
-      effectOnly(
-        Effect.action(InstallEditPage(fromTask,eo))
-      )
     case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
       log.debug("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
