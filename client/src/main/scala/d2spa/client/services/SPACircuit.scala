@@ -40,8 +40,8 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
-    new EOsHandler(zoomTo(_.content.eos)),
-    new InsertedEOsHandler(zoomTo(_.content.insertedEOs)),
+    new EOHandler(zoomTo(_.content.eo)),
+    new EOCacheHandler(zoomTo(_.content.cache)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
     new EOModelHandler(zoomTo(_.content.eomodel))
     //new MegaDataHandler(zoomTo(_.content))
@@ -89,11 +89,11 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
       updated(Ready(eomodel))
 
 
-    case SetNewEO(selectedEntityName, property, actions) =>
+    case NewEOWithEntityName(selectedEntityName, property, actions) =>
       println("NewEOPage: " + selectedEntityName)
       // Create the EO and set it in the cache
       effectOnly(
-        Effect.action(CreateNewEO(value.get, selectedEntityName, property, actions)) // from edit ?
+        Effect.action(NewEOWithEOModel(value.get, selectedEntityName, property, actions)) // from edit ?
       )
 
 
@@ -203,7 +203,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
         case CreateMemID(eo) =>
           println("CreateMemID: " + eo)
-          effectOnly(Effect.action(SetNewEO(eo.entity.name,rulesContainer,remainingActions)))
+          effectOnly(Effect.action(NewEOWithEntityName(eo.entity.name,rulesContainer,remainingActions)))
         case Hydration(drySubstrate,  wateringScope) =>
           // get displayPropertyKeys from previous rule results
           val fireRule = wateringScope.fireRule.get
@@ -325,37 +325,57 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 }
 
+class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
+
+  override def handle = {
+    case NewEOCreated(eo,property,actions) =>
+      println("eo created " + eo)
+      updated(
+        Ready(eo),
+        Effect.action(FireActions(property, actions))
+      )
+    case RefreshEO(eo, property, actions) =>
+      log.debug("Refreshed EO " + eo)
+      updated(
+        Ready(eo),
+        Effect.action(FireActions(property,actions))
+      )
+
+  }
+}
+
+
 // hydrated destination EOs are simply stored in MegaContent eos
-class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends ActionHandler(modelRW) {
+class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(modelRW) {
 
   // eo chache is stored as:
   // Map of entityName -> Map of id -> eo
   // eos: Map[String, Map[Int,EO]],
 
   // Entity Name is retreived from the eos
-  def updatedModelForEntityNamed(eos: Seq[EO]): Map[String, Map[Int,EO]] = {
+  def updatedModelForEntityNamed(idExtractor: EO => Option[Int], cache: Map[String, Map[Int,EO]], eos: Seq[EO]): Map[String, Map[Int,EO]] = {
     if (eos.isEmpty) {
-      value
+      cache
     } else {
-      val result : Map[String, Map[Int,EO]] = newUpdatedCache(eos)
+      val result : Map[String, Map[Int,EO]] = newUpdatedCache(idExtractor, cache,eos)
       println("storing result as :" + result)
       result
     }
   }
 
-
-  def newUpdatedCache(eos: Seq[EO]) = {
+//EOValueUtils.pk(eo)
+  def newUpdatedCache(idExtractor:EO => Option[Int], cache: Map[String, Map[Int,EO]],eos: Seq[EO]) = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
         val entity = head.entity
         val pkAttributeName = entity.pkAttributeName
         val entityName = entity.name
-        val entityMap = if (value.contains(entityName)) value(entity.name) else Map.empty[Int,EO]
+        val entityMap = if (cache.contains(entityName)) cache(entity.name) else Map.empty[Int,EO]
 
         // we create a Map with eo and id
         val refreshedEOs = eos.map(eo => {
-          val pkOpt = EOValueUtils.pk(eo)
+          val pkOpt = idExtractor(eo)
           pkOpt match {
             case Some(pk) => Some((pk,eo))
             case _ => Some((-1,eo))
@@ -385,25 +405,48 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
         }).toMap
         val newEntityMap = entityMap ++ newAndUpdateMap
 
-        value + (entity.name -> newEntityMap)
+        cache + (entity.name -> newEntityMap)
       case _ => Map.empty[String, Map[Int,EO]]
     }
   }
+  def updatedOutOfDBCacheWithEOs(eos: Seq[EO]): EOCache = {
+    val insertedEOs = value.insertedEOs
+    val outOfDBEOs = updatedModelForEntityNamed(eo => EOValueUtils.pk(eo),value.eos,eos)
+    EOCache(outOfDBEOs,insertedEOs)
+  }
+
+  def updatedMemCacheWithEOs(eos: Seq[EO]): EOCache = {
+    val newCache = updatedModelForEntityNamed(eo => eo.memID,value.insertedEOs,eos)
+    EOCache(value.eos,newCache)
+  }
+
+
+  def updatedOutOfDBCache(eos: Map[String, Map[Int,EO]]): EOCache = {
+    val insertedEOs = value.insertedEOs
+    EOCache(eos,insertedEOs)
+  }
+  def updatedMemCache(eos: Map[String, Map[Int,EO]]): EOCache = {
+    val dbEOs = value.eos
+    EOCache(dbEOs,eos)
+  }
+
 
   override def handle = {
 
     case FetchedObjectsForEntity(eoses, property, actions) =>
       println("FetchedObjectsForEntity property " + property)
       //println("FetchedObjectsForEntity eos " + eos)
+
+
       updated(
-        updatedModelForEntityNamed(eoses),
+        updatedOutOfDBCacheWithEOs(eoses),
         Effect.action(FireActions(property, actions))
       )
 
     case SearchResult(entity, eoses) =>
       println("length " + eoses.length)
       updated(
-        updatedModelForEntityNamed(eoses),
+        updatedOutOfDBCacheWithEOs(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entity.name))
       )
     case DeleteEOFromList(fromTask, eo) =>
@@ -425,13 +468,12 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
     case DeletedEO(deletedEO) =>
       println("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
-      val eos = value(entityName)
       val eoPk = EOValueUtils.pk(deletedEO).get
 
-      val entityMap = value(entityName)
+      val entityMap = value.eos(entityName)
       val newEntityMap = entityMap - eoPk
-      val newValue = value + (entityName -> newEntityMap)
-      updated(newValue)
+      val newValue = value.eos + (entityName -> newEntityMap)
+      updated(updatedOutOfDBCache(newValue))
 
 
     // set error on eo
@@ -439,22 +481,16 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
       val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
       val entityName = eoOnError.entity.name
-      val eos = value(entityName)
       val eoPk = EOValueUtils.pk(eoWithDisplayableError).get
-      val entityMap = value(entityName)
+      val entityMap = value.eos(entityName)
       val newEntityMap = entityMap + (eoPk -> eoWithDisplayableError)
-      val newValue = value + (entityName -> newEntityMap)
-      updated(newValue)
+      val newValue = value.eos + (entityName -> newEntityMap)
+      updated(updatedOutOfDBCache(newValue))
 
     case InspectEO(fromTask, eo) =>
       log.debug("InspectEO " + eo)
       effectOnly(
         Effect.action(InstallInspectPage(fromTask,eo))
-      )
-    case RefreshEO(eo, property, actions) =>
-      log.debug("Refreshed EO " + eo)
-      effectOnly(
-        Effect.action(FireActions(property,actions))
       )
 
     case EditEO(fromTask, eo) =>
@@ -470,35 +506,30 @@ class EOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends Actio
       println("EO: " + eo)
       val propertyName = property.name
       val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
-      updated(updatedModelForEntityNamed(Seq(newEO)))
-  }
 
-}
+      if (newEO.memID.isDefined) {
+        updated(updatedMemCacheWithEOs(Seq(newEO)))
+      } else {
+        updated(updatedOutOfDBCacheWithEOs(Seq(newEO)))
+      }
 
-class InsertedEOsHandler[M](modelRW: ModelRW[M, Map[String, Map[Int,EO]]]) extends ActionHandler(modelRW) {
-
-  def newCacheByInserting(eo:EO) = {
-
-  }
-
-  override def handle = {
-    case CreateNewEO(eomodel, selectedEntityName, property, actions: List[D2WAction]) =>
+    case NewEOWithEOModel(eomodel, selectedEntityName, property, actions: List[D2WAction]) =>
       log.debug("CreateNewEO: " + selectedEntityName)
       // Create the EO and set it in the cache
-      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value, eomodel, selectedEntityName)
+      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, selectedEntityName)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
+      updated(updatedMemCache(newValue),
+              Effect.action(NewEOCreated(newEO,property,actions)))
 
 
-      updated(
-        newValue,
-        Effect.action(FireActions(property, actions))
-      )
 
   }
 
 }
+
+
 
 
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
@@ -507,7 +538,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
     case InitClient =>
       println("InitMenu ")
       if (value.isEmpty) {
-        println("Api get Menus")
+        log.debug("Api get Menus")
         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
       } else
         noChange

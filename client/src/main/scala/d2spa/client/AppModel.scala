@@ -22,9 +22,13 @@ case class CustomData()
 
 
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
-                       eos: Map[String, Map[Int,EO]],
-                       insertedEOs: Map[String, Map[Int,EO]],
+                       eo: Pot[EO],
+                       cache: EOCache,
                        queryValues: List[QueryValue])
+
+
+case class EOCache(eos: Map[String, Map[Int,EO]],
+                    insertedEOs: Map[String, Map[Int,EO]])
 
 
 // Generic Part
@@ -49,8 +53,9 @@ case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
 
-case class SetNewEO(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class CreateNewEO(eomodel: EOModel,entityName: String,rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEntityName(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOCreated(eo: EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
@@ -120,8 +125,8 @@ object AppModel {
       Empty,
       Empty,
       List(),
-      Map(),
-      Map(),
+      Empty,
+      EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue]
       List()
     )
   )
@@ -134,22 +139,28 @@ object EOCacheUtils {
     if (entityEOs.isEmpty) None else Some(entityEOs)
   } else None
 
-  def objectForEntityNamedAndPk(eos: Map[String, Map[Int,EO]], entityName: String, pk: Int): Option[EO] = if (eos.contains(entityName)) {
-    val entityEOById = eos(entityName)
+  def objectForEntityNamedAndPk(eos: Map[String, Map[Int,EO]], entityName: String, pk: Int): Option[EO] =
+    if (eos.contains(entityName)) {
+      val entityEOById = eos(entityName)
 
-    if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
-  } else None
+      if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
+    } else None
 
   def outOfCacheEOUsingPkFromEO(cache: MegaContent, eo: EO): Option[EO] = {
     val entity = eo.entity
     eo.memID match {
       case Some(memID) =>
-        EOCacheUtils.objectForEntityNamedAndPk(cache.insertedEOs,entity.name,memID)
+        val memCache = cache.cache.insertedEOs
+        println("Out of cache " + memID)
+        println("Cache " + memCache)
+        println("e name " + entity.name)
+        EOCacheUtils.objectForEntityNamedAndPk(memCache,entity.name,memID)
       case None =>
+        val dbCache = cache.cache.eos
         val pkOpt = EOValueUtils.pk(eo)
         pkOpt match {
           case Some(pk) =>
-            EOCacheUtils.objectForEntityNamedAndPk(cache.eos,entity.name,pk)
+            EOCacheUtils.objectForEntityNamedAndPk(dbCache,entity.name,pk)
           case None => None
         }
     }

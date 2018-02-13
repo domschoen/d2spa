@@ -18,6 +18,7 @@ import d2spa.client.MegaContent
 import d2spa.client.UpdateQueryProperty
 import d2spa.shared.{PropertyMetaInfo, EOValue, EO}
 import d2spa.client.{MegaContent, UpdateEOValueForProperty}
+import d2spa.client.logger._
 
 
 
@@ -30,6 +31,7 @@ object ERD2WEditString  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
+      //log.debug("eo: " + p.eo)
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
       eoOpt match {
         case Some(eo) =>
@@ -40,7 +42,7 @@ object ERD2WEditString  {
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
                 p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property, EOValue(stringV = Some(e.target.value))))} )
           )
-        case None => <.div("")
+        case None => <.div("No eo out of cache")
       }
     }
   }

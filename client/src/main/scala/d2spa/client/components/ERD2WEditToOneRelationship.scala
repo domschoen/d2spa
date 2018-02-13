@@ -125,7 +125,7 @@ object ERD2WEditToOneRelationship   {
             case Some(Some(keyWhenRelationship)) => {
               //case Some(keyWhenRelationship) => {
               val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
-              val eoCache = p.proxy.value.eos
+              val eoCache = p.proxy.value.cache.eos
               val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
               <.div(
                 //{
