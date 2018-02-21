@@ -186,11 +186,22 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value)
 
 
-    case FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) =>
+    case FireActions(rulesCon: RulesContainer, actions: List[D2WAction]) =>
       if (actions.isEmpty) {
         noChange
       } else {
       println("FireActions " + actions)
+
+      // rulesContainer may have been updated, get it again from the model !
+      val rulesContainer: RulesContainer = rulesCon match {
+        case property: PropertyMetaInfo =>
+          AppModel.propertyMetaDataWithEntityMetaDatas(value, property.entityName, property.task, property.name).get
+        case task: Task =>
+          // val entityMetaData = AppModel.entityMetaDataFromMegaContentForEntityNamed(value, entityMetaInfo.entity.name).get
+          task // TBD refresh ?
+      }
+
+
       // take first actions and call FireActions again with the rest
       val fireAction = actions.head
       val remainingActions = actions.tail
@@ -199,29 +210,49 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           println("Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
           val newRhs = RuleUtils.convertD2WContextToFullFledged(rhs)
-          effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr => SetRuleResults(List(rr), rulesContainer, remainingActions))))
+          effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
+            {
+              println("rr " + rr)
+              SetRuleResults(List(rr), rulesContainer, remainingActions)
+            })))
 
         case CreateMemID(eo) =>
           println("CreateMemID: " + eo)
           effectOnly(Effect.action(NewEOWithEntityName(eo.entity.name,rulesContainer,remainingActions)))
+
+
+        // Hydration(
+        //   DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
+        //   WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
+        //
+        // // only on kind of Watering scope for the moment: property /ies from a rule. 2 cases:
+        // // 1) displayPropertyKeys
+        // // 2) keyWhenRelationship
+
+        // Possible watering scopes (existing and future):
+        //   1) Property from an already fired rule
+        //   2) explicit propertyKeys
+
+        // case class WateringScope(fireRule: Option[RuleFault] = None)
+        // case class RuleFault(rhs: D2WContextFullFledged, key: String)
+
+
         case Hydration(drySubstrate,  wateringScope) =>
+          // We handle only RuleFault
+          // -> we expect it
+
           // get displayPropertyKeys from previous rule results
-          val fireRule = wateringScope.fireRule.get
-          log.debug("Hydration watering scope " + fireRule)
-          val ruleKey = fireRule.key
-          log.debug("Hydration watering rule key " + ruleKey)
 
-          val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(fireRule.rhs)
-          log.debug("Hydration d2wcontext " + ruleRhs)
-          log.debug("Hydration property rule results " + rulesContainer.ruleResults)
-
-          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
+          // How to proceed:
+          // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
+          val ruleResultOpt = RuleUtils.faultRule(wateringScope.fireRule.get, rulesContainer)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
+
           ruleResultOpt match {
             case Some(RuleResult(rhs,key,value)) => {
 
               val ruleValue = rulesContainer.ruleResults
-              val missingKeys: Set[String] = ruleKey match {
+              val missingKeys: Set[String] = key match {
                 case RuleKeys.keyWhenRelationship =>
                   Set(value.stringV.get)
                   //Set(value)

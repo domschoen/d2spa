@@ -119,6 +119,13 @@ object EOValueUtils {
     }
   }
 
+  def eoValueForKey(eo: EO, key: String) : Option[EO] = {
+    valueForKey(eo,key) match {
+      case Some(value) => value.eoV
+      case None => None
+    }
+  }
+
   def valueForKey(eo: EO, key: String) = {
     if (eo.values.contains(key)) {
       Some(eo.values(key))
@@ -276,6 +283,15 @@ object RuleUtils {
     return true
   }
 
+  def faultRule(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
+    println("faultRule: " + ruleFault)
+    val ruleKey = ruleFault.key
+    val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
+    println("Hydration d2wcontext " + ruleRhs)
+    println("Hydration property rule results " + rulesContainer.ruleResults)
+
+    RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
+  }
 
   def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})

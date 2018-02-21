@@ -3,7 +3,7 @@ package d2spa.client
 import diode._
 import diode.data._
 import diode.util._
-import d2spa.shared._
+import d2spa.shared.{EntityMetaData, _}
 import boopickle.DefaultBasic._
 
 /**
@@ -131,6 +131,24 @@ object AppModel {
     )
   )
 
+  def propertyMetaDataWithEntityMetaDatas(entityMetaDatas: List[EntityMetaData], entityName: String, taskName: String, propertyName: String) = {
+    val entityMetaData = entityMetaDataFromMegaContentForEntityNamed(entityMetaDatas,entityName).get
+    propertyMetaDataWithEntityMetaData(entityMetaData,taskName,propertyName)
+  }
+
+  def entityMetaDataFromMegaContentForEntityNamed(entityMetaDatas: List[EntityMetaData], entityName: String): Option[EntityMetaData] =
+    entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
+
+  def propertyMetaDataWithEntityMetaData(entityMetaData: EntityMetaData, taskName: String, propertyName: String) = {
+    val task = taskName match {
+      case TaskDefine.edit => entityMetaData.editTask
+      case TaskDefine.list => entityMetaData.listTask
+      case TaskDefine.inspect => entityMetaData.inspectTask
+      case TaskDefine.query => entityMetaData.queryTask
+      case _ => entityMetaData.queryTask
+    }
+    task.displayPropertyKeys.find(p => p.name.equals(propertyName))
+  }
 }
 
 object EOCacheUtils {

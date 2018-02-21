@@ -58,10 +58,22 @@ object ERD2WEditToOneRelationship   {
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
-          p.property,
+          p.property,  // rule Container
+
           List[D2WAction](
+            // Fire keyWhenRelationship for D2WContext
             keyWhenRelationshipFireRule,
-            Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+
+            // Already done at Page level
+            // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+
+            // Substrate defined by objects to fetch for destination entity name
+            // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
+            // Example:
+            //    Hydration(
+            //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
+            //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
+
             Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipRuleFault)))
           )
         )
@@ -108,6 +120,8 @@ object ERD2WEditToOneRelationship   {
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+
+      val taskName = p.d2wContext.task.get
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
       eoOpt match {
         case Some(eo) =>
@@ -117,15 +131,26 @@ object ERD2WEditToOneRelationship   {
 
 
           log.debug("+ rules " + p.property.ruleResults)
+          log.debug("task  " + taskName)
 
           //println("Edit To One Relationship " + eo)
-          val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(p.property,properyD2WContext, RuleKeys.keyWhenRelationship)
+
+          // We need to get the propertyMetaInfo from the model because it could have been updated !
+          val propertyMetaInfo = AppModel.propertyMetaDataWithEntityMetaDatas(p.proxy.value.entityMetaDatas,entityName,taskName,propertyName).get
+
+          log.debug("ERD2WEditToOneRelationship render propertyMetaInfo rule result" + propertyMetaInfo.ruleResults)
+
+
+          val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(propertyMetaInfo,properyD2WContext, RuleKeys.keyWhenRelationship)
 
           keyWhenRelationshipRuleOpt match {
             case Some(Some(keyWhenRelationship)) => {
               //case Some(keyWhenRelationship) => {
               val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
               val eoCache = p.proxy.value.cache.eos
+
+              println("Look into the cache for objects for entity named " + destinationEntity.name)
+              println("eoCache " + eoCache)
               val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
               <.div(
                 //{

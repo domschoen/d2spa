@@ -366,6 +366,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {
+    println("Fire rule for key " + key + " and d2wContext: " + rhs)
     val f = fireRuleFuture(rhs, key)
     f.map(ruleResultWithResponse(rhs,_))
   }
@@ -384,15 +385,19 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       }
        */
     val jsvalue = jsObj.values.toSeq(0)
+    println("jsvalue " + jsvalue)
     val ruleValue = if (jsvalue.asOpt[JsArray].isDefined) {
       val (key, value) = fromRuleResponseToKeyAndArray(response)
       RuleValue(stringsV = value.toList)
     } else {
       val (key, value) = fromRuleResponseToKeyAndString(response)
+      println("key  " + key + " value "+ value)
       RuleValue(Some(value))
     }
 
-    RuleResult(rhs, key, ruleValue)
+    val result  =RuleResult(rhs, key, ruleValue)
+    println("Result " + result )
+    result
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
