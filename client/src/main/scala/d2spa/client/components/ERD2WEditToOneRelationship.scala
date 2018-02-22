@@ -152,6 +152,7 @@ object ERD2WEditToOneRelationship   {
               println("Look into the cache for objects for entity named " + destinationEntity.name)
               println("eoCache " + eoCache)
               val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
+
               <.div(
                 //{
                 //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
@@ -196,7 +197,7 @@ object ERD2WEditToOneRelationship   {
                     )
                   }
                   case _ => {
-                    <.div("No eos for destination entity " + destinationEntity)
+                    <.div("No " + destinationEntity.name + " available !")
                   }
                 }
 

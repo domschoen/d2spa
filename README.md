@@ -23,6 +23,7 @@ open you browser with this url: http://localhost:9000/#task/query/entity/Project
 ## Features
   - At save, if server return an error (field exceeding DB field size for example), it stays in edit mode and display error message
   - Delete
+  - None value in popup when value is null
 
 
 
@@ -47,10 +48,9 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 
   - Implement ERDList
   - Implement ERD2WDisplayToOne
-  - None value in popup when value is null
   - inspect url whould be better with a number: http://localhost:9000/#task/inspect/entity/Customer/1
-  - When starting with http://localhost:9000/#task/query/entity/Customer, need to go to Project in order to edit a customer 
   - Why to-many relationship Customer.projects is not part of exported data ?
+  - List page > Inspect 1 element > Click Return button should go bach to List page
   
 
 ### Nice to have

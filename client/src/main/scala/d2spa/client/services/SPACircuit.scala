@@ -590,14 +590,21 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect.action(SetupQueryPageForEntity(entityName))
       )
     case SetPreviousPage(selectedEntity) =>
+      log.debug("Set Previous Page for entity: " + selectedEntity)
       val previousTaskOpt = value.get.d2wContext.previousTask
-      val previousTask = previousTaskOpt.get
+      log.debug("PreviousTaskOpt: " + previousTaskOpt)
 
-      updated(
-        // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
-        Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, selectedEntity.name))
-      )
+      previousTaskOpt match {
+        case Some(previousTask) => {
+          updated(
+            // change context to inspect
+            Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
+            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, selectedEntity.name))
+          )
+        }
+        case _ => noChange
+      }
+
 
     case Save(selectedEntityName, eo) =>
       println("SAVE " + eo)
