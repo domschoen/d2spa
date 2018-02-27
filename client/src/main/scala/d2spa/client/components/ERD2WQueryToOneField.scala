@@ -52,21 +52,28 @@ object ERD2WQueryToOneField  {
       //val eomodel = p.proxy.value.eomodel.get
       //val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val currentD2wContext = d2wContext(p)
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+      val property = p.property
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(property, currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
       val whereDisplayText = displayNameForKeyWhenRelationship match {
-        case Some(Some(text)) => text
+        case Some(text) => text
         case _ => ""
       }
 
-      val queryKey = p.property.name + "." + RuleUtils.ruleStringValueForContextAndKey(p.property,currentD2wContext,RuleKeys.keyWhenRelationship)
-      val pretext = "where " + whereDisplayText + " is "
-      val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
-      val value = if (queryValue.isDefined) queryValue.get.value else ""
-      <.div(
-        <.span(pretext),
-        <.input(^.id := "toOneTextField", ^.value := value,
-           ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
-      )
+      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(property,currentD2wContext,RuleKeys.keyWhenRelationship)
+      keyWhenRelationshipOpt match {
+        case Some(keyWhenRelationship) => {
+          val queryKey = property.name + "." + keyWhenRelationship
+          val pretext = "where " + whereDisplayText + " is "
+          val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
+          val value = if (queryValue.isDefined) queryValue.get.value else ""
+          <.div(
+            <.span(pretext),
+            <.input(^.id := "toOneTextField", ^.value := value,
+              ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
+          )
+        }
+        case _ =>   <.div("")
+      }
     }
   }
 

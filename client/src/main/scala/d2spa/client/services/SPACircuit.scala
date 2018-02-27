@@ -690,6 +690,8 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>
+      println("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
+
       updated(queryValue :: value)
   }
 }

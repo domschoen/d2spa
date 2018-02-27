@@ -27,6 +27,7 @@ object ERD2WQueryStringOperator  {
 
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName.get
+      println("ERD2WQueryStringOperator " + p.property)
       val propertyKey = p.property.name
       val queryValue = p.proxy().queryValues.find(r => {r.key.equals(propertyKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""

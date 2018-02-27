@@ -168,7 +168,7 @@ object D2WEditPage {
                                       <.th(^.className := "propertyName query", {
                                         val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property, d2wContext, RuleKeys.displayNameForProperty)
                                         val displayString = displayNameFound match {
-                                          case Some(Some(stringValule)) => {
+                                          case Some(stringValule) => {
                                             //case Some(stringValule) => {
                                             stringValule
                                           }
