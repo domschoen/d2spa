@@ -26,6 +26,7 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
     // by default we do development build, no eliding
+    //elideOptions := Seq("-Xelide-below", "WARNING"),
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,

@@ -117,13 +117,12 @@ object SPAMain extends js.JSApp {
   def main(): Unit = {
     log.warn("Application starting")
     // send log messages also to the server
-    log.enableServerLogging("/logging")
+    //log.enableServerLogging("/logging")
     log.info("This message goes to server as well")
 
     // create stylesheet
     GlobalStyles.addToDocument()
 
-    //println( GlobalStyles.render[String] )
     SPACircuit.dispatch(InitClient)
 
     // create the router

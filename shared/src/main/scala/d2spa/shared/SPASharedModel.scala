@@ -156,13 +156,7 @@ object EOValueUtils {
   def pk(eo:EO) = {
     val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
     eoValue match {
-      case Some(myEoValue) =>
-        println("pk " + myEoValue)
-
-        val result = myEoValue._2.intV
-        println("pk  result " + result)
-
-        result
+      case Some(myEoValue) =>  myEoValue._2.intV
       case _ => None
     }
   }
@@ -284,12 +278,8 @@ object RuleUtils {
   }
 
   def faultRule(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
-    println("faultRule: " + ruleFault)
     val ruleKey = ruleFault.key
     val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
-    println("Hydration d2wcontext " + ruleRhs)
-    println("Hydration property rule results " + rulesContainer.ruleResults)
-
     RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
   }
 
@@ -297,7 +287,6 @@ object RuleUtils {
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
 
   def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
-    println("Looking for "  + d2wContext)
     val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
     result match {
       case Some(ruleResult) => ruleResult.value.stringV

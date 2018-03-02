@@ -20,7 +20,7 @@ import scala.concurrent.duration._
 import play.api.libs.json.{JsString, _}
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
-
+import play.api.Logger
 
 case class CountryItem(
                         name : String,
@@ -115,7 +115,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def eomodel(): EOModel = {
     if (!_eomodel.isDefined) {
-      println("fetch eomodel")
+      Logger.debug("fetch eomodel")
       _eomodel = Some(Await.result(eomodelF(),10 seconds))
     }
     _eomodel.get
@@ -124,7 +124,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def eomodelF(): Future[EOModel] = {
     if (!_eomodelF.isDefined) {
-      println("fetch eomodel future")
+      Logger.debug("fetch eomodel future")
       _eomodelF = Some(executeEOModelWS())
     }
     _eomodelF.get
@@ -141,23 +141,23 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def executeEOModelWS() : Future[EOModel] = {
     val url = d2spaServerBaseUrl + "/EOModel.json";
-    println("WS " + url)
+    Logger.debug("WS " + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
       val resultBody = response.json
-      println("Eomodels " + resultBody)
+      Logger.debug("Eomodels " + resultBody)
       var entities = List[EOEntity]()
 
       val modelArray = resultBody.asInstanceOf[JsArray].value
       for (model <- modelArray) {
         val eomodelJsObj = model.asInstanceOf[JsObject]
         val array = (eomodelJsObj \ "entities").get.asInstanceOf[JsArray].value
-        println("Entities " + array)
+        Logger.debug("Entities " + array)
 
         for (menuRaw <- array) {
-          //println(menuRaw)
+          //Logger.debug(menuRaw)
           val obj = menuRaw.validate[FetchedEOEntity]
           obj match {
             case s: JsSuccess[FetchedEOEntity] => {
@@ -167,18 +167,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val relationships = fetchedRelationships.map(r => EORelationship(r.name,r.destinationEntityName)).toList
               entities =  EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, relationships) :: entities
             }
-            case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+            case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
           }
         }
       }
-      println("Entities " + entities)
+      Logger.debug("Entities " + entities)
       EOModel(entities)
     }
   }
 
 
   override def getMenus(): Future[Menus] = {
-    println("get Menus")
+    Logger.debug("get Menus")
 
       val fetchedEOModel = eomodel()
       val url = d2spaServerBaseUrl + "/Menu.json";
@@ -189,14 +189,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val array = resultBody.asInstanceOf[JsArray]
         var menus = List[MenuItem]()
         for (menuRaw <- array.value) {
-          //println(menuRaw)
+          //Logger.debug(menuRaw)
           val obj = menuRaw.validate[MenuItem]
           obj match {
             case s: JsSuccess[MenuItem] => {
               val wiObj = s.get
               menus = wiObj :: menus
             }
-            case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+            case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
           }
         }
         val children = menus.filter(_.parent.isDefined)
@@ -206,7 +206,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           case (mm, cs) =>
 
             val childMenus = cs.map(cm => {
-              println("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
+              Logger.debug("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
 
               val entity = EOModelUtils.entityNamed(fetchedEOModel,cm.entity.name).get
               Menu(cm.id,cm.title,entity)
@@ -231,14 +231,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   val fireRuleArguments = List("entity","task","propertyKey","pageConfiguration","key")
 
   def fireRuleFuture(rhs: D2WContextFullFledged, key: String) : Future[WSResponse] = {
-    //println("Fire Rule for key " + key + " rhs:" + rhs)
+    //Logger.debug("Fire Rule for key " + key + " rhs:" + rhs)
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
     val fireRuleValues = List(rhs.entityName, rhs.task, rhs.propertyKey, rhs.pageConfiguration, Some(key))
     val nonNullArguments = fireRuleArguments zip fireRuleValues
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
 
-    //println("Args : " + arguments)
+    //Logger.debug("Args : " + arguments)
 
     val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
@@ -270,7 +270,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val propertyComponentName = fromRuleResponseToKeyAndString(pComponentName)
         val attributeType = fromRuleResponseToKeyAndString(ptype)
 
-        println("<" + propertyComponentName + ">")
+        //Logger.debug("<" + propertyComponentName + ">")
 
         PropertyMetaInfo(
           attributeType._2,
@@ -316,7 +316,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def fromResponseToMetaInfo(response: WSResponse, entity: EOEntity, task: String) = {
     val displayPropertyKeys = fromRuleResponseToKeyAndArray(response)
-    //System.out.println("--- " + task + " --- " + array)
+    //Logger.debug("--- " + task + " --- " + array)
     propertyMetaInfosForTask(displayPropertyKeys._2, entity, task)
   }
 
@@ -341,7 +341,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         editDisplayPropertyKeys <- editDisplayPropertyKeysFuture
       } yield {
         val entityDisplayName = fromRuleResponseToKeyAndString(r1)
-        println("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
+        Logger.debug("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
         val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
 
         val queryProperties = fromResponseToMetaInfo(queryDisplayPropertyKeys,entity,TaskDefine.query)
@@ -366,7 +366,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {
-    println("Fire rule for key " + key + " and d2wContext: " + rhs)
+    Logger.debug("Fire rule for key " + key + " and d2wContext: " + rhs)
     val f = fireRuleFuture(rhs, key)
     f.map(ruleResultWithResponse(rhs,_))
   }
@@ -376,7 +376,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
 
-    println("Rule response: " + jsObj)
+    Logger.debug("Rule response: " + jsObj)
 
       // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship
       /* Response:
@@ -385,18 +385,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       }
        */
     val jsvalue = jsObj.values.toSeq(0)
-    println("jsvalue " + jsvalue)
+    Logger.debug("jsvalue " + jsvalue)
     val ruleValue = if (jsvalue.asOpt[JsArray].isDefined) {
       val (key, value) = fromRuleResponseToKeyAndArray(response)
       RuleValue(stringsV = value.toList)
     } else {
       val (key, value) = fromRuleResponseToKeyAndString(response)
-      println("key  " + key + " value "+ value)
+      Logger.debug("key  " + key + " value "+ value)
       RuleValue(Some(value))
     }
 
     val result  =RuleResult(rhs, key, ruleValue)
-    println("Result " + result )
+    Logger.debug("Result " + result )
     result
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
@@ -406,7 +406,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
   def search(entityName: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
-    println("Search for entity: " + entityName + " queryValues " + queryValues)
+    Logger.debug("Search for entity: " + entityName + " queryValues " + queryValues)
     //if (usesD2SPAServer) {
       searchOnD2SPAServer(entityName, queryValues)
     //} else {
@@ -433,7 +433,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     val qualifierSuffix = if (queryValues == null || queryValues.isEmpty) "" else "?" + qualifiersUrlPart(queryValues)
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
-    println("Search URL:" + url)
+    Logger.debug("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
@@ -445,7 +445,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val obj = item.asInstanceOf[JsObject]
         var valuesMap = Map[String, EOValue]()
         for ((key, value) <- obj.fields) {
-          //println("value class " + value.getClass.getName)
+          //Logger.debug("value class " + value.getClass.getName)
           value match {
             case s: play.api.libs.json.JsString =>
               valuesMap += (key -> EOValue(stringV = Some(s.value)))
@@ -459,10 +459,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             case play.api.libs.json.JsObject(fields) =>
               // case class EORef(entityName: String, id: Int)
               val fieldsMap = fields.toMap
-              println("fieldsMap " + fieldsMap)
+              Logger.debug("fieldsMap " + fieldsMap)
               val destinationEntityName = fieldsMap("type").asInstanceOf[JsString].value
               val destinationEntity = EOModelUtils.entityNamed(eomodel(),destinationEntityName).get
-              println("destinationEntity " + destinationEntity)
+              Logger.debug("destinationEntity " + destinationEntity)
               val pkName = destinationEntity.pkAttributeName
               val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
               val eo = EOValueUtils.dryEOWithEntity(destinationEntity,Some(pk))
@@ -474,7 +474,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
         eos ::= EO(entity,valuesMap,None)
       }
-      println("Search: eos created " + eos)
+      Logger.debug("Search: eos created " + eos)
 
       eos.toSeq
     }
@@ -502,7 +502,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               "alpha2_code" -> StringValue(wiObj.alpha2_code),
               "alpha3_code" -> StringValue(wiObj.alpha3_code)))
           }
-          case e: JsError => println("Errors: " + JsError.toFlatJson(e).toString())
+          case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
         }
       }
       eos.toSeq
@@ -577,8 +577,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     pk match {
       case Some(pkValue) =>
         val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pkValue + ".json"
-        println("Delete EO: " + eo)
-        println("Delete WS: " + url)
+        Logger.debug("Delete EO: " + eo)
+        Logger.debug("Delete WS: " + url)
 
         val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
         val futureResponse: Future[WSResponse] = request.delete()
@@ -607,7 +607,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
 
   def newEO(entity: EOEntity, eo: EO): Future[EO] = {
-    println("New EO: " + eo)
+    Logger.debug("New EO: " + eo)
 
     val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
 
@@ -615,16 +615,16 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = eo.values filter (v => {
-      println("v._2" + v._2)
+      Logger.debug("v._2" + v._2)
       EOValueUtils.isDefined(v._2) })
 
-    println("eoDefinedValues " + eoDefinedValues)
+    Logger.debug("eoDefinedValues " + eoDefinedValues)
     val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
-    println("eoValues " + eoValues)
+    Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
-    println("Upate WS:  " + url)
-    println("WS post data: " + data)
+    Logger.debug("Upate WS:  " + url)
+    Logger.debug("WS post data: " + data)
 
     val futureResponse: Future[WSResponse] = request.post(data)
     futureResponse.map { response =>
@@ -661,7 +661,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 }*/
 
   def completeEO(eo: EO, missingKeys: Set[String]): Future[EO] = {
-    println("Complete EO: " + eo)
+    Logger.debug("Complete EO: " + eo)
     val pk = EOValueUtils.pk(eo).get
 
     val entity = eo.entity
@@ -716,7 +716,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           } else {
             EOValueUtils.stringV(value.toString())
           }
-          println("JsObj value " + value.getClass.getName + " value: " + value)
+          Logger.debug("JsObj value " + value.getClass.getName + " value: " + value)
           (kvTuple._1,newValue)
         }).toMap
 
@@ -737,7 +737,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
   def updateEO(eo: EO): Future[EO] = {
-    println("Update EO: " + eo)
+    Logger.debug("Update EO: " + eo)
     val pk = EOValueUtils.pk(eo).get
 
     val entity = eo.entity
@@ -745,16 +745,16 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
     /*val eoDefinedValues = eo.values filter (v => {
-      println("v._2" + v._2)
+      Logger.debug("v._2" + v._2)
       EOValueUtils.isDefined(v._2) })*/
 
-    println("eoDefinedValues " + eo.values)
+    Logger.debug("eoDefinedValues " + eo.values)
     val eoValues = eo.values map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
-    println("eoValues " + eoValues)
+    Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
-    println("Upate WS:  " + url)
-    println("WS post data: " + data)
+    Logger.debug("Upate WS:  " + url)
+    Logger.debug("WS post data: " + data)
 
     val futureResponse: Future[WSResponse] = request.put(data)
     futureResponse.map { response =>

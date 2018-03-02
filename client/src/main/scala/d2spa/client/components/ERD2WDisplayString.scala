@@ -31,12 +31,20 @@ object ERD2WDisplayString  {
     def render(p: Props) = {
       val eo = p.eo
       val propertyName = p.property.name
-      val eoValue = eo.values(propertyName)
-      val value = EOValueUtils.juiceString(eoValue)
-      <.div(
-        <.span(^.id := "description", value)
-      )
+      if (eo.values.contains(propertyName)) {
+        val eoValue = eo.values(propertyName)
+        val value = EOValueUtils.juiceString(eoValue)
+        <.div(
+          <.span(^.id := "description", value)
+        )
+      } else {
+        <.div(
+          <.span(^.id := "description", "No data found")
+        )
+
+      }
     }
+
   }
 
   private val component = ScalaComponent.builder[Props]("ERD2WDisplayString")

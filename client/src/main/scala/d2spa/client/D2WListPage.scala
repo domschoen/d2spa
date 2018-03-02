@@ -12,6 +12,7 @@ import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
+import d2spa.client.logger.log
 import d2spa.shared._
 import diode.data.Ready
 
@@ -23,9 +24,9 @@ object D2WListPage {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
       val entityName = props.d2wContext.entityName
-      println("D2WListPage mounted for entity " + entityName)
+      log.debug("D2WListPage mounted for entity " + entityName)
       val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
-      println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName.get)))
     }
@@ -54,7 +55,7 @@ object D2WListPage {
 
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName.get
-      println("Render List page for entity: " + entityName)
+      log.debug("Render List page for entity: " + entityName)
       val menuModelPot = p.proxy.value.menuModel
       menuModelPot match {
         case Ready(menuModel) => {
@@ -65,10 +66,10 @@ object D2WListPage {
           val eosPot: Option[Map[Int, EO]] = if (p.proxy.value.cache.eos.contains(entityName)) Some(p.proxy.value.cache.eos(entityName)) else None
           eosPot match {
             case Some(eosByID) =>
-              println("list task inside " + eosByID )
+              log.debug("list task inside " + eosByID )
               val eos = eosByID.values.toList
               val displayPropertyKeys = task.displayPropertyKeys
-              println("list task displayPropertyKeys " + displayPropertyKeys )
+              log.debug("list task displayPropertyKeys " + displayPropertyKeys )
               <.div(
                 <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
                 <.div(^.id:="a",
@@ -167,7 +168,7 @@ object D2WListPage {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
-    println("ctl " + ctl.hashCode())
+    log.debug("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, proxy))
   }
 }

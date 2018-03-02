@@ -91,7 +91,7 @@ object ERD2WEditToOneRelationship   {
     }
 
     def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
-      //println("id " + id + " class " + id.getClass.getName)
+      //log.debug("id " + id + " class " + id.getClass.getName)
       if (id.equals("None")) None
       val idAsInt = id.toInt
       val pkAttributeName = entity.pkAttributeName
@@ -103,7 +103,7 @@ object ERD2WEditToOneRelationship   {
     }
 
     /*def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
-      //println("id " + id + " class " + id.getClass.getName)
+      //log.debug("id " + id + " class " + id.getClass.getName)
       if (id.equals("None")) None
       val idAsInt = id.toInt
       val pkAttributeName = entity.pkAttributeName
@@ -133,7 +133,7 @@ object ERD2WEditToOneRelationship   {
           log.debug("+ rules " + p.property.ruleResults)
           log.debug("task  " + taskName)
 
-          //println("Edit To One Relationship " + eo)
+          //log.debug("Edit To One Relationship " + eo)
 
           // We need to get the propertyMetaInfo from the model because it could have been updated !
           val propertyMetaInfo = AppModel.propertyMetaDataWithEntityMetaDatas(p.proxy.value.entityMetaDatas,entityName,taskName,propertyName).get
@@ -149,20 +149,20 @@ object ERD2WEditToOneRelationship   {
               val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
               val eoCache = p.proxy.value.cache.eos
 
-              println("Look into the cache for objects for entity named " + destinationEntity.name)
-              println("eoCache " + eoCache)
+              log.debug("Look into the cache for objects for entity named " + destinationEntity.name)
+              log.debug("eoCache " + eoCache)
               val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
 
               <.div(
                 //{
-                //println("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+                //log.debug("p.property.ruleKeyValues " + p.property.ruleKeyValues)
                 /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
                  <.div("entity " +entity),
                  <.div("propertyName " +propertyName)*/
 
                 destinationEOs match {
                   case Some(eos) => {
-                    println("eoRefs " + eos)
+                    log.debug("eoRefs " + eos)
                     val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
                     val defaultValue = destinationEO match {
                       case Some(EOValue(_,_,_,eoV,_)) => eoV match {
@@ -179,7 +179,7 @@ object ERD2WEditToOneRelationship   {
                           val tupleOpts = eos map (x => {
 
                             val id = EOValueUtils.pk(x)
-                            println("id " + id + " for eo: " + x)
+                            log.debug("id " + id + " for eo: " + x)
                             if (id.isDefined) {
                               val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
                               Some((id.get.toString,displayName))
@@ -188,7 +188,7 @@ object ERD2WEditToOneRelationship   {
                           // remove None
                           val tupleValids = tupleOpts.flatten.toList
                           val tuplesWithNone = ("None", "- none -") :: tupleValids
-                          println("valid tuples " + tupleValids)
+                          log.debug("valid tuples " + tupleValids)
                           tuplesWithNone toTagMod (eo => {
                             <.option(^.value := eo._1, eo._2)
                           })

@@ -23,10 +23,10 @@ object D2WQueryPage {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(props: Props) = {
       val entityName = props.d2wContext.entityName.get
-      println("D2WQueryPage " + entityName)
+      log.debug("D2WQueryPage " + entityName)
 
       val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
-      println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
 
       Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
@@ -42,7 +42,7 @@ object D2WQueryPage {
 
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName.get
-      println("Render Query page for entity: " + entityName)
+      log.debug("Render Query page for entity: " + entityName)
       val metaDatas = p.proxy.value
       if  (!metaDatas.entityMetaDatas.isEmpty) {
         val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
@@ -114,7 +114,7 @@ object D2WQueryPage {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
-    println("ctl " + ctl.hashCode())
+    log.debug("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, proxy))
   }
 }

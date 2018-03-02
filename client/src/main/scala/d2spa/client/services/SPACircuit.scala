@@ -75,13 +75,13 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler(modelRW) {
   override def handle = {
     case FetchEOModel =>
-      println("FetchEOModel")
+      log.debug("FetchEOModel")
       value match {
         case Ready(eomodel) =>
-          println("FetchEOModel no change")
+          log.debug("FetchEOModel no change")
           noChange
         case _ =>
-          println("FetchEOModel fetching")
+          log.debug("FetchEOModel fetching")
           effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
       }
 
@@ -90,7 +90,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
 
     case NewEOWithEntityName(selectedEntityName, property, actions) =>
-      println("NewEOPage: " + selectedEntityName)
+      log.debug("NewEOPage: " + selectedEntityName)
       // Create the EO and set it in the cache
       effectOnly(
         Effect.action(NewEOWithEOModel(value.get, selectedEntityName, property, actions)) // from edit ?
@@ -152,14 +152,14 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   // case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 
   def ruleResultsWith(base: List[RuleResult], addOn: List[RuleResult]): List[RuleResult] = {
-    println("Mix base " + base)
-    println("+ addOn  " + addOn)
+    log.debug("Mix base " + base)
+    log.debug("+ addOn  " + addOn)
 
     val baseMap = base.map(x => ((x.rhs, x.key),x)).toMap
     val addOnMap = addOn.map(x => ((x.rhs, x.key),x)).toMap
     val mixMap = baseMap ++ addOnMap
     val result = mixMap.values.toList
-    println("result   " + result)
+    log.debug("result   " + result)
     result
   }
 
@@ -167,7 +167,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   // handle actions
   override def handle = {
     case SetPageForTaskAndEntity(task, entityName, pk) =>
-      println("InitMetaData ")
+      log.debug("InitMetaData ")
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
@@ -179,10 +179,10 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityMetaData.entity.name)))
 
     case InitMetaData(entity) =>
-      println("InitMetaData ")
+      log.debug("InitMetaData ")
       effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(_))))
     case SetMetaData(entityMetaData) =>
-      println("SetMetaData " + entityMetaData)
+      log.debug("SetMetaData " + entityMetaData)
       updated(entityMetaData :: value)
 
 
@@ -190,7 +190,7 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       if (actions.isEmpty) {
         noChange
       } else {
-      println("FireActions " + actions)
+        log.debug("FireActions " + actions)
 
       // rulesContainer may have been updated, get it again from the model !
       val rulesContainer: RulesContainer = rulesCon match {
@@ -207,17 +207,17 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
       val remainingActions = actions.tail
       fireAction match {
         case FireRule(rhs, key) =>
-          println("Fire Rule " + key + " context: " + rhs)
+          log.debug("Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
           val newRhs = RuleUtils.convertD2WContextToFullFledged(rhs)
           effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
             {
-              println("rr " + rr)
+              log.debug("rr " + rr)
               SetRuleResults(List(rr), rulesContainer, remainingActions)
             })))
 
         case CreateMemID(eo) =>
-          println("CreateMemID: " + eo)
+          log.debug("CreateMemID: " + eo)
           effectOnly(Effect.action(NewEOWithEntityName(eo.entity.name,rulesContainer,remainingActions)))
 
 
@@ -296,8 +296,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
     // many rules
     case SetRuleResults(ruleResults, rulesContainer, actions: List[D2WAction]) =>
-      println("Rule Results " + ruleResults)
-      println("Rule Container " + rulesContainer)
+      log.debug("Rule Results " + ruleResults)
+      log.debug("Rule Container " + rulesContainer)
       //val d2wContext = property.d2wContext
       //val entity = d2wContext.entity
       //val task = d2wContext.task
@@ -360,7 +360,7 @@ class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) 
 
   override def handle = {
     case NewEOCreated(eo,property,actions) =>
-      println("eo created " + eo)
+      log.debug("eo created " + eo)
       updated(
         Ready(eo),
         Effect.action(FireActions(property, actions))
@@ -395,7 +395,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       cache
     } else {
       val result : Map[String, Map[Int,EO]] = newUpdatedCache(idExtractor, cache,eos)
-      println("storing result as :" + result)
+      log.debug("storing result as :" + result)
       result
     }
   }
@@ -471,9 +471,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   override def handle = {
 
     case FetchedObjectsForEntity(eoses, property, actions) =>
-      println("FetchedObjectsForEntity property " + property)
-      //println("FetchedObjectsForEntity eos " + eos)
-
+      log.debug("FetchedObjectsForEntity property " + property)
 
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
@@ -481,7 +479,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
     case SearchResult(entity, eoses) =>
-      println("length " + eoses.length)
+      log.debug("length " + eoses.length)
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entity.name))
@@ -493,17 +491,17 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       effectOnly(Effect(AjaxClient[Api].deleteEO(eo).call().map( deletedEO => {
         val onError = deletedEO.validationError.isDefined
         if (onError) {
-          println("Deleted EO error " + deletedEO.validationError)
+          log.debug("Deleted EO error " + deletedEO.validationError)
           UpdateEOsForEOOnError(deletedEO)
 
         } else {
-          println("Deleted EO action ")
+          log.debug("Deleted EO action ")
 
           DeletedEO(deletedEO)
         }
       })))
     case DeletedEO(deletedEO) =>
-      println("Deleted EO " + deletedEO)
+      log.debug("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
       val eoPk = EOValueUtils.pk(deletedEO).get
 
@@ -535,7 +533,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
-      println("EO: " + eo)
+      log.debug("EO: " + eo)
       val propertyName = property.name
       val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
 
@@ -568,7 +566,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
   override def handle = {
     case InitClient =>
-      println("InitMenu ")
+      log.debug("Init Client")
       if (value.isEmpty) {
         log.debug("Api get Menus")
         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
@@ -580,11 +578,11 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       })))
 
     case SetMenus(menus) =>
-      println("Set Menus " + menus)
+      log.debug("Set Menus " + menus)
       updated(Ready(menus),Effect.action(FetchEOModel))
 
     case SelectMenu(entityName) =>
-      println("selectedEntity " + entityName)
+      log.debug("selectedEntity " + entityName)
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(entityName), task = Some("query")))),
         Effect.action(SetupQueryPageForEntity(entityName))
@@ -607,7 +605,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
 
     case Save(selectedEntityName, eo) =>
-      println("SAVE " + eo)
+      log.debug("SAVE " + eo)
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntityName), task = Some("inspect")))),
@@ -624,7 +622,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         ))
       )
     case NewEO(selectedEntity, eo) =>
-      println("SAVE new eo " + eo)
+      log.debug("SAVE new eo " + eo)
       updated(
         // change context to inspect
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some("inspect")))),
@@ -642,7 +640,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       )
 
     case InstallInspectPage(fromTask, eo) =>
-      println("Inspect page for entity " + eo)
+      log.debug("Inspect page for entity " + eo)
       val pk = EOValueUtils.pk(eo).get
       updated(
         // change context to inspect
@@ -652,7 +650,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Effect(AfterEffectRouter.setInspectPageForEntity(value.get.d2wContext.entityName.get, pk))
       )
     case InstallEditPage(fromTask, eo) =>
-      println("Edit page for entity " + eo)
+      log.debug("Edit page for entity " + eo)
       val pk = EOValueUtils.pk(eo).get
       updated(
         // change context to inspect
@@ -675,7 +673,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
   override def handle = {
     // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity) =>
-      println("Search: for entity " + selectedEntity + " with query values " + value)
+      log.debug("Search: for entity " + selectedEntity + " with query values " + value)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
       effectOnly(Effect(AjaxClient[Api].search(selectedEntity.name, value).call().map(SearchResult(selectedEntity, _))))
     //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
@@ -690,7 +688,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>
-      println("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
+      log.debug("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
 
       updated(queryValue :: value)
   }

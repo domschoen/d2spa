@@ -5,7 +5,7 @@ import diode.data._
 import diode.util._
 import d2spa.shared.{EntityMetaData, _}
 import boopickle.DefaultBasic._
-
+import d2spa.client.logger.log
 /**
   * Created by dschoen on 01.05.17.
   */
@@ -169,9 +169,9 @@ object EOCacheUtils {
     eo.memID match {
       case Some(memID) =>
         val memCache = cache.cache.insertedEOs
-        println("Out of cache " + memID)
-        println("Cache " + memCache)
-        println("e name " + entity.name)
+        log.debug("Out of cache " + memID)
+        log.debug("Cache " + memCache)
+        log.debug("e name " + entity.name)
         EOCacheUtils.objectForEntityNamedAndPk(memCache,entity.name,memID)
       case None =>
         val dbCache = cache.cache.eos

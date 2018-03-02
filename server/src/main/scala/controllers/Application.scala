@@ -9,6 +9,7 @@ import play.api.mvc._
 import services.ApiService
 import d2spa.shared.Api
 import play.api.libs.ws._
+import play.api.Logger
 
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,8 +29,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
   def autowireApi(path: String) = Action.async(parse.raw) {
     implicit request =>
-      println(s"Request path: $path")
-      println("time to try some rest call")
+      Logger.debug(s"Request path: $path")
 
       // get the request body as ByteStringthenApply
       val b = request.body.asBytes(parse.UNLIMITED).get
@@ -47,7 +47,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
   def logging = Action(parse.anyContent) {
     implicit request =>
       request.body.asJson.foreach { msg =>
-        println(s"CLIENT - $msg")
+        Logger.debug(s"CLIENT - $msg")
       }
       Ok("")
   }

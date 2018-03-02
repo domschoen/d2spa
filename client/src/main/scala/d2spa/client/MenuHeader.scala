@@ -12,6 +12,7 @@ import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
 import d2spa.client.components.Icon
+import d2spa.client.logger.log
 import d2spa.shared.EOEntity
 
 
@@ -31,14 +32,14 @@ object MenuHeader {
     }*/
 
     def selectMenu(entityName: String) = {
-      println("selectMenu")
+      log.debug("selectMenu")
 
       Callback.log(s"Menu selected: $entityName") >>
         $.props >>= (_.proxy.dispatchCB(SelectMenu(entityName)))
     }
 
     def newEO(entity: EOEntity) = {
-      println("new EO for entity " + entity)
+      log.debug("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
         $.props >>= (_.proxy.dispatchCB(SetPageForTaskAndEntity("edit",entity.name, None)))
@@ -50,7 +51,7 @@ object MenuHeader {
       val debugButtonText = if (p.proxy.value.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
-          println("Menu not empty")
+          log.debug("Menu not empty")
           <.div(
             <.ul(style.listGroup, ^.className := "menu",
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>

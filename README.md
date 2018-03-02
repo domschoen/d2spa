@@ -25,6 +25,40 @@ open you browser with this url: http://localhost:9000/#task/query/entity/Project
   - Delete
   - None value in popup when value is null
 
+## Logging
+
+### Client
+If you want to have less log, you have to change the elideOptions in the build.sbt file. For example, if you want to remove everything below WARNING:
+```
+elideOptions := Seq("-Xelide-below", "WARNING"),
+```
+
+This will remove INFO, DEBUG, TRACE, ALL from your the log. You need to recompile to have it:
+  - reload
+  - compile
+
+Note: here the list of logging levels:
+  - FATAL
+  - ERROR
+  - WARN
+  - INFO
+  - DEBUG
+  - TRACE
+  - ALL
+
+#### Client server log
+
+If you want to have client log added to the server log, you need to uncomment the line in the SPAMain.scala:
+```
+log.enableServerLogging("/logging")
+```
+
+### Server
+
+This is the standard Play Framework logging system.
+
+To turn on the log, no need to recompile, you just need to replace the content of file  d2spa/server/src/main/resources/logback.xml by the content of logback.xml.dev (same path)
+
 
 
 ## Difficulties

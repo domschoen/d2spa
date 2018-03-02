@@ -33,16 +33,16 @@ object D2WEditPage {
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
       val entityName = p.d2wContext.entityName.get
-      println("D2WEditPage: will Mount " + entityName)
+      log.debug("D2WEditPage: will Mount " + entityName)
       val taskName = p.d2wContext.task.get
 
       val entityMetaDataOpt = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
       val entityMetaDataNotFetched = entityMetaDataOpt.isEmpty
-      println("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      println("D2WEditPage: eo " + p.eo)
+      log.debug("D2WEditPage: eo " + p.eo)
       val isNew = EOValueUtils.isNew(p.eo)
 
       val actionList = if (isNew) List(
@@ -100,6 +100,7 @@ object D2WEditPage {
       task.displayPropertyKeys
     }
 
+
     def render(p: Props) = {
       val eoRefOpt = p.proxy.value.eo
       log.debug("D2WEditPage: render eo ref: " + eoRefOpt)
@@ -113,12 +114,12 @@ object D2WEditPage {
             case Some(eo) =>
               val entityName = p.d2wContext.entityName.get
 
-              println("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
+              log.debug("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
               val metaDatas = p.proxy.value
               val entityMetaDataNotFetched = p.proxy.value.entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
 
               if (!entityMetaDataNotFetched) {
-                println("entityMetaDatas not empty")
+                log.debug("entityMetaDatas not empty")
 
                 val entityMetaData = entityMetaDataFromProps(p)
                 //log.debug("Entity meta Data " + metaDatas)
@@ -127,7 +128,7 @@ object D2WEditPage {
                 val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
                 val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
 
-                println("Edit page EO " + eo)
+                log.debug("Edit page EO " + eo)
                 <.div(
                   <.div(^.id := "b", MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
                   <.div(^.id := "a",
@@ -196,7 +197,7 @@ object D2WEditPage {
               }
             case None => <.div("Object not found")
           }
-        case diode.data.Empty => <.div("Object Ref not found")
+        case _ => <.div("Object Ref not found")
       }
     }
   }
@@ -207,7 +208,7 @@ object D2WEditPage {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = {
-    println("ctl " + ctl.hashCode())
+    log.debug("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, eo, proxy))
   }
 }
