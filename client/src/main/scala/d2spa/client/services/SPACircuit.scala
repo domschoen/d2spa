@@ -89,6 +89,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
       updated(Ready(eomodel))
 
 
+    // get the eomodel
     case NewEOWithEntityName(selectedEntityName, property, actions) =>
       log.debug("NewEOPage: " + selectedEntityName)
       // Create the EO and set it in the cache
@@ -167,11 +168,13 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   // handle actions
   override def handle = {
     case SetPageForTaskAndEntity(task, entityName, pk) =>
-      log.debug("InitMetaData ")
+      log.debug("SetPageForTaskAndEntity, task " + task + ", entity name " + entityName)
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
+          log.debug("SetPageForTaskAndEntity, getMetaData for entityName " + entityName)
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
         case _ =>
+          log.debug("SetPageForTaskAndEntity, set page for entityName " + entityName)
           effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pk, entityName)))
       }
 
@@ -359,6 +362,9 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
 
   override def handle = {
+    case CreateEO(entityName) =>
+      updated(Empty,Effect.action(SetPageForTaskAndEntity("edit",entityName,None)))
+
     case NewEOCreated(eo,property,actions) =>
       log.debug("eo created " + eo)
       updated(

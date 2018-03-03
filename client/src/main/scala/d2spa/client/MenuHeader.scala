@@ -42,7 +42,7 @@ object MenuHeader {
       log.debug("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(SetPageForTaskAndEntity("edit",entity.name, None)))
+        $.props >>= (_.proxy.dispatchCB(CreateEO(entity.name)))
     }
 
 
@@ -51,7 +51,7 @@ object MenuHeader {
       val debugButtonText = if (p.proxy.value.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
-          log.debug("Menu not empty")
+          log.debug("MenuHeader, render, Menu not empty")
           <.div(
             <.ul(style.listGroup, ^.className := "menu",
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>

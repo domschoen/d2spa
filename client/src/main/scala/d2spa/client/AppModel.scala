@@ -49,6 +49,7 @@ case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer,
 
 case class InitMetaData(entity: String) extends Action
 case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
+case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
