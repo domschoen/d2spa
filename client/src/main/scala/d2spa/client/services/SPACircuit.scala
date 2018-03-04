@@ -39,7 +39,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   override val actionHandler = composeHandlers(
     new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
-    new DataHandler(zoomTo(_.content.entityMetaDatas)),
+    new EntityMetaDataHandler(zoomTo(_.content.entityMetaDatas)),
     new EOHandler(zoomTo(_.content.editEOFault)),
     new EOCacheHandler(zoomTo(_.content.cache)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
@@ -109,7 +109,7 @@ class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelR
   }
 }
 
-class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
+class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
 
   private def zoomToEntity(entityName: String, rw: ModelRW[M, List[EntityMetaData]]): Option[ModelRW[M, EntityMetaData]] = {
     rw.value.indexWhere(n => n.entity.name.equals(entityName)) match {
@@ -181,6 +181,11 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
     case SetMetaDataForMenu(task, pageCounter, entityMetaData) =>
       updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pageCounter, None, entityMetaData.entity.name)))
 
+    case SetMetaDataWithActions(taskName, actions, entityMetaData) =>
+      val task = EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
+      updated(entityMetaData :: value,Effect.action(FireActions(task, actions)))
+
+
     case InitMetaData(entity) =>
       log.debug("InitMetaData ")
       effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(_))))
@@ -202,6 +207,8 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
         case task: Task =>
           // val entityMetaData = AppModel.entityMetaDataFromMegaContentForEntityNamed(value, entityMetaInfo.entity.name).get
           task // TBD refresh ?
+        case taskFault: TaskFault =>
+          taskFault
       }
 
 
@@ -223,6 +230,10 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
           log.debug("CreateMemID: " + entityName)
           effectOnly(Effect.action(NewEOWithEntityName(entityName,rulesContainer,remainingActions)))
 
+        case FetchMetaData(entityName) =>
+          val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataWithActions(taskFault.taskName, remainingActions, _))))
+
 
         // Hydration(
         //   DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
@@ -238,7 +249,6 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
         // case class WateringScope(fireRule: Option[RuleFault] = None)
         // case class RuleFault(rhs: D2WContextFullFledged, key: String)
-
 
         case Hydration(drySubstrate,  wateringScope) =>
           // We handle only RuleFault
@@ -264,9 +274,9 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
                   //Set(value)
               }
               drySubstrate match {
-                case DrySubstrate(_ , Some(eo), _) =>
+                case DrySubstrate(_ , Some(eoFault), _) =>
                   // completeEO ends up with a MegaContent eo update
-                  effectOnly(Effect(AjaxClient[Api].completeEO(eo,missingKeys).call().map(RefreshEO(_, rulesContainer, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(RefreshEO(_, rulesContainer, remainingActions))))
                 case DrySubstrate(Some(eorefsdef), _ , _) =>
                   eorefsdef match {
                     case EORefsDefinition(Some(eoakp)) =>
@@ -363,6 +373,12 @@ class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(model
 
   override def handle = {
 
+    case RefreshEO(eo, property, actions) =>
+      log.debug("Refreshed EO " + eo)
+      updated(
+        EditEOFault(Ready(eo),0),
+        Effect.action(PutRefreshEOInCache(eo,property,actions))
+      )
 
     case CreateEO(entityName) =>
       val c = value.newCounter + 1
@@ -374,12 +390,6 @@ class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(model
       updated(
         EditEOFault(Ready(eo),value.newCounter),
         Effect.action(FireActions(property, actions))
-      )
-    case RefreshEO(eo, property, actions) =>
-      log.debug("Refreshed EO " + eo)
-      updated(
-        EditEOFault(Ready(eo),value.newCounter),
-        Effect.action(FireActions(property,actions))
       )
     case EditEO(fromTask, eo) =>
       log.debug("EditEO: " + eo)
@@ -485,6 +495,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo)),
         Effect.action(InstallInspectPage(fromTask,eo))
+      )
+    case PutRefreshEOInCache(eo, property, actions) =>
+      log.debug("Refreshed EO " + eo)
+      updated(
+        updatedOutOfDBCacheWithEOs(Seq(eo)),
+        Effect.action(FireActions(property,actions))
       )
 
     case FetchedObjectsForEntity(eoses, property, actions) =>
@@ -634,10 +650,10 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         ))
       )
 
-      // 1) NewEO (MenuHandler)
-      // 2) Effect: Save DB
-      // 3) InspectEO (EOHandler)
-      // 4) InstallInspectPage (MenuHandler)
+    // 1) NewEO (MenuHandler)
+    // 2) Effect: Save DB
+    // 3) SavedEO (EOCache)
+    // 4) InstallInspectPage (MenuHandler)
     case NewEO(selectedEntity, eo) =>
       log.debug("SAVE new eo " + eo)
       updated(

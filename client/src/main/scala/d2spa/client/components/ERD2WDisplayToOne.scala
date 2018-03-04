@@ -75,14 +75,16 @@ object ERD2WDisplayToOne  {
 
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
       val keyWhenRelationshipRuleFault = RuleFault(RuleUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
-      val destinationEO = EOValueUtils.eoValueForKey(p.eo,propertyName)
+      val destinationEO = EOValueUtils.eoValueForKey(p.eo,propertyName).get
+      val destinationPk = EOValueUtils.pk(destinationEO).get
+      val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
           p.property,
           List[D2WAction](
             keyWhenRelationshipFireRule,
-            Hydration(DrySubstrate(eo = destinationEO),WateringScope(Some(keyWhenRelationshipRuleFault))
+            Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
           )
         )
       )))

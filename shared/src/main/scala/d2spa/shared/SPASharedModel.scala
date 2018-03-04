@@ -175,8 +175,8 @@ case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton:
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
-
-case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EO] = None, fetchSpecification: Option[FetchSpecification] = None)
+case class EOFault(entityName : String, pk: Int)
+case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[FetchSpecification] = None)
 case class WateringScope(fireRule: Option[RuleFault] = None)
 case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
 case class EOsAtKeyPath(eo: EO, keyPath: String)
@@ -204,6 +204,8 @@ case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = Li
 sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
 }
+
+case class TaskFault(entityName: String, taskName: String, override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
 // Property
 case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String,
@@ -237,6 +239,8 @@ object EOModelUtils {
 
 
 object EntityMetaDataUtils {
+
+
 
   def taskWithTaskName(entityMetaData: EntityMetaData, taskName: String) = {
     taskName match {

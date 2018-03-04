@@ -660,14 +660,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   "customer": null
 }*/
 
-  def completeEO(eo: EO, missingKeys: Set[String]): Future[EO] = {
-    Logger.debug("Complete EO: " + eo)
-    val pk = EOValueUtils.pk(eo).get
-
-    val entity = eo.entity
+  def completeEO(eoFault: EOFault, missingKeys: Set[String]): Future[EO] = {
+    Logger.debug("Complete EO: " + eoFault)
     // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Customer/2/propertyValues.json?missingKeys=("projects")
     val toArrayString= missingKeys.map(x => s""""${x}"""").mkString("(",",",")")
-    val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pk + "/propertyValues.json?missingKeys=" + toArrayString
+    val url = d2spaServerBaseUrl + "/" + eoFault.entityName + "/" + eoFault.pk + "/propertyValues.json?missingKeys=" + toArrayString
+    val entity = EOModelUtils.entityNamed(eomodel(), eoFault.entityName).get
+    val eo = EOValueUtils.dryEOWithEntity(entity,Some(eoFault.pk))
 
 
     // returns
@@ -689,7 +688,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val resultBody = response.json
         val jObj = resultBody.asInstanceOf[JsObject]
 
-        val pkName = eo.entity.pkAttributeName
+        val pkName = entity.pkAttributeName
         // Seq[(String, JsValue)]
         val jObjValues = jObj.fields.filter(x => !(x._1.equals(pkName) || x._1.equals("type")))
 //case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)

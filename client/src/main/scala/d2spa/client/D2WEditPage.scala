@@ -48,10 +48,11 @@ object D2WEditPage {
       Callback.when(anyChange) {
         willmounted(nextProps)
       }
-
     }
 
-      // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
+
+
+    // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
       val entityName = p.d2wContext.entityName.get
       log.debug("D2WEditPage: will Mount " + entityName)
@@ -67,12 +68,12 @@ object D2WEditPage {
 
       val actionList = p.pk match {
         case Some(pkIntValue) =>
-          val eoSkeleton = EOValueUtils.dryEOWithEntity(entityMetaDataOpt.get.entity,p.pk)
+          val eoFault = EOFault(entityName,pkIntValue)
           List(
             fireDisplayPropertyKeys,
             // in order to have an EO completed with all attributes for the task,
             // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(eoSkeleton)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+            Hydration(DrySubstrate(eo = Some(eoFault)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
           )
         case None =>
           List(
@@ -82,11 +83,13 @@ object D2WEditPage {
             CreateMemID(entityName)
           )
       }
+      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(entityName) :: actionList else actionList
+      val ruleContainer = if (entityMetaDataNotFetched) TaskFault(entityName, taskName) else getTask(p,entityName,taskName)
 
       Callback.when(true)(p.proxy.dispatchCB(
           FireActions(
-            getTask(p,entityName,taskName),
-            actionList
+            ruleContainer,
+            actionList2
           )
       ))
     }
@@ -220,7 +223,7 @@ object D2WEditPage {
               } else {
                 <.div("no meta datas")
               }
-            case None => <.div("Object not found")
+            case None => <.div("Object not found in cache")
           }
         case _ => <.div("Object Ref not found")
       }

@@ -43,6 +43,7 @@ case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class PutRefreshEOInCache(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
@@ -92,10 +93,14 @@ trait D2WAction extends diode.Action
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
+case class FetchMetaData(entityName: String) extends D2WAction
 
 case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
+
+
+case class SetMetaDataWithActions(taskName: String, actions: List[D2WAction], metaData: EntityMetaData) extends Action
 
 case class SetRuleResults(ruleResults: List[RuleResult], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
