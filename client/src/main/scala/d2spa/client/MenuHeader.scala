@@ -32,14 +32,14 @@ object MenuHeader {
     }*/
 
     def selectMenu(entityName: String) = {
-      log.debug("selectMenu")
+      //log.debug("selectMenu")
 
       Callback.log(s"Menu selected: $entityName") >>
         $.props >>= (_.proxy.dispatchCB(SelectMenu(entityName)))
     }
 
     def newEO(entity: EOEntity) = {
-      log.debug("new EO for entity " + entity)
+      //log.debug("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
         $.props >>= (_.proxy.dispatchCB(CreateEO(entity.name)))

@@ -40,7 +40,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new DataHandler(zoomTo(_.content.entityMetaDatas)),
-    new EOHandler(zoomTo(_.content.eo)),
+    new EOHandler(zoomTo(_.content.editEOFault)),
     new EOCacheHandler(zoomTo(_.content.cache)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
     new EOModelHandler(zoomTo(_.content.eomodel))
@@ -167,19 +167,19 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
 
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(task, entityName, pk) =>
+    case SetPageForTaskAndEntity(task, entityName, pageCounter, pk) =>
       log.debug("SetPageForTaskAndEntity, task " + task + ", entity name " + entityName)
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
           log.debug("SetPageForTaskAndEntity, getMetaData for entityName " + entityName)
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, _))))
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, pageCounter, _))))
         case _ =>
           log.debug("SetPageForTaskAndEntity, set page for entityName " + entityName)
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pk, entityName)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pageCounter, pk, entityName)))
       }
 
-    case SetMetaDataForMenu(task, entityMetaData) =>
-      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, None, entityMetaData.entity.name)))
+    case SetMetaDataForMenu(task, pageCounter, entityMetaData) =>
+      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pageCounter, None, entityMetaData.entity.name)))
 
     case InitMetaData(entity) =>
       log.debug("InitMetaData ")
@@ -219,9 +219,9 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
               SetRuleResults(List(rr), rulesContainer, remainingActions)
             })))
 
-        case CreateMemID(eo) =>
-          log.debug("CreateMemID: " + eo)
-          effectOnly(Effect.action(NewEOWithEntityName(eo.entity.name,rulesContainer,remainingActions)))
+        case CreateMemID(entityName) =>
+          log.debug("CreateMemID: " + entityName)
+          effectOnly(Effect.action(NewEOWithEntityName(entityName,rulesContainer,remainingActions)))
 
 
         // Hydration(
@@ -359,28 +359,32 @@ class DataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHa
   }
 }
 
-class EOHandler[M](modelRW: ModelRW[M, Pot[EO]]) extends ActionHandler(modelRW) {
+class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(modelRW) {
 
   override def handle = {
+
+
     case CreateEO(entityName) =>
-      updated(Empty,Effect.action(SetPageForTaskAndEntity("edit",entityName,None)))
+      val c = value.newCounter + 1
+      log.debug("CreateEO " + entityName + " c " + c)
+      updated(EditEOFault(Empty,c),Effect.action(SetPageForTaskAndEntity("edit",entityName,c,None)))
 
     case NewEOCreated(eo,property,actions) =>
       log.debug("eo created " + eo)
       updated(
-        Ready(eo),
+        EditEOFault(Ready(eo),value.newCounter),
         Effect.action(FireActions(property, actions))
       )
     case RefreshEO(eo, property, actions) =>
       log.debug("Refreshed EO " + eo)
       updated(
-        Ready(eo),
+        EditEOFault(Ready(eo),value.newCounter),
         Effect.action(FireActions(property,actions))
       )
     case EditEO(fromTask, eo) =>
       log.debug("EditEO: " + eo)
       updated(
-        Ready(eo),
+        EditEOFault(Ready(eo),value.newCounter),
         Effect.action(InstallEditPage(fromTask,eo))
       )
 
@@ -476,6 +480,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
   override def handle = {
 
+    case SavedEO(fromTask, eo) =>
+      log.debug("SavedEO " + eo)
+      updated(
+        updatedOutOfDBCacheWithEOs(Seq(eo)),
+        Effect.action(InstallInspectPage(fromTask,eo))
+      )
+
     case FetchedObjectsForEntity(eoses, property, actions) =>
       log.debug("FetchedObjectsForEntity property " + property)
 
@@ -528,11 +539,6 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val newValue = value.eos + (entityName -> newEntityMap)
       updated(updatedOutOfDBCache(newValue))
 
-    case InspectEO(fromTask, eo) =>
-      log.debug("InspectEO " + eo)
-      effectOnly(
-        Effect.action(InstallInspectPage(fromTask,eo))
-      )
 
     case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
       log.debug("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
@@ -603,7 +609,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
           updated(
             // change context to inspect
             Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
-            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, previousTask.pk, selectedEntity.name))
+            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, 0, previousTask.pk, selectedEntity.name))
           )
         }
         case _ => noChange
@@ -622,11 +628,16 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
             EditEO("edit", newEO)
 
           } else {
-            InspectEO("edit", newEO)
+            SavedEO("edit", newEO)
           }
         }
         ))
       )
+
+      // 1) NewEO (MenuHandler)
+      // 2) Effect: Save DB
+      // 3) InspectEO (EOHandler)
+      // 4) InstallInspectPage (MenuHandler)
     case NewEO(selectedEntity, eo) =>
       log.debug("SAVE new eo " + eo)
       updated(
@@ -639,7 +650,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
             EditEO("edit", newEO)
 
           } else {
-            InspectEO("edit", newEO)
+            SavedEO("edit", newEO)
           }
         }
         ))
@@ -676,6 +687,10 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
 class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {
 
+  // 1) Search (QueryValuesHandler)
+  // 2) Effect: fetch
+  // 3) SearchResult (EOCacheHandler)
+  // 4) Effect: set list page
   override def handle = {
     // Menu Handler --> SearchResult in EOsHandler
     case Search(selectedEntity) =>
@@ -690,7 +705,7 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     case SetupQueryPageForEntity(selectedEntityName) =>
       updated(
         List(),
-        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, None))
+        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, 0, None))
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>

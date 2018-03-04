@@ -31,16 +31,11 @@ object SPAMain extends js.JSApp {
   case object TaskRoot extends TaskAppPage
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
-  case class EditPage(entity: String, pk: Int) extends TaskAppPage
-  case class NewEOPage(entity: String) extends TaskAppPage
+  case class EditPage(entity: String,  pk: Int) extends TaskAppPage
+  case class NewEOPage(entity: String, pageCounter: Int = 0) extends TaskAppPage
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
   object TaskAppPage {
-
-    def eoWithProxyAndPk(p: ModelProxy[MegaContent], entityName: String, pk: Option[Int]) = {
-        val theeomodel = p.value.eomodel.get
-        EOValueUtils.dryEOWith(theeomodel,entityName, pk)
-    }
 
 
 
@@ -70,22 +65,25 @@ object SPAMain extends js.JSApp {
               })
             }
           )
-        | dynamicRouteCT(("#task/edit/entity" / string(".*") / int).caseClass[EditPage]) ~> dynRenderR(
+        | dynamicRouteCT(("#task/edit/entity" / string(".*") / int ).caseClass[EditPage]) ~> dynRenderR(
              (m, ctl) => {
                 AfterEffectRouter.setCtl(ctl)
-                menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), eoWithProxyAndPk(p, m.entity, Some(m.pk)), p ))
+                menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), 0, Some(m.pk), p ))
               }
            )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), eoWithProxyAndPk(p, m.entity, Some(m.pk)), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), 0, Some(m.pk), p))
             }
           )
-        | dynamicRouteCT(("#task/edit/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
+        | dynamicRouteCT(("#task/new/entity" / string(".*") / int).caseClass[NewEOPage]) ~> dynRenderR(
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
-            menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("edit")), eoWithProxyAndPk(p, m.entity, None), p))
+            menusConnection(p => {
+              println ("m " + m)
+              D2WEditPage(ctl, D2WContext(Some(m.entity),  Some("edit")), m.pageCounter, None, p)
+            })
           }
         )
       )

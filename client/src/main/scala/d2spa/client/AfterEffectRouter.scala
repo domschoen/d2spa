@@ -11,17 +11,21 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEOAndEntity(task: String, pkOpt: Option[Int], entity: String): Future[diode.NoAction.type] = {
+  def setPageForTaskAndEOAndEntity(task: String, pageCounter: Int, pkOpt: Option[Int], entity: String): Future[diode.NoAction.type] = {
 
 
-    log.debug("Set " + task + " page " + entity + " pk " + pkOpt)
+    log.debug("Set " + task + " page " + entity + " pk " + pkOpt + " page Counter " + pageCounter)
     task match {
       case "query" => setRouterToPage(QueryPage(entity))
       case "list" => setRouterToPage(ListPage(entity))
       case "edit" => {
         pkOpt match {
           case Some(pk) => setRouterToPage(EditPage(entity, pk))
-          case _ => setRouterToPage(NewEOPage(entity))
+          case _ => {
+            val page = NewEOPage(entity, pageCounter)
+            log.debug("Set Router to page " + page)
+            setRouterToPage(page)
+          }
         }
       }
       // To be refactored : same code as above

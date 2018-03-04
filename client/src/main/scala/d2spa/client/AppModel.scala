@@ -22,10 +22,11 @@ case class CustomData()
 
 
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
-                       eo: Pot[EO],
+                       editEOFault: EditEOFault,
                        cache: EOCache,
                        queryValues: List[QueryValue])
 
+case class EditEOFault(eo: Pot[EO], newCounter : Int)
 
 case class EOCache(eos: Map[String, Map[Int,EO]],
                     insertedEOs: Map[String, Map[Int,EO]])
@@ -48,11 +49,11 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class SetPageForTaskAndEntity(task: String, entityName: String, pk: Option[Int]) extends Action
+case class SetPageForTaskAndEntity(task: String, entityName: String, pageCounter: Int, pk: Option[Int]) extends Action
 case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
-case class SetMetaDataForMenu(task: String, metaData: EntityMetaData) extends Action
+case class SetMetaDataForMenu(task: String, pageCounter: Int, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case class NewEOWithEntityName(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
@@ -79,7 +80,7 @@ case class SearchResult(entity: EOEntity, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
-case class InspectEO(fromTask: String, eo: EO) extends Action
+case class SavedEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
@@ -90,7 +91,7 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 trait D2WAction extends diode.Action
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
-case class CreateMemID(eo: EO) extends D2WAction
+case class CreateMemID(entityName: String) extends D2WAction
 
 case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
@@ -126,7 +127,7 @@ object AppModel {
       Empty,
       Empty,
       List(),
-      Empty,
+      EditEOFault(Empty,0),
       EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue]
       List()
     )

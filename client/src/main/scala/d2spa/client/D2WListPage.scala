@@ -39,7 +39,7 @@ object D2WListPage {
     }
     def inspectEO (eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(InspectEO("list", eo)))
+        $.props >>= (_.proxy.dispatchCB(SavedEO("list", eo)))
     }
 
     def editEO (eo: EO) = {

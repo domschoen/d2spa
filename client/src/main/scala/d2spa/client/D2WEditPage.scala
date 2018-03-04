@@ -20,7 +20,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, pageCounter: Int, pk: Option[Int], proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -30,7 +30,28 @@ object D2WEditPage {
       EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
     }
 
-    // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      val cCount = currentProps.pageCounter
+      val nCount = nextProps.pageCounter
+      val countChanged = !cCount.equals(nCount)
+      log.debug("C " + cCount + "n " + nCount)
+      val cTask = currentProps.d2wContext.task
+      val nTask = nextProps.d2wContext.task
+      val taskChanged = !cTask.equals(nTask)
+
+      val cPk = currentProps.pk
+      val nPk = nextProps.pk
+      val pkChanged = !nPk.equals(nPk)
+
+      val anyChange = countChanged || taskChanged || pkChanged
+
+      Callback.when(anyChange) {
+        willmounted(nextProps)
+      }
+
+    }
+
+      // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
       val entityName = p.d2wContext.entityName.get
       log.debug("D2WEditPage: will Mount " + entityName)
@@ -42,21 +63,25 @@ object D2WEditPage {
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      log.debug("D2WEditPage: eo " + p.eo)
-      val isNew = EOValueUtils.isNew(p.eo)
+      log.debug("D2WEditPage: eo " + p.pk)
 
-      val actionList = if (isNew) List(
-        fireDisplayPropertyKeys,
-        // in order to have an EO completed with all attributes for the task,
-        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-        CreateMemID(p.eo)
-      ) else List(
-        fireDisplayPropertyKeys,
-        // in order to have an EO completed with all attributes for the task,
-        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-        Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-      )
-
+      val actionList = p.pk match {
+        case Some(pkIntValue) =>
+          val eoSkeleton = EOValueUtils.dryEOWithEntity(entityMetaDataOpt.get.entity,p.pk)
+          List(
+            fireDisplayPropertyKeys,
+            // in order to have an EO completed with all attributes for the task,
+            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+            Hydration(DrySubstrate(eo = Some(eoSkeleton)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+          )
+        case None =>
+          List(
+            fireDisplayPropertyKeys,
+            // in order to have an EO completed with all attributes for the task,
+            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+            CreateMemID(entityName)
+          )
+      }
 
       Callback.when(true)(p.proxy.dispatchCB(
           FireActions(
@@ -102,7 +127,7 @@ object D2WEditPage {
 
 
     def render(p: Props) = {
-      val eoRefOpt = p.proxy.value.eo
+      val eoRefOpt = p.proxy.value.editEOFault.eo
       log.debug("D2WEditPage: render eo ref: " + eoRefOpt)
 
       eoRefOpt match {
@@ -204,11 +229,12 @@ object D2WEditPage {
 
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = {
-    log.debug("ctl " + ctl.hashCode())
-    component(Props(ctl, d2wContext, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, pageCount: Int, pk: Option[Int], proxy: ModelProxy[MegaContent]) = {
+    log.debug("ctl " + ctl.hashCode() +  " page Counter " + pageCount)
+    component(Props(ctl, d2wContext, pageCount, pk, proxy))
   }
 }
