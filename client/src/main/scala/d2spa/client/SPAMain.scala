@@ -14,7 +14,7 @@ import CssSettings._
 
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
-import d2spa.shared.{D2WContext, EOValueUtils}
+import d2spa.shared.{D2WContext, EOValueUtils, TaskDefine}
 import diode.react.ModelProxy
 
 @JSExportTopLevel("SPAMain")
@@ -46,13 +46,13 @@ object SPAMain extends js.JSApp {
 
 
       (emptyRule
-        | staticRoute(root, TaskRoot) ~> renderR(ctl => SPACircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, D2WContext(Some("Project"),Some("query")), proxy)))
+        | staticRoute(root, TaskRoot) ~> renderR(ctl => SPACircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, D2WContext(entityName = Some("Project"), task = Some(TaskDefine.query)), proxy)))
 
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
               menusConnection(p => {
-                D2WQueryPage(ctl, D2WContext(Some(m.entity), Some("query")), p)
+                D2WQueryPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.query)), p)
               })
             }
           )
@@ -61,20 +61,20 @@ object SPAMain extends js.JSApp {
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
               menusConnection(p => {
-                D2WListPage(ctl, D2WContext(Some(m.entity),Some("list")), p)
+                D2WListPage(ctl, D2WContext(entityName =Some(m.entity), task = Some(TaskDefine.list)), p)
               })
             }
           )
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int ).caseClass[EditPage]) ~> dynRenderR(
              (m, ctl) => {
                 AfterEffectRouter.setCtl(ctl)
-                menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity),Some("edit")), 0, Some(m.pk), p ))
+                menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit)), 0, Some(m.pk), p ))
               }
            )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(Some(m.entity), Some("inspect")), 0, Some(m.pk), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect)), 0, Some(m.pk), p))
             }
           )
         | dynamicRouteCT(("#task/new/entity" / string(".*") / int).caseClass[NewEOPage]) ~> dynRenderR(
@@ -82,7 +82,7 @@ object SPAMain extends js.JSApp {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
               println ("m " + m)
-              D2WEditPage(ctl, D2WContext(Some(m.entity),  Some("edit")), m.pageCounter, None, p)
+              D2WEditPage(ctl, D2WContext(entityName = Some(m.entity),  task = Some(TaskDefine.edit)), m.pageCounter, None, p)
             })
           }
         )

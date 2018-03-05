@@ -218,10 +218,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
           // D2WContext(null,null,null)
 
-          Menus(List(),D2WContext(null,null,null,null),showDebugButton)
+          Menus(List(),D2WContext(entityName = None,task = None),showDebugButton)
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(Some(firstChildEntity.name),Some("query")),showDebugButton)
+          Menus(mainMenus.toList,D2WContext(entityName = Some(firstChildEntity.name), task =Some("query")),showDebugButton)
         }
       }
 

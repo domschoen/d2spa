@@ -43,7 +43,8 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new EOHandler(zoomTo(_.content.editEOFault)),
     new EOCacheHandler(zoomTo(_.content.cache)),
     new QueryValuesHandler(zoomTo(_.content.queryValues)),
-    new EOModelHandler(zoomTo(_.content.eomodel))
+    new EOModelHandler(zoomTo(_.content.eomodel)),
+    new PreviousPageHandler(zoomTo(_.content.previousPage))
     //new MegaDataHandler(zoomTo(_.content))
   )
 
@@ -167,19 +168,21 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
 
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(task, entityName, pageCounter, pk) =>
-      log.debug("SetPageForTaskAndEntity, task " + task + ", entity name " + entityName)
+    case SetPageForTaskAndEntity(d2WContext) =>
+      log.debug("SetPageForTaskAndEntity, d2WContext " + d2WContext)
+      val entityName = d2WContext.entityName.get
       value.indexWhere(n => n.entity.name.equals(entityName)) match {
         case -1 =>
           log.debug("SetPageForTaskAndEntity, getMetaData for entityName " + entityName)
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(task, pageCounter, _))))
+          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(d2WContext, _))))
         case _ =>
           log.debug("SetPageForTaskAndEntity, set page for entityName " + entityName)
-          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pageCounter, pk, entityName)))
+          effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext)))
       }
 
-    case SetMetaDataForMenu(task, pageCounter, entityMetaData) =>
-      updated(entityMetaData :: value,Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(task, pageCounter, None, entityMetaData.entity.name)))
+    case SetMetaDataForMenu(d2WContext, entityMetaData) =>
+      updated(entityMetaData :: value,Effect.action(RegisterPreviousPage(d2WContext)))
+
 
     case SetMetaDataWithActions(taskName, actions, entityMetaData) =>
       val task = EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
@@ -383,7 +386,8 @@ class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(model
     case CreateEO(entityName) =>
       val c = value.newCounter + 1
       log.debug("CreateEO " + entityName + " c " + c)
-      updated(EditEOFault(Empty,c),Effect.action(SetPageForTaskAndEntity("edit",entityName,c,None)))
+      val d2wContext = D2WContext(Some(entityName),Some(TaskDefine.edit),None,c,None,None,None)
+      updated(EditEOFault(Empty,c),Effect.action(SetPageForTaskAndEntity(d2wContext)))
 
     case NewEOCreated(eo,property,actions) =>
       log.debug("eo created " + eo)
@@ -587,6 +591,36 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 }
 
+class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case RegisterPreviousPage(d2WContext) =>
+      log.debug("Set Previous Page for d2wContext: " + d2WContext)
+      val lastPage = value match {
+        case Some(currentPage) => d2WContext.copy(previousTask = value)
+        case _ => d2WContext
+      }
+      updated(
+            // change context to inspect
+            Some(lastPage),
+            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext))
+          )
+
+    case SetPreviousPage =>
+      log.debug("SetPreviousPage to: " + value)
+      value match {
+        case Some(previousTask) => {
+          updated(
+            // change context to inspect
+            if (value.isDefined) value.get.previousTask else None,
+            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask))
+          )
+        }
+        case _ => noChange
+      }
+
+
+  }
+}
 
 
 
@@ -615,21 +649,6 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(entityName), task = Some("query")))),
         Effect.action(SetupQueryPageForEntity(entityName))
       )
-    case SetPreviousPage(selectedEntity) =>
-      log.debug("Set Previous Page for entity: " + selectedEntity)
-      val previousTaskOpt = value.get.d2wContext.previousTask
-      log.debug("PreviousTaskOpt: " + previousTaskOpt)
-
-      previousTaskOpt match {
-        case Some(previousTask) => {
-          updated(
-            // change context to inspect
-            Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(task = Some(previousTask.task)))),
-            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask.task, 0, previousTask.pk, selectedEntity.name))
-          )
-        }
-        case _ => noChange
-      }
 
 
     case Save(selectedEntityName, eo) =>
@@ -697,6 +716,8 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some(selectedTask)))),
         Effect(AfterEffectRouter.setListPageForEntity(selectedEntity.name))
       )
+
+
   }
 
 }
@@ -719,9 +740,10 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
     //
 
     case SetupQueryPageForEntity(selectedEntityName) =>
+      val d2wContext = D2WContext(Some(selectedEntityName),Some(TaskDefine.query),None,0,None,None,None)
       updated(
         List(),
-        Effect.action(SetPageForTaskAndEntity("query", selectedEntityName, 0, None))
+        Effect.action(SetPageForTaskAndEntity(d2wContext))
       )
 
     case UpdateQueryProperty(entityName, queryValue) =>

@@ -4,25 +4,26 @@ import scala.concurrent.Future
 import japgolly.scalajs.react.extra.router._
 import d2spa.client.SPAMain._
 import d2spa.client.logger.log
-import d2spa.shared.{EO, EOEntity, EOValueUtils}
+import d2spa.shared.{D2WContext, EO, EOEntity, EOValueUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEOAndEntity(task: String, pageCounter: Int, pkOpt: Option[Int], entity: String): Future[diode.NoAction.type] = {
+  def setPageForTaskAndEOAndEntity(d2WContext: D2WContext): Future[diode.NoAction.type] = {
 
 
-    log.debug("Set " + task + " page " + entity + " pk " + pkOpt + " page Counter " + pageCounter)
-    task match {
-      case "query" => setRouterToPage(QueryPage(entity))
-      case "list" => setRouterToPage(ListPage(entity))
+    log.debug("AfterEffectRouter " + d2WContext)
+    val entityName = d2WContext.entityName.get
+    d2WContext.task.get match {
+      case "query" => setRouterToPage(QueryPage(entityName))
+      case "list" => setRouterToPage(ListPage(entityName))
       case "edit" => {
-        pkOpt match {
-          case Some(pk) => setRouterToPage(EditPage(entity, pk))
+        d2WContext.pk match {
+          case Some(pk) => setRouterToPage(EditPage(entityName, pk))
           case _ => {
-            val page = NewEOPage(entity, pageCounter)
+            val page = NewEOPage(entityName, d2WContext.pageCounter)
             log.debug("Set Router to page " + page)
             setRouterToPage(page)
           }
@@ -30,13 +31,13 @@ object AfterEffectRouter {
       }
       // To be refactored : same code as above
       case "inspect" => {
-        pkOpt match {
-          case Some(pk) => setRouterToPage(InspectPage(entity, pk))
-          case _ => setRouterToPage(QueryPage(entity))
+        d2WContext.pk match {
+          case Some(pk) => setRouterToPage(InspectPage(entityName, pk))
+          case _ => setRouterToPage(QueryPage(entityName))
         }
 
       }
-      case _ => setRouterToPage(QueryPage(entity))
+      case _ => setRouterToPage(QueryPage(entityName))
     }
   }
   def setQueryPageForEntity( entity: String) : Future[diode.NoAction.type] = setRouterToPage(QueryPage(entity))

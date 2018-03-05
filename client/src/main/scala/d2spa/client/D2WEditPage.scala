@@ -108,7 +108,7 @@ object D2WEditPage {
 
     def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
       Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(SetPreviousPage(entity)))
+        $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
     }
 
     /*def eo(propertyKeys: List[EditInspectProperty]): EO = {

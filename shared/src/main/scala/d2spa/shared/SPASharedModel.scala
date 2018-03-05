@@ -183,7 +183,7 @@ case class EOsAtKeyPath(eo: EO, keyPath: String)
 case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
-case class PreviousTask(task: String, pk: Option[Int])
+//case class PreviousTask(task: String, pk: Option[Int])
 
 case class D2WContextFullFledged(entityName: Option[String],
                       task: Option[String],
@@ -191,7 +191,9 @@ case class D2WContextFullFledged(entityName: Option[String],
                       pageConfiguration: Option[String] = None)
 case class D2WContext(entityName: Option[String],
                       task: Option[String],
-                      previousTask: Option[PreviousTask] = None,
+                      previousTask: Option[D2WContext] = None,
+                      pageCounter: Int = 0,
+                      pk: Option[Int] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
@@ -265,6 +267,8 @@ object RuleUtils {
   def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
     d2wContext.entityName,
     d2wContext.task,
+    None,
+    0,
     None,
     d2wContext.propertyKey,
     if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None

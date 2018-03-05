@@ -24,15 +24,13 @@ case class CustomData()
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
                        editEOFault: EditEOFault,
                        cache: EOCache,
+                       previousPage: Option[D2WContext],
                        queryValues: List[QueryValue])
 
 case class EditEOFault(eo: Pot[EO], newCounter : Int)
 
 case class EOCache(eos: Map[String, Map[Int,EO]],
                     insertedEOs: Map[String, Map[Int,EO]])
-
-
-// Generic Part
 
 
 
@@ -50,11 +48,11 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entity: String) extends Action
-case class SetPageForTaskAndEntity(task: String, entityName: String, pageCounter: Int, pk: Option[Int]) extends Action
+case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(metaData: EntityMetaData) extends Action
-case class SetMetaDataForMenu(task: String, pageCounter: Int, metaData: EntityMetaData) extends Action
+case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case class NewEOWithEntityName(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
@@ -62,7 +60,8 @@ case class NewEOCreated(eo: EO, rulesContainer: RulesContainer, actions: List[D2
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
-case class SetPreviousPage(entity: EOEntity) extends Action
+case object SetPreviousPage extends Action
+case class RegisterPreviousPage(d2WContext: D2WContext) extends Action
 
 case object InitMenuSelection extends Action
 
@@ -133,7 +132,8 @@ object AppModel {
       Empty,
       List(),
       EditEOFault(Empty,0),
-      EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue]
+      EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
+      None,
       List()
     )
   )

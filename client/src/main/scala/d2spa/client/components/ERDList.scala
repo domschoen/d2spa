@@ -63,9 +63,11 @@ object ERDList {
       log.debug("ERDList mounted: fireListConfiguration" + fireListConfiguration)
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
       log.debug("ERDList mounted: fireDisplayPropertyKeys" + fireDisplayPropertyKeys)
+
+      // TBD should we use D2WContext or full fledged ?
       val displayPKeysContext = D2WContext(
         Some(destinationEntity.name),
-        Some(d2spa.shared.TaskDefine.list) , None, None,
+        Some(d2spa.shared.TaskDefine.list) , None, 0, None, None,
         Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
       log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
