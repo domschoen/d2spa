@@ -643,6 +643,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       log.debug("Set Menus " + menus)
       updated(Ready(menus),Effect.action(FetchEOModel))
 
+    // case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
     case SelectMenu(entityName) =>
       log.debug("selectedEntity " + entityName)
       updated(
