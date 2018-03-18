@@ -98,7 +98,7 @@ object D2WEditPage {
       val isNewEO = EOValueUtils.isNew(eo)
       if (isNewEO) {
         Callback.log(s"Save new EO: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(NewEO(entity,eo)))
+          $.props >>= (_.proxy.dispatchCB(SaveNewEO(entity,eo)))
       } else {
         Callback.log(s"Save: $entity") >>
           $.props >>= (_.proxy.dispatchCB(Save(entity.name,eo)))

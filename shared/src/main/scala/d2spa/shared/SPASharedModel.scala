@@ -138,7 +138,7 @@ object EOValueUtils {
     val existingValues = existingEO.values
     val refreshedValues = refreshedEO.values
     val newValues = existingValues ++ refreshedValues
-    existingEO.copy(values = newValues)
+    existingEO.copy(values = newValues, validationError = refreshedEO.validationError)
   }
 
   def isNew(eo:EO) = {
@@ -171,7 +171,7 @@ case class EORelationship(name: String, destinationEntityName: String)
 case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
 //case class EORef(entityName: String, id: Int)
 
-case class Menus(menus: List[MainMenu], d2wContext: D2WContext, showDebugButton: Boolean)
+case class Menus(menus: List[MainMenu], showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
@@ -189,13 +189,7 @@ case class D2WContextFullFledged(entityName: Option[String],
                       task: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[String] = None)
-case class D2WContext(entityName: Option[String],
-                      task: Option[String],
-                      previousTask: Option[D2WContext] = None,
-                      pageCounter: Int = 0,
-                      pk: Option[Int] = None,
-                      propertyKey:  Option[String] = None,
-                      pageConfiguration: Option[Either[RuleFault,String]] = None)
+
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
 
@@ -258,32 +252,6 @@ object EntityMetaDataUtils {
 
 
 object RuleUtils {
-  def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
-    d2wContext.entityName,
-    d2wContext.task,
-    d2wContext.propertyKey,
-    if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
-  )
-  def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
-    d2wContext.entityName,
-    d2wContext.task,
-    None,
-    0,
-    None,
-    d2wContext.propertyKey,
-    if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
-  )
-
-
-  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
-    if (!a.entityName.equals(b.entityName)) return false
-    if (!a.task.equals(b.task)) return false
-    if (!a.propertyKey.equals(b.propertyKey)) return false
-    if (b.pageConfiguration.isDefined && b.pageConfiguration.get.isLeft) return false
-    val comparableValue = if (b.pageConfiguration.isDefined) Some(b.pageConfiguration.get.right.get) else None
-    if (!a.pageConfiguration.equals(comparableValue)) return false
-    return true
-  }
 
   def faultRule(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
     val ruleKey = ruleFault.key

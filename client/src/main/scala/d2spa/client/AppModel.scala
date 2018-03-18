@@ -22,12 +22,12 @@ case class CustomData()
 
 
 case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
-                       editEOFault: EditEOFault,
                        cache: EOCache,
-                       previousPage: Option[D2WContext],
-                       queryValues: List[QueryValue])
+                       previousPage: Option[D2WContext]
+                       )
 
-case class EditEOFault(eo: Pot[EO], newCounter : Int)
+
+case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 case class EOCache(eos: Map[String, Map[Int,EO]],
                     insertedEOs: Map[String, Map[Int,EO]])
@@ -41,7 +41,8 @@ case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class PutRefreshEOInCache(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class UpdateRefreshEOInCache(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
@@ -69,7 +70,7 @@ case object InitAppModel extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
-case class NewEO(entity: EOEntity, eo: EO) extends Action
+case class SaveNewEO(entity: EOEntity, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class UpdateEOValueForProperty(eo: EO, entityName: String, property: PropertyMetaInfo, value: EOValue) extends Action
@@ -84,6 +85,7 @@ case class SavedEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
+case class SaveError(eo: EO) extends Action
 object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
@@ -98,6 +100,46 @@ case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction])
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
+// The D2WContext will contains also the queryValues
+// it should contain everything needed to redisplay a page
+case class D2WContext(entityName: Option[String],
+                      task: Option[String],
+                      previousTask: Option[D2WContext] = None,
+                      //pageCounter: Int = 0,
+                      eo: Option[D2WContextEO] = None,
+                      queryValues: List[QueryValue] = List(),
+                      propertyKey:  Option[String] = None,
+                      pageConfiguration: Option[Either[RuleFault,String]] = None)
+
+object D2WContextUtils {
+  def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
+    d2wContext.entityName,
+    d2wContext.task,
+    d2wContext.propertyKey,
+    if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
+  )
+  def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
+    d2wContext.entityName,
+    d2wContext.task,
+    None,
+    None,
+    List(),
+    d2wContext.propertyKey,
+    if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
+  )
+
+
+  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
+    if (!a.entityName.equals(b.entityName)) return false
+    if (!a.task.equals(b.task)) return false
+    if (!a.propertyKey.equals(b.propertyKey)) return false
+    if (b.pageConfiguration.isDefined && b.pageConfiguration.get.isLeft) return false
+    val comparableValue = if (b.pageConfiguration.isDefined) Some(b.pageConfiguration.get.right.get) else None
+    if (!a.pageConfiguration.equals(comparableValue)) return false
+    return true
+  }
+
+}
 
 case class SetMetaDataWithActions(taskName: String, actions: List[D2WAction], metaData: EntityMetaData) extends Action
 
@@ -131,10 +173,9 @@ object AppModel {
       Empty,
       Empty,
       List(),
-      EditEOFault(Empty,0),
+      //EditEOFault(Empty,0),
       EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
-      None,
-      List()
+      None
     )
   )
 
