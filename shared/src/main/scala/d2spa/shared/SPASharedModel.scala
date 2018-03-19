@@ -176,13 +176,8 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 case class EOFault(entityName : String, pk: Int)
-case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[FetchSpecification] = None)
-case class WateringScope(fireRule: Option[RuleFault] = None)
-case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
-case class EOsAtKeyPath(eo: EO, keyPath: String)
 case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
-case class RuleFault(rhs: D2WContextFullFledged, key: String)
 //case class PreviousTask(task: String, pk: Option[Int])
 
 case class D2WContextFullFledged(entityName: Option[String],
@@ -251,26 +246,4 @@ object EntityMetaDataUtils {
 }
 
 
-object RuleUtils {
 
-  def faultRule(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
-    val ruleKey = ruleFault.key
-    val ruleRhs = RuleUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
-    RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
-  }
-
-  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
-  //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
-
-  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
-    val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
-    result match {
-      case Some(ruleResult) => ruleResult.value.stringV
-      case _ => None
-    }
-  }
-
-  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
-
-
-}

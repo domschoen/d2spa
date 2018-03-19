@@ -261,7 +261,7 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
 
           // How to proceed:
           // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
-          val ruleResultOpt = RuleUtils.faultRule(wateringScope.fireRule.get, rulesContainer)
+          val ruleResultOpt = RuleUtils.fireRuleFault(wateringScope.fireRule.get, rulesContainer)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
 
           ruleResultOpt match {

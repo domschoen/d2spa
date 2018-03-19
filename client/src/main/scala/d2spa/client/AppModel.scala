@@ -29,6 +29,8 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot
 
 case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
+
+
 case class EOCache(eos: Map[String, Map[Int,EO]],
                     insertedEOs: Map[String, Map[Int,EO]])
 
@@ -111,6 +113,37 @@ case class D2WContext(entityName: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
+case class RuleFault(rhs: D2WContextFullFledged, key: String)
+case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[FetchSpecification] = None)
+case class WateringScope(fireRule: Option[RuleFault] = None)
+case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
+case class EOsAtKeyPath(eo: EO, keyPath: String)
+
+object RuleUtils {
+
+
+  def fireRuleFault(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
+    val ruleKey = ruleFault.key
+    val ruleRhs = ruleFault.rhs
+    RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
+  }
+
+  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContextFullFledged, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
+  //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
+
+  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContextFullFledged, key:String) = {
+    val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
+    result match {
+      case Some(ruleResult) => ruleResult.value.stringV
+      case _ => None
+    }
+  }
+
+  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContextFullFledged, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
+
+
+}
+
 object D2WContextUtils {
   def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
     d2wContext.entityName,
@@ -129,7 +162,7 @@ object D2WContextUtils {
   )
 
 
-  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
+  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContextFullFledged): Boolean  = {
     if (!a.entityName.equals(b.entityName)) return false
     if (!a.task.equals(b.task)) return false
     if (!a.propertyKey.equals(b.propertyKey)) return false
@@ -235,5 +268,5 @@ object EOCacheUtils {
 
 
 object FireRuleConverter {
-  def toRuleFault(fireRule: FireRule) = RuleFault(RuleUtils.convertD2WContextToFullFledged(fireRule.rhs),fireRule.key)
+  def toRuleFault(fireRule: FireRule) = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(fireRule.rhs),fireRule.key)
 }

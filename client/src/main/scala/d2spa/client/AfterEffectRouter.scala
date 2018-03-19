@@ -34,8 +34,8 @@ object AfterEffectRouter {
           val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)
           setRouterToPage(page)
         }
-        case D2WContextEO(_, Some(memID)) => {
-          val page = NewEOPage(entityName, memID)
+        case _ => {
+          val page = NewEOPage(entityName)
           log.debug("Set Router to page " + page)
           setRouterToPage(page)
         }

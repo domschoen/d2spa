@@ -20,7 +20,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, pageCounter: Int, pk: Option[Int], proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -30,20 +30,18 @@ object D2WEditPage {
       EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
     }
 
+    // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
+    // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      val cCount = currentProps.pageCounter
-      val nCount = nextProps.pageCounter
-      val countChanged = !cCount.equals(nCount)
-      log.debug("C " + cCount + "n " + nCount)
       val cTask = currentProps.d2wContext.task
       val nTask = nextProps.d2wContext.task
       val taskChanged = !cTask.equals(nTask)
 
-      val cPk = currentProps.pk
-      val nPk = nextProps.pk
+      val cPk = currentProps.d2wContext.eo
+      val nPk = nextProps.d2wContext.eo
       val pkChanged = !nPk.equals(nPk)
 
-      val anyChange = countChanged || taskChanged || pkChanged
+      val anyChange = taskChanged || pkChanged
 
       Callback.when(anyChange) {
         willmounted(nextProps)
@@ -64,10 +62,10 @@ object D2WEditPage {
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      log.debug("D2WEditPage: eo " + p.pk)
+      log.debug("D2WEditPage: eo " + p.d2wContext.eo)
 
-      val actionList = p.pk match {
-        case Some(pkIntValue) =>
+      val actionList = p.d2wContext.eo match {
+        case Some(D2WContextEO(Some(pkIntValue),_)) =>
           val eoFault = EOFault(entityName,pkIntValue)
           List(
             fireDisplayPropertyKeys,
@@ -236,8 +234,8 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, pageCount: Int, pk: Option[Int], proxy: ModelProxy[MegaContent]) = {
-    log.debug("ctl " + ctl.hashCode() +  " page Counter " + pageCount)
-    component(Props(ctl, d2wContext, pageCount, pk, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
+    log.debug("ctl " + ctl.hashCode())
+    component(Props(ctl, d2wContext, proxy))
   }
 }

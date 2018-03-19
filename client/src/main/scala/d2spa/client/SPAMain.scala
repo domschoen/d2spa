@@ -32,7 +32,7 @@ object SPAMain extends js.JSApp {
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
   case class EditPage(entity: String,  pk: Int) extends TaskAppPage
-  case class NewEOPage(entity: String, pageCounter: Int = 0) extends TaskAppPage
+  case class NewEOPage(entity: String) extends TaskAppPage
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
   object TaskAppPage {
@@ -68,21 +68,21 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int ).caseClass[EditPage]) ~> dynRenderR(
              (m, ctl) => {
                 AfterEffectRouter.setCtl(ctl)
-                menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit)), 0, Some(m.pk), p ))
+                menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(pk = Some(m.pk)))), p ))
               }
            )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect)), 0, Some(m.pk), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), eo = Some(D2WContextEO(pk = Some(m.pk)))), p))
             }
           )
-        | dynamicRouteCT(("#task/new/entity" / string(".*") / int).caseClass[NewEOPage]) ~> dynRenderR(
+        | dynamicRouteCT(("#task/new/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
               println ("m " + m)
-              D2WEditPage(ctl, D2WContext(entityName = Some(m.entity),  task = Some(TaskDefine.edit)), m.pageCounter, None, p)
+              D2WEditPage(ctl, D2WContext(entityName = Some(m.entity),  task = Some(TaskDefine.edit), eo = None), p)
             })
           }
         )
