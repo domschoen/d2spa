@@ -40,12 +40,9 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new EntityMetaDataHandler(zoomTo(_.content.entityMetaDatas)),
-    //new EOHandler(zoomTo(_.content.editEOFault)),
     new EOCacheHandler(zoomTo(_.content.cache)),
-    //new QueryValuesHandler(zoomTo(_.content.queryValues)),
     new EOModelHandler(zoomTo(_.content.eomodel)),
     new PreviousPageHandler(zoomTo(_.content.previousPage))
-    //new MegaDataHandler(zoomTo(_.content))
   )
 
 
@@ -372,23 +369,6 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
 
   }
 }
-
-/*
-class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(modelRW) {
-
-  override def handle = {
-
-
-
-    case NewEOCreated(eo,property,actions) =>
-      log.debug("eo created " + eo)
-      updated(
-        EditEOFault(Ready(eo),value.newCounter),
-        Effect.action(FireActions(property, actions))
-      )
-
-  }
-}*/
 
 
 // hydrated destination EOs are simply stored in MegaContent eos
@@ -722,6 +702,14 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
         case _ => noChange
       }
 
+    case UpdateQueryProperty(entityName, queryValue) =>
+      log.debug("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
+      val d2wContext = value.get
+      val currentQueryValues = d2wContext.queryValues
+      val newQueryValues = queryValue :: currentQueryValues
+      val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
+      updated(Some(newD2wContext))
+
 
     case Search(selectedEntity) =>
       val queryValues = value match {
@@ -767,47 +755,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       updated(Ready(menus),Effect.action(FetchEOModel))
 
 
-
-
-
-
- /*   case InstallEditPage(fromTask, eo) =>
-      log.debug("Edit page for entity " + eo)
-      val pk = EOValueUtils.pk(eo).get
-      updated(
-        // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(eo.entity.name), // previousTask = Some(fromTask),
-          task = Some("edit")))),
-        Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entityName.get,pk))
-      )*/
-
-   /* case ShowPage(selectedEntity, selectedTask) =>
-      updated(
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some(selectedTask)))),
-        Effect(AfterEffectRouter.setListPageForEntity(selectedEntity.name))
-      )*/
-
-
   }
 
 }
-/*
-class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {
-
-  override def handle = {
-
-    case SetupQueryPageForEntity(selectedEntityName) =>
-      val d2wContext = D2WContext(Some(selectedEntityName),Some(TaskDefine.query),None,None,List(), None,None)
-      updated(
-        List(),
-        Effect.action(SetPageForTaskAndEntity(d2wContext))
-      )
-
-    case UpdateQueryProperty(entityName, queryValue) =>
-      log.debug("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
-
-      updated(queryValue :: value)
-  }
-}
-*/
 

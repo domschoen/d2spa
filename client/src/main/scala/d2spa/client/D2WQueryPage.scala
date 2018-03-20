@@ -26,11 +26,17 @@ object D2WQueryPage {
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       val cEntityName = currentProps.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.entityName
-      val taskChanged = !cEntityName.equals(nEntityName)
+      val entityNameChanged = !cEntityName.equals(nEntityName)
+
+      val cIsDebugMode = currentProps.proxy.value.isDebugMode
+      val nIsDebugMode = nextProps.proxy.value.isDebugMode
+      val isDebugModeChanged = !cIsDebugMode.equals(nIsDebugMode)
+
+
 
       log.debug("cEntityName " + cEntityName + " nEntityName " + nEntityName)
 
-      val anyChange = taskChanged
+      val anyChange = entityNameChanged || isDebugModeChanged
 
       Callback.when(anyChange) {
         mounted(nextProps)

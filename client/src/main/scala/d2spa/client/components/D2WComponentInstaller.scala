@@ -11,6 +11,7 @@ import d2spa.client.components.GlobalStyles
 
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
+import d2spa.client.logger._
 
 
 
@@ -24,7 +25,7 @@ object D2WComponentInstaller  {
     def render(p: Props) = {
       val eo = p.eo
       val property = p.property
-
+      //log.debug("Render D2WComponentInstaller " + p.proxy.value.isDebugMode)
       <.div({
         val propertyName = p.property.name
         val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
@@ -39,8 +40,8 @@ object D2WComponentInstaller  {
               case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
               case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
               case "ERDList" => <.span(ERDList(p.router, p.d2wContext, property, eo, p.proxy), displayedComponentName)
-              case "ERD2WQueryStringOperator" => ERD2WQueryStringOperator (p.router, p.d2wContext, property, p.proxy)
-              case "ERD2WQueryToOneField" => ERD2WQueryToOneField (p.router, p.d2wContext, property, p.proxy)
+              case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, p.d2wContext, property, p.proxy), displayedComponentName)
+              case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, p.d2wContext, property, p.proxy), displayedComponentName)
               case _ => <.span("Component not found: " + componentName)
             }
           }

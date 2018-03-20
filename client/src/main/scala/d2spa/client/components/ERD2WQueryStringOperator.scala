@@ -27,8 +27,10 @@ object ERD2WQueryStringOperator  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
-      val queryValues = p.d2wContext.queryValues
+      val d2wContext = p.proxy.value.previousPage.get
+
+      val entityName = d2wContext.entityName.get
+      val queryValues = d2wContext.queryValues
       log.debug("ERD2WQueryStringOperator " + p.property)
       val propertyKey = p.property.name
       val queryValue = queryValues.find(r => {r.key.equals(propertyKey)})
