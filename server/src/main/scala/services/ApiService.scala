@@ -218,14 +218,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
           // D2WContext(null,null,null)
 
-          Menus(List(),D2WContext(entityName = None,task = None),showDebugButton)
+          Menus(List(),showDebugButton)
         } else {
           val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,D2WContext(entityName = Some(firstChildEntity.name), task =Some("query")),showDebugButton)
+          Menus(mainMenus.toList,showDebugButton)
         }
       }
-
-
   }
 
   val fireRuleArguments = List("entity","task","propertyKey","pageConfiguration","key")
@@ -362,7 +360,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   }
 
-  case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
 
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {

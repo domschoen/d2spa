@@ -28,14 +28,14 @@ object D2WListPage {
       val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
       log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName.get)))
+      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaDataForList(entityName.get)))
     }
 
 
 
     def returnAction (router: RouterCtl[TaskAppPage],entityName: String) = {
       Callback.log(s"Search: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(SetupQueryPageForEntity(entityName)))
+        $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
     }
     def inspectEO (eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
@@ -43,8 +43,11 @@ object D2WListPage {
     }
 
     def editEO (eo: EO) = {
+      val pk = EOValueUtils.pk(eo)
+      val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(pk = pk)))
+
       Callback.log(s"Edit: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(EditEO("list", eo)))
+        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
     }
 
     def deleteEO (eo: EO) = {
@@ -164,7 +167,7 @@ object D2WListPage {
 
   private val component = ScalaComponent.builder[Props]("D2WListPage")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {

@@ -67,7 +67,7 @@ object ERDList {
       // TBD should we use D2WContext or full fledged ?
       val displayPKeysContext = D2WContext(
         Some(destinationEntity.name),
-        Some(d2spa.shared.TaskDefine.list) , None, 0, None, None,
+        Some(d2spa.shared.TaskDefine.list) , None,  None, List(), None,
         Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
       log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
@@ -105,7 +105,9 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      val entityName = p.d2wContext.entityName.get
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
+
       eoOpt match {
         case Some(eo) =>
           val propertyName = p.property.name

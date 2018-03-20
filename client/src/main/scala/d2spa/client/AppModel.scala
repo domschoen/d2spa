@@ -50,7 +50,8 @@ case class SetEOModel(eomodel: EOModel) extends Action
 
 case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 
-case class InitMetaData(entity: String) extends Action
+case class InitMetaData(entityName: String) extends Action
+case class InitMetaDataForList(entityName: String) extends Action
 case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
@@ -58,8 +59,11 @@ case class SetMetaData(metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEOModelForEdit(eomodel: EOModel, entityName: String) extends Action
 case class NewEOWithEntityName(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEntityNameForEdit(entityName: String) extends Action
 case class NewEOCreated(eo: EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOCreatedForEdit(eo: EO) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
@@ -118,20 +122,21 @@ case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFa
 case class WateringScope(fireRule: Option[RuleFault] = None)
 case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
 case class EOsAtKeyPath(eo: EO, keyPath: String)
+//case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
 object RuleUtils {
 
 
   def fireRuleFault(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
     val ruleKey = ruleFault.key
-    val ruleRhs = ruleFault.rhs
+    val ruleRhs = D2WContextUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
     RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
   }
 
-  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContextFullFledged, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
+  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
 
-  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContextFullFledged, key:String) = {
+  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
     val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
     result match {
       case Some(ruleResult) => ruleResult.value.stringV
@@ -139,7 +144,7 @@ object RuleUtils {
     }
   }
 
-  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContextFullFledged, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
+  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
 
 
 }
@@ -162,7 +167,7 @@ object D2WContextUtils {
   )
 
 
-  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContextFullFledged): Boolean  = {
+  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
     if (!a.entityName.equals(b.entityName)) return false
     if (!a.task.equals(b.task)) return false
     if (!a.propertyKey.equals(b.propertyKey)) return false
@@ -245,21 +250,20 @@ object EOCacheUtils {
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def outOfCacheEOUsingPkFromEO(cache: MegaContent, eo: EO): Option[EO] = {
-    val entity = eo.entity
+  def outOfCacheEOUsingPkFromEO(cache: MegaContent, entityName: String, eo: D2WContextEO): Option[EO] = {
     eo.memID match {
       case Some(memID) =>
         val memCache = cache.cache.insertedEOs
         log.debug("Out of cache " + memID)
         log.debug("Cache " + memCache)
-        log.debug("e name " + entity.name)
-        EOCacheUtils.objectForEntityNamedAndPk(memCache,entity.name,memID)
+        log.debug("e name " + entityName)
+        EOCacheUtils.objectForEntityNamedAndPk(memCache,entityName,memID)
       case None =>
         val dbCache = cache.cache.eos
-        val pkOpt = EOValueUtils.pk(eo)
+        val pkOpt = eo.pk
         pkOpt match {
           case Some(pk) =>
-            EOCacheUtils.objectForEntityNamedAndPk(dbCache,entity.name,pk)
+            EOCacheUtils.objectForEntityNamedAndPk(dbCache,entityName,pk)
           case None => None
         }
     }

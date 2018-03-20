@@ -98,6 +98,11 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
         Effect.action(NewEOWithEOModel(value.get, selectedEntityName, property, actions)) // from edit ?
       )
 
+    case NewEOWithEntityNameForEdit(selectedEntityName) =>
+      effectOnly(
+        Effect.action(NewEOWithEOModelForEdit(value.get, selectedEntityName)) // from edit ?
+      )
+
 
   }
 
@@ -188,10 +193,6 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
       val task = EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
       updated(entityMetaData :: value,Effect.action(FireActions(task, actions)))
 
-
-    case InitMetaData(entity) =>
-      log.debug("InitMetaData ")
-      effectOnly(Effect(AjaxClient[Api].getMetaData(entity).call().map(SetMetaData(_))))
     case SetMetaData(entityMetaData) =>
       log.debug("SetMetaData " + entityMetaData)
       updated(entityMetaData :: value)
@@ -372,6 +373,7 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
   }
 }
 
+/*
 class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(modelRW) {
 
   override def handle = {
@@ -384,15 +386,9 @@ class EOHandler[M](modelRW: ModelRW[M, EditEOFault]) extends ActionHandler(model
         EditEOFault(Ready(eo),value.newCounter),
         Effect.action(FireActions(property, actions))
       )
-    case EditEO(fromTask, eo) =>
-      log.debug("EditEO: " + eo)
-      updated(
-        EditEOFault(Ready(eo),value.newCounter),
-        Effect.action(InstallEditPage(fromTask,eo))
-      )
 
   }
-}
+}*/
 
 
 // hydrated destination EOs are simply stored in MegaContent eos
@@ -547,9 +543,25 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       ))
       )
 
-    case CreateEO(entityName) =>
-      // Needs to look in the mem cache for the next memID of entityName
-      // Add to inserted eo
+    // 1) NewEO (MenuHandler)
+    // 2) Effect: Save DB
+    // 3) SavedEO (EOCache)
+    // 4) InstallInspectPage (MenuHandler)
+      case SaveNewEO(selectedEntity, eo) =>
+         log.debug("SAVE new eo " + eo)
+           // Update the DB and dispatch the result withing UpdatedEO action
+           effectOnly(Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map(newEO => {
+             val onError = newEO.validationError.isDefined
+             if (onError) {
+               EditEO("edit", newEO)
+
+             } else {
+               SavedEO("edit", newEO)
+             }
+           }
+           ))
+         )
+
 
     case UpdateEOInCache(eo) =>
       log.debug("UpdateEOInCache " + eo)
@@ -642,6 +654,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(updatedMemCache(newValue),
               Effect.action(NewEOCreated(newEO,property,actions)))
 
+    case NewEOWithEOModelForEdit(eomodel, entityName) =>
+      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
+
+      log.debug("newValue " + newValue)
+      log.debug("newEO " + newEO)
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(memID = newEO.memID)))
+
+      updated(updatedMemCache(newValue),
+        Effect.action(RegisterPreviousPage(d2wContext)))
 
 
   }
@@ -649,32 +670,77 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 }
 
 class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends ActionHandler(modelRW) {
-  override def handle = {
-    case RegisterPreviousPage(d2WContext) =>
-      log.debug("Set Previous Page for d2wContext: " + d2WContext)
-      val lastPage = value match {
-        case Some(currentPage) => d2WContext.copy(previousTask = value)
-        case _ => d2WContext
+
+  def stackD2WContext(d2WContext: D2WContext) : D2WContext = {
+    value match {
+      case Some(currentPage) => {
+        d2WContext.copy(previousTask = value)
       }
+      case _ => d2WContext
+    }
+  }
+
+  override def handle = {
+    case  InitMetaDataForList (entityName) =>
+      log.debug("InitMetaData for List page " + entityName)
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
+      updated(
+        // change context to inspect
+        Some(d2wContext),
+        Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaData(_))))
+
+    case InitMetaData(entityName) =>
+      log.debug("InitMetaData for Query page " + entityName)
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.query))
+      updated(
+        // change context to inspect
+        Some(d2wContext),
+        Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaData(_))))
+
+    case RegisterPreviousPage(d2WContext) =>
+      val  stack = stackD2WContext(d2WContext)
+      log.debug("Set Previous Page for d2wContext: " + stack)
       updated(
             // change context to inspect
-            Some(lastPage),
+            Some(stack),
             Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext))
           )
 
     case SetPreviousPage =>
       log.debug("SetPreviousPage to: " + value)
       value match {
-        case Some(previousTask) => {
-          updated(
-            // change context to inspect
-            if (value.isDefined) value.get.previousTask else None,
-            Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousTask))
-          )
+        case Some(currentPage) => {
+          currentPage.previousTask match {
+            case Some(previousPage) =>
+              updated(
+                Some(previousPage),
+                Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(previousPage))
+              )
+            case _ => noChange
+          }
         }
         case _ => noChange
       }
 
+
+    case Search(selectedEntity) =>
+      val queryValues = value match {
+        case Some(d2wContext) =>
+           d2wContext.queryValues
+        case _ => List()  // shouldn't come here because the query page initialized it
+      }
+      val entityName = selectedEntity.name
+      log.debug("Search: for entity " + entityName + " with query values " + queryValues)
+      // Call the server to get the result +  then execute action Search Result (see above datahandler)
+
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
+      val  stack = stackD2WContext(d2wContext)
+      log.debug("Register Previous " + stack)
+      updated(
+        // change context to inspect
+        Some(stack),
+        Effect(AjaxClient[Api].search(selectedEntity.name, queryValues).call().map(SearchResult(selectedEntity, _)))
+      )
 
   }
 }
@@ -703,29 +769,9 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
 
 
 
-    // 1) NewEO (MenuHandler)
-    // 2) Effect: Save DB
-    // 3) SavedEO (EOCache)
-    // 4) InstallInspectPage (MenuHandler)
-    case SaveNewEO(selectedEntity, eo) =>
-      log.debug("SAVE new eo " + eo)
-      updated(
-        // change context to inspect
-        Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some("inspect")))),
-        // Update the DB and dispatch the result withing UpdatedEO action
-        Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map(newEO => {
-          val onError = newEO.validationError.isDefined
-          if (onError) {
-            EditEO("edit", newEO)
 
-          } else {
-            SavedEO("edit", newEO)
-          }
-        }
-        ))
-      )
 
-    case InstallEditPage(fromTask, eo) =>
+ /*   case InstallEditPage(fromTask, eo) =>
       log.debug("Edit page for entity " + eo)
       val pk = EOValueUtils.pk(eo).get
       updated(
@@ -733,38 +779,25 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(eo.entity.name), // previousTask = Some(fromTask),
           task = Some("edit")))),
         Effect(AfterEffectRouter.setEditPageForEntity(value.get.d2wContext.entityName.get,pk))
-      )
+      )*/
 
-    case ShowPage(selectedEntity, selectedTask) =>
+   /* case ShowPage(selectedEntity, selectedTask) =>
       updated(
         Ready(value.get.copy(d2wContext = value.get.d2wContext.copy(entityName = Some(selectedEntity.name), task = Some(selectedTask)))),
         Effect(AfterEffectRouter.setListPageForEntity(selectedEntity.name))
-      )
+      )*/
 
 
   }
 
 }
-
+/*
 class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends ActionHandler(modelRW) {
 
-  // 1) Search (QueryValuesHandler)
-  // 2) Effect: fetch
-  // 3) SearchResult (EOCacheHandler)
-  // 4) Effect: set list page
   override def handle = {
-    // Menu Handler --> SearchResult in EOsHandler
-    case Search(selectedEntity) =>
-      log.debug("Search: for entity " + selectedEntity + " with query values " + value)
-      // Call the server to get the result +  then execute action Search Result (see above datahandler)
-      effectOnly(Effect(AjaxClient[Api].search(selectedEntity.name, value).call().map(SearchResult(selectedEntity, _))))
-    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")))
-    //updated(value.copy(d2wContext = value.d2wContext.copy(entity = selectedEntity, task = "list")),Effect(AjaxClient[Api].search(EOKeyValueQualifier("name","Sw")).call().map(SearchResult)))
-    //Effect(AjaxClient[Api].deleteTodo("1").call().map(noChange)))
-    //
 
     case SetupQueryPageForEntity(selectedEntityName) =>
-      val d2wContext = D2WContext(Some(selectedEntityName),Some(TaskDefine.query),None,0,None,None,None)
+      val d2wContext = D2WContext(Some(selectedEntityName),Some(TaskDefine.query),None,None,List(), None,None)
       updated(
         List(),
         Effect.action(SetPageForTaskAndEntity(d2wContext))
@@ -776,5 +809,5 @@ class QueryValuesHandler[M](modelRW: ModelRW[M, List[QueryValue]]) extends Actio
       updated(queryValue :: value)
   }
 }
-
+*/
 

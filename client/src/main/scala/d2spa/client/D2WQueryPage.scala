@@ -21,15 +21,33 @@ object D2WQueryPage {
 
 
   class Backend($ : BackendScope[Props, Unit]) {
+
+
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      val cEntityName = currentProps.d2wContext.entityName
+      val nEntityName = nextProps.d2wContext.entityName
+      val taskChanged = !cEntityName.equals(nEntityName)
+
+      log.debug("cEntityName " + cEntityName + " nEntityName " + nEntityName)
+
+      val anyChange = taskChanged
+
+      Callback.when(anyChange) {
+        mounted(nextProps)
+      }
+    }
+
+
+
     def mounted(props: Props) = {
       val entityName = props.d2wContext.entityName.get
       log.debug("D2WQueryPage " + entityName)
 
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
-      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      val entityMetaData = props.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
+      log.debug("entityMetaDataNotFetched " + entityMetaData)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
 
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaData(entityName)))
+      Callback.when(entityMetaData.isEmpty)(props.proxy.dispatchCB(InitMetaData(entityName)))
     }
 
 
@@ -43,9 +61,10 @@ object D2WQueryPage {
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName.get
       log.debug("Render Query page for entity: " + entityName)
-      val metaDatas = p.proxy.value
-      if  (!metaDatas.entityMetaDatas.isEmpty) {
-        val entityMetaData = metaDatas.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
+      val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
+      entityMetaData match {
+        case Some(entityMetaData) =>
+
         val task = entityMetaData.queryTask
         val displayPropertyKeys = task.displayPropertyKeys
         <.div(
@@ -98,9 +117,10 @@ object D2WQueryPage {
             )
           )
         )
-      } else {
-        <.div("no meta datas")
+        case _ =>
+          <.div("no meta datas")
       }
+
     }
   }
 
@@ -110,6 +130,7 @@ object D2WQueryPage {
 
   private val component = ScalaComponent.builder[Props]("D2WQueryPage")
     .renderBackend[Backend]
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 

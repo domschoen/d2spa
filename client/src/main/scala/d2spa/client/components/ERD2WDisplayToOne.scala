@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
-import d2spa.client.{D2WAction, FireActions, FireRule, Hydration}
+import d2spa.client._
 import d2spa.client.logger.log
 import d2spa.shared._
 import diode.react.ModelProxy
@@ -74,7 +74,7 @@ object ERD2WDisplayToOne  {
 
 
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-      val keyWhenRelationshipRuleFault = RuleFault(RuleUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
+      val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
       val destinationEO = EOValueUtils.eoValueForKey(p.eo,propertyName).get
       val destinationPk = EOValueUtils.pk(destinationEO).get
       val destEOFault = EOFault(destinationEO.entity.name,destinationPk)

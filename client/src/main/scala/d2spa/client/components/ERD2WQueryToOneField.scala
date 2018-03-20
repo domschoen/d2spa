@@ -1,7 +1,7 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, FireActions, FireRule}
-import d2spa.shared.{EOModelUtils, RuleUtils}
+import d2spa.client._
+import d2spa.shared.EOModelUtils
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -10,7 +10,7 @@ import japgolly.scalajs.react.{ReactEventFromInput, _}
 
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client.{MegaContent, UpdateQueryProperty}
-import d2spa.shared.{PropertyMetaInfo, QueryValue, D2WContext, RuleKeys, QueryOperator}
+import d2spa.shared.{PropertyMetaInfo, QueryValue, RuleKeys, QueryOperator}
 
 object ERD2WQueryToOneField  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
@@ -64,7 +64,8 @@ object ERD2WQueryToOneField  {
         case Some(keyWhenRelationship) => {
           val queryKey = property.name + "." + keyWhenRelationship
           val pretext = "where " + whereDisplayText + " is "
-          val queryValue = p.proxy().queryValues.find(r => {r.key.equals(queryKey)})
+          val queryValues = p.d2wContext.queryValues
+          val queryValue = queryValues.find(r => {r.key.equals(queryKey)})
           val value = if (queryValue.isDefined) queryValue.get.value else ""
           <.div(
             <.span(pretext),

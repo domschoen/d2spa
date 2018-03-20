@@ -52,8 +52,8 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
 
 
-      val keyWhenRelationshipRuleFault = RuleFault(RuleUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
-      val fireDisplayPropertyKeys = RuleFault(RuleUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.displayPropertyKeys)
+      val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
+      val fireDisplayPropertyKeys = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.displayPropertyKeys)
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
@@ -122,7 +122,7 @@ object ERD2WEditToOneRelationship   {
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
 
       val taskName = p.d2wContext.task.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
           val propertyName = p.property.name

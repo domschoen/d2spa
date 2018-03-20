@@ -1,8 +1,8 @@
 package d2spa.client.components
 
-import d2spa.client.AppModel
+import d2spa.client.{AppModel, D2WContext}
 import d2spa.client.logger.log
-import d2spa.shared.{D2WContext, PropertyMetaInfo, QueryOperator, RuleKeys}
+import d2spa.shared.{PropertyMetaInfo, QueryOperator, RuleKeys}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react.{ReactEventFromInput, _}
@@ -28,9 +28,10 @@ object ERD2WQueryStringOperator  {
 
     def render(p: Props) = {
       val entityName = p.d2wContext.entityName.get
+      val queryValues = p.d2wContext.queryValues
       log.debug("ERD2WQueryStringOperator " + p.property)
       val propertyKey = p.property.name
-      val queryValue = p.proxy().queryValues.find(r => {r.key.equals(propertyKey)})
+      val queryValue = queryValues.find(r => {r.key.equals(propertyKey)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
       <.div(
         <.input(^.id := "description", ^.value := value,

@@ -1,6 +1,7 @@
 package d2spa.client.components
 
-import d2spa.shared.{D2WContext, EO, EOValueUtils}
+import d2spa.client.D2WContext
+import d2spa.shared.{EO, EOValueUtils}
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._

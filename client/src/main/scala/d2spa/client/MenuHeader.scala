@@ -43,7 +43,7 @@ object MenuHeader {
       //log.debug("new EO for entity " + entity)
 
       Callback.log(s"New EO for: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(CreateEO(entity.name)))
+        $.props >>= (_.proxy.dispatchCB(NewEOWithEntityNameForEdit(entity.name)))
     }
 
 

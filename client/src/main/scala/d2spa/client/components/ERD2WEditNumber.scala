@@ -8,6 +8,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
+import d2spa.client.D2WContext
 
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
@@ -27,7 +28,8 @@ object ERD2WEditNumber {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, p.eo)
+      val entityName = p.d2wContext.entityName.get
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
           val propertyName = p.property.name

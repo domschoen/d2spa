@@ -84,7 +84,8 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Implement ERDList
   - Implement ERD2WDisplayToOne
   - Why to-many relationship Customer.projects is not part of exported data ?
-  - List page > Inspect 1 element > Click Return button should go bach to List page
+  - List page > Inspect 1 element > Click Return button should go back to List page
+  - Change D2WContext to FullFledgeD2WContext for FireRule
   
 
 ### Nice to have
