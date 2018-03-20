@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client._
+import d2spa.client.{FireRule, _}
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client.logger.log
 import d2spa.shared._
@@ -72,15 +72,15 @@ object ERDList {
       log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
       log.debug("ERDList mounted: fireListDisplayPropertyKeys" + fireListDisplayPropertyKeys)
-
+      val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
 
       // hydrated destination EOs are simply stored in MegaContent eos
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
           p.property,
           List(
-            fireListConfiguration,
-            fireListDisplayPropertyKeys,
+            fireListConfiguration, // standard FieRule
+            fireListDisplayPropertyKeys, // standard FieRule
               // Hydrate has 2 parts
               // 1) which eos
               // 2) which propertyKeys
@@ -96,9 +96,11 @@ object ERDList {
               //   1) property eos as eorefs (entity, In qualifier)
               //   2) displayPropertyKeys (fireRule is used)
               // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-              Hydration(DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))),
-              WateringScope(Some(
-                FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys))))
+              Hydration(
+                  DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))), // Hydration of objects at the end of relationship, stored in cache
+                  WateringScope(Some(
+                    ruleFaultListDisplayPropertyKeys))), // populate with properties to be fired rule
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)),displayPKeysContext, RuleKeys.componentName)
           )
           )
         ))

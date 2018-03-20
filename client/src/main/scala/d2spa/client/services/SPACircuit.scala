@@ -235,6 +235,30 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
           val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
           effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataWithActions(taskFault.taskName, remainingActions, _))))
 
+        case FireRules(keysSubstrate, rhs, key) =>
+          val ruleResultOpt = RuleUtils.fireRuleFault(keysSubstrate.ruleFault.get, rulesContainer)
+          val updatedActions = ruleResultOpt match {
+            case Some(RuleResult(rhs, rk, value)) => {
+              val ruleValue = rulesContainer.ruleResults
+              val keys: Set[String] = rk match {
+                case RuleKeys.keyWhenRelationship =>
+                  Set(value.stringV.get)
+                //Set(value)
+                case RuleKeys.displayPropertyKeys =>
+                  value.stringsV.toSet
+                //Set(value)
+              }
+              val dc = D2WContextUtils.convertFullFledgedToD2WContext(rhs)
+              val rulesActions = keys.toList.map(k => {
+                val d2wContextProperty = dc.copy(propertyKey = Some(k))
+                FireRule(d2wContextProperty,key)
+              })
+              remainingActions ::: rulesActions
+            }
+            case _ => remainingActions
+          }
+          effectOnly(Effect.action(FireActions(rulesContainer, updatedActions)))
+
 
         // Hydration(
         //   DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),

@@ -98,6 +98,7 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 
 trait D2WAction extends diode.Action
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
+case class FireRules(keysSubstrate: KeysSubstrate, rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
 case class FetchMetaData(entityName: String) extends D2WAction
@@ -117,6 +118,7 @@ case class D2WContext(entityName: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
+case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
 case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[FetchSpecification] = None)
 case class WateringScope(fireRule: Option[RuleFault] = None)
