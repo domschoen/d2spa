@@ -33,27 +33,6 @@ object D2WListPage {
 
 
 
-    def returnAction (router: RouterCtl[TaskAppPage],entityName: String) = {
-      Callback.log(s"Search: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
-    }
-    def inspectEO (eo: EO) = {
-      Callback.log(s"Inspect: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(SavedEO("list", eo)))
-    }
-
-    def editEO (eo: EO) = {
-      val pk = EOValueUtils.pk(eo)
-      val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(pk = pk)))
-
-      Callback.log(s"Edit: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
-    }
-
-    def deleteEO (eo: EO) = {
-      Callback.log(s"Delete: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list",eo)))
-    }
 
 
     def render(p: Props) = {
