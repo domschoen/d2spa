@@ -211,7 +211,7 @@ case class QueryValue(key: String,value: String, operator: String)
 
 // Task
 //case class Task(task: String, displayPropertyKeys: List[PropertyMetaInfo])
-case class Task(name: String, displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
+//case class Task(name: String, displayPropertyKeys: List[PropertyMetaInfo]) extends RulesContainer
 
 
 /// Important NOTE: Seems that Map is not supported in case classes managed by boopickle

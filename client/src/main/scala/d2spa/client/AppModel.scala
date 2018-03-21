@@ -21,11 +21,15 @@ case class CustomData()
 
 
 
-case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], entityMetaDatas: List[EntityMetaData],
+case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
                        cache: EOCache,
                        previousPage: Option[D2WContext]
                        )
-
+case class PageConfigurationRuleResults(ruleResults: List[RuleResult] = List(), properties: Map[String,PropertyRuleResults])
+case class PropertyRuleResults(ruleResults: List[RuleResult] = List())
+object PageConfiguration {
+  val NoPageConfiguration = "NoPageConfiguration"
+}
 
 case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
@@ -33,6 +37,7 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 case class EOCache(eos: Map[String, Map[Int,EO]],
                     insertedEOs: Map[String, Map[Int,EO]])
+
 
 
 
@@ -115,8 +120,38 @@ case class D2WContext(entityName: Option[String],
                       //pageCounter: Int = 0,
                       eo: Option[D2WContextEO] = None,
                       queryValues: List[QueryValue] = List(),
+                      dataRep: Option[DataRep],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
+
+case class DataRep (fs: Option[FetchSpecification])
+case class FetchSpecification (entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering])
+case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier],
+                       orQualifier: List[EOQualifier],
+                       keyValueQualifier: Option[EOKeyValueQualifier],
+                       notQualifier: EOQualifier
+                      )
+case class EOKeyValueQualifier(key: String, selector : String, value: Any)
+case class EOSortOrdering(key: String, selector: String)
+
+object NSSelector {
+  val QualifierOperatorEqual = "QualifierOperatorEqual"
+  val QualifierOperatorNotEqual = "QualifierOperatorNotEqual"
+  val QualifierOperatorLessThan = "QualifierOperatorLessThan"
+  val QualifierOperatorGreaterThan = "QualifierOperatorGreaterThan"
+  val QualifierOperatorLessThanOrEqualTo = "QualifierOperatorLessThanOrEqualTo"
+  val QualifierOperatorContains = "QualifierOperatorContains"
+  val QualifierOperatorLike = "QualifierOperatorLike"
+  val QualifierOperatorCaseInsensitiveLike = "QualifierOperatorCaseInsensitiveLike"
+}
+
+object EOQualifierType {
+  val EOAndQualifier = "EOAndQualifier"
+  val EOOrQualifier = "EOOrQualifier"
+  val EOKeyValueQualifier = "EOKeyValueQualifier"
+  val EONotQualifier = "EONotQualifier"
+}
+
 
 case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
@@ -138,9 +173,46 @@ object RuleUtils {
   def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
 
-  def ruleStringValueForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = {
-    val result = ruleResultForContextAndKey(property.ruleResults, d2wContext, key)
-    result match {
+  def ruleStringValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[String] = {
+    val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
+    ruleStringValueWithRuleResult(ruleResult)
+  }
+
+  def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[String] = {
+    val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
+    ruleStringValueWithRuleResult(ruleResult)
+  }
+
+  def ruleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[RuleResult] = {
+    val entityName = d2wContext.entityName.get
+    val task = d2wContext.task.get
+    val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get.right.get else PageConfiguration.NoPageConfiguration
+    if (ruleResults.contains(entityName)) {
+      val entitySubTree = ruleResults(entityName)
+      if (entitySubTree.contains(task)) {
+        val taskSubTree = entitySubTree(task)
+        if (taskSubTree.contains(pageConfiguration)) {
+          val pageConfigurationSubTree = taskSubTree(pageConfiguration)
+          d2wContext.propertyKey match {
+            case Some(propertyKey) => {
+              if (pageConfigurationSubTree.properties.contains(propertyKey)) {
+                val propertySubTree = pageConfigurationSubTree.properties(propertyKey)
+                ruleResultForContextAndKey(propertySubTree.ruleResults,d2wContext,key)
+              } else {
+                None
+              }
+            }
+            case _ => {
+              ruleResultForContextAndKey(pageConfigurationSubTree.ruleResults,d2wContext,key)
+            }
+          }
+        } else None
+      } else None
+    } else None
+  }
+
+  def ruleStringValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
+    ruleResultOpt match {
       case Some(ruleResult) => ruleResult.value.stringV
       case _ => None
     }
@@ -212,7 +284,7 @@ object AppModel {
       false,
       Empty,
       Empty,
-      List(),
+      Map(),
       //EditEOFault(Empty,0),
       EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
       None

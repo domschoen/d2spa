@@ -66,83 +66,10 @@ object D2WListPage {
           val task = entityMetaData.listTask
           val entity = entityMetaData.entity
           //val eos = if (task.eos.isReady) task.eos.get else Vector()
-          val eosPot: Option[Map[Int, EO]] = if (p.proxy.value.cache.eos.contains(entityName)) Some(p.proxy.value.cache.eos(entityName)) else None
-          eosPot match {
-            case Some(eosByID) =>
-              log.debug("list task inside " + eosByID )
-              val eos = eosByID.values.toList
-              val displayPropertyKeys = task.displayPropertyKeys
-              log.debug("list task displayPropertyKeys " + displayPropertyKeys )
               <.div(
                 <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
-                <.div(^.id:="a",
-                  {
-                    val eoOnError = eos.find(x => (x.validationError.isDefined))
-                    if (eoOnError.isDefined) {
-                      val validationError =  eoOnError.get.validationError.get
-                      <.div(<.span(^.color:="red",^.dangerouslySetInnerHtml := validationError))
-                    } else <.div()
-                  },
-                  <.table(^.className := "listPage",
-                    <.tbody(
-                      <.tr(^.className := "listHeader",
-                        <.td(^.className := "listHeaderEntityName",
-                          <.span(^.className := "attribute",eos.size + " " + entityMetaData.displayName)
-                        ),
-                        <.td(^.className := "listHeaderReturnButton",<.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router,entityName))))
-                      )
-                    ),
-                    <.tbody(
-                      <.tr(
-                        <.td(
-                          <.table(^.className :="listRepetition",
-                            <.tbody(
-                              <.tr(^.className :="listRepetitionColumnHeader",
-                                <.td(), {
-                                  displayPropertyKeys toTagMod (property =>
-                                    <.td(^.className :="listRepetitionColumnHeader", {
-                                      val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
-                                      val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.keyWhenRelationship)
-                                      val displayString = displayNameFound match {
-                                        case Some(stringValue) => {
-                                        //case Some(stringValue) => {
-                                          stringValue
-                                        }
-                                        case _ => property.name
-                                      }
-                                      <.span(^.className :="listRepetitionColumnHeader",displayString)
-                                    })
-                                  )
-                                }
-                              )
-                            ),
-                            <.tbody(
-                              eos toTagMod (eo =>
-                                <.tr(
-                                  <.td(
-                                    <.img(^.className := "IconButton",^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
-                                    <.img(^.className := "IconButton",^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
-                                    <.img(^.className := "IconButton",^.src := "/assets/images/Clone.gif")
-                                  ),
-                                  displayPropertyKeys toTagMod (
-                                    property => {
-                                      val propertyD2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
-                                      <.td(^.className := "list1",
-                                        D2WComponentInstaller(p.router, propertyD2wContext, property,eo, p.proxy)
-                                      )
+                <.div(^.id:="a",NVListComponent(p.router,p.d2wContext,p.proxy)
 
-                                    }
-                                  ),
-                                  <.td(<.img(^.className := "IconButton",^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
-
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
                 )
               )
             case _ =>
