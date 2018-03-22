@@ -39,7 +39,7 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   override val actionHandler = composeHandlers(
     new DebugHandler(zoomTo(_.content.isDebugMode)),
     new MenuHandler(zoomTo(_.content.menuModel)),
-    new EntityMetaDataHandler(zoomTo(_.content.entityMetaDatas)),
+    new RuleResultsHandler(zoomTo(_.content.ruleResults)),
     new EOCacheHandler(zoomTo(_.content.cache)),
     new EOModelHandler(zoomTo(_.content.eomodel)),
     new PreviousPageHandler(zoomTo(_.content.previousPage))
@@ -112,46 +112,8 @@ class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelR
   }
 }
 
-class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extends ActionHandler(modelRW) {
+class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String,PageConfigurationRuleResults]]]) extends ActionHandler(modelRW) {
 
-  private def zoomToEntity(entityName: String, rw: ModelRW[M, List[EntityMetaData]]): Option[ModelRW[M, EntityMetaData]] = {
-    rw.value.indexWhere(n => n.entity.name.equals(entityName)) match {
-      case -1 =>
-        // should not happen!
-        None
-      case idx =>
-        Some(rw.zoomRW(_(idx))((m, v) =>
-          (m.take(idx) :+ v) ++ m.drop(idx + 1)))
-    }
-  }
-  private def zoomToProperty(property: PropertyMetaInfo, rw: ModelRW[M, Task]): Option[ModelRW[M, PropertyMetaInfo]] = {
-    rw.value.displayPropertyKeys.indexWhere(n => n.name == property.name) match {
-      case -1 =>
-        // should not happen!
-        None
-      case idx =>
-        Some(rw.zoomRW(_.displayPropertyKeys(idx))((m, v) =>
-          m.copy(displayPropertyKeys = (m.displayPropertyKeys.take(idx) :+ v) ++ m.displayPropertyKeys.drop(idx + 1))))
-    }
-  }
-  private def zoomToTask(task: String, rw: ModelRW[M, EntityMetaData]): Option[ModelRW[M, Task]] = {
-    if (task.equals(TaskDefine.edit)) {
-      Some(rw.zoomRW(_.editTask) ((m, v) =>
-        m.copy(editTask = v)))
-    } else if (task.equals(TaskDefine.list)) {
-      Some(rw.zoomRW(_.listTask)((m, v) =>
-        m.copy(listTask = v)))
-    } else if (task.equals(TaskDefine.inspect)) {
-      Some(rw.zoomRW(_.inspectTask)((m, v) =>
-        m.copy(inspectTask = v)))
-    } else if (task.equals(TaskDefine.query)) {
-      Some(rw.zoomRW(_.queryTask)((m, v) =>
-        m.copy(queryTask = v)))
-    } else {
-      Some(rw.zoomRW(_.queryTask)((m, v) =>
-        m.copy(queryTask = v)))
-    }
-  }
 
   // case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 
@@ -167,35 +129,54 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
     result
   }
 
+  def updatedRuleResultsWithEntityMetaData(d2wContext: D2WContext, entityMetaData: EntityMetaData) = {
+    // convert data from entityMetaData to ruleResults
+    val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
+    var updatedRuleResults = RuleUtils.registerRuleResult(value, RuleResult(fullFledged,RuleKeys.displayNameForEntity,RuleValue(stringV = Some(entityMetaData.displayName))))
+    for (prop <- entityMetaData.displayPropertyKeys) {
+      val propertyD2WContext = fullFledged.copy(propertyKey = Some(prop.name))
+      updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults,RuleResult(propertyD2WContext,RuleKeys.propertyType,RuleValue(stringV = Some(prop.typeV))))
+      for (ruleResult <- prop.ruleResults) {
+        updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults,ruleResult)
+      }
+    }
+    updatedRuleResults
+  }
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(d2WContext) =>
-      log.debug("SetPageForTaskAndEntity, d2WContext " + d2WContext)
-      val entityName = d2WContext.entityName.get
-      value.indexWhere(n => n.entity.name.equals(entityName)) match {
-        case -1 =>
-          log.debug("SetPageForTaskAndEntity, getMetaData for entityName " + entityName)
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataForMenu(d2WContext, _))))
-        case _ =>
-          log.debug("SetPageForTaskAndEntity, set page for entityName " + entityName)
-          effectOnly(Effect.action(RegisterPreviousPage(d2WContext)))
+    case SetPageForTaskAndEntity(d2wContext) =>
+      log.debug("SetPageForTaskAndEntity, d2wContext " + d2wContext)
+      val entityName = d2wContext.entityName.get
+      val metaDataPresent = RuleUtils.metaDataFetched(value,d2wContext)
+      if (metaDataPresent) {
+        log.debug("SetPageForTaskAndEntity, set page for entityName " + entityName)
+        effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
+
+      } else {
+        log.debug("SetPageForTaskAndEntity, getMetaData for entityName " + entityName)
+        val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+        effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataForMenu(d2wContext, _))))
+
       }
 
-    case SetMetaDataForMenu(d2WContext, entityMetaData) =>
-      updated(entityMetaData :: value,Effect.action(RegisterPreviousPage(d2WContext)))
+    case SetMetaDataForMenu(d2wContext, entityMetaData) => {
+      val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
+      updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
+    }
 
 
-    case SetMetaDataWithActions(taskName, actions, entityMetaData) =>
-      val task = EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
-      updated(entityMetaData :: value,Effect.action(FireActions(task, actions)))
+    case SetMetaDataWithActions(d2wContext, actions, entityMetaData) =>
+      val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
+      updated(updatedRuleResults,Effect.action(FireActions(d2wContext, actions)))
 
-    case SetMetaData(entityMetaData) =>
+    case SetMetaData(d2wContext, entityMetaData) =>
       log.debug("SetMetaData " + entityMetaData)
-      updated(entityMetaData :: value)
+      val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
+      updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
 
 
-    case FireActions(rulesCon: RulesContainer, actions: List[D2WAction]) =>
+    case FireActions(d2wContext: D2WContext, actions: List[D2WAction]) =>
       if (actions.isEmpty) {
         noChange
       } else {
@@ -231,9 +212,10 @@ class EntityMetaDataHandler[M](modelRW: ModelRW[M, List[EntityMetaData]]) extend
           log.debug("CreateMemID: " + entityName)
           effectOnly(Effect.action(NewEOWithEntityName(entityName,rulesContainer,remainingActions)))
 
-        case FetchMetaData(entityName) =>
-          val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
-          effectOnly(Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaDataWithActions(taskFault.taskName, remainingActions, _))))
+        case FetchMetaData(d2wContext) =>
+          //val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
+          val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+          effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataWithActions(d2wContext, remainingActions, _))))
 
         case FireRules(keysSubstrate, rhs, key) =>
           val ruleResultOpt = RuleUtils.fireRuleFault(keysSubstrate.ruleFault.get, rulesContainer)
@@ -688,10 +670,12 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
     case  InitMetaDataForList (entityName) =>
       log.debug("InitMetaData for List page " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
+      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+
       updated(
         // change context to inspect
         Some(d2wContext),
-        Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaData(_))))
+        Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
 
     case InitMetaData(entityName) =>
       log.debug("InitMetaData for Query page " + entityName)

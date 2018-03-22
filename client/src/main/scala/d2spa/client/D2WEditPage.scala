@@ -81,7 +81,7 @@ object D2WEditPage {
             CreateMemID(entityName)
           )
       }
-      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(entityName) :: actionList else actionList
+      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(p.d2wContext) :: actionList else actionList
       val ruleContainer = if (entityMetaDataNotFetched) TaskFault(entityName, taskName) else getTask(p,entityName,taskName)
 
       Callback.when(true)(p.proxy.dispatchCB(

@@ -252,6 +252,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
 
 
+  // Fetch the following information for each property
+  // - displayNameForProperty
+  // - componentName
+  // - attributeType
   def propertyMetaInfosForTask(displayPropertyKeys: Seq[String], entity: EOEntity, task: String) = {
     val propertiesFutures = displayPropertyKeys.map( propertyKey => {
       val rhs = D2WContextFullFledged(Some(entity.name),Some(task),Some(propertyKey))
@@ -323,35 +327,24 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // D2WContext: task=edit, entity=..
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayNameForEntity
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
-  def getMetaData(entityName: String): Future[EntityMetaData] = {
+  def getMetaData(d2wContext: D2WContextFullFledged): Future[EntityMetaData] = {
     val fetchedEOModel = eomodel()
-      val entityDisplayNameFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayNameForEntity)
-      val queryDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.query)), RuleKeys.displayPropertyKeys)
-      val editDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.edit)), RuleKeys.displayPropertyKeys)
-      val listDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.list)), RuleKeys.displayPropertyKeys)
-      val inspectDisplayPropertyKeysFuture = fireRuleFuture(D2WContextFullFledged(Some(entityName), Some(TaskDefine.inspect)), RuleKeys.displayPropertyKeys)
+      val entityDisplayNameFuture = fireRuleFuture(d2wContext, RuleKeys.displayNameForEntity)
+      val displayPropertyKeysFuture = fireRuleFuture(d2wContext, RuleKeys.displayPropertyKeys)
 
       val result = for {
         r1 <- entityDisplayNameFuture
-        queryDisplayPropertyKeys <- queryDisplayPropertyKeysFuture
-        listDisplayPropertyKeys <- listDisplayPropertyKeysFuture
-        inspectDisplayPropertyKeys <- inspectDisplayPropertyKeysFuture
-        editDisplayPropertyKeys <- editDisplayPropertyKeysFuture
+        displayPropertyKeys <- displayPropertyKeysFuture
       } yield {
         val entityDisplayName = fromRuleResponseToKeyAndString(r1)
+        val entityName = d2wContext.entityName.get
         Logger.debug("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
         val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
+        val task = d2wContext.task.get
 
-        val queryProperties = fromResponseToMetaInfo(queryDisplayPropertyKeys,entity,TaskDefine.query)
-        val listProperties = fromResponseToMetaInfo(listDisplayPropertyKeys,entity,TaskDefine.list)
-        val inspectProperties = fromResponseToMetaInfo(inspectDisplayPropertyKeys,entity,TaskDefine.inspect)
-        val editProperties = fromResponseToMetaInfo(editDisplayPropertyKeys,entity,TaskDefine.edit)
+        val properties = fromResponseToMetaInfo(displayPropertyKeys,entity,task)
 
-        val emd = EntityMetaData(entity, entityDisplayName._2,
-          Task(TaskDefine.query, queryProperties),
-          Task(TaskDefine.list, listProperties),
-          Task(TaskDefine.inspect, inspectProperties),
-          Task(TaskDefine.edit,editProperties))
+        val emd = EntityMetaData(d2wContext, entityDisplayName._2, properties)
         emd
       }
       result

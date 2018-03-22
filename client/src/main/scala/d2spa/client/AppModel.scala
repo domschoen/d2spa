@@ -6,6 +6,7 @@ import diode.util._
 import d2spa.shared.{EntityMetaData, _}
 import boopickle.DefaultBasic._
 import d2spa.client.logger.log
+import jdk.nashorn.internal.ir.PropertyKey
 /**
   * Created by dschoen on 01.05.17.
   */
@@ -25,8 +26,15 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot
                        cache: EOCache,
                        previousPage: Option[D2WContext]
                        )
-case class PageConfigurationRuleResults(ruleResults: List[RuleResult] = List(), properties: Map[String,PropertyRuleResults])
-case class PropertyRuleResults(ruleResults: List[RuleResult] = List())
+
+sealed trait RulesContainer {
+  def ruleResults: List[RuleResult]
+  def metaDataFetched: Boolean
+}
+
+
+case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), override val metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
+case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), override val metaDataFetched: Boolean = false, typeV: String = "stringV") extends RulesContainer
 object PageConfiguration {
   val NoPageConfiguration = "NoPageConfiguration"
 }
@@ -60,7 +68,7 @@ case class InitMetaDataForList(entityName: String) extends Action
 case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
-case class SetMetaData(metaData: EntityMetaData) extends Action
+case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
@@ -106,9 +114,9 @@ case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class FireRules(keysSubstrate: KeysSubstrate, rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
-case class FetchMetaData(entityName: String) extends D2WAction
+case class FetchMetaData(d2wContext: D2WContext) extends D2WAction
 
-case class FireActions(rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
@@ -120,7 +128,7 @@ case class D2WContext(entityName: Option[String],
                       //pageCounter: Int = 0,
                       eo: Option[D2WContextEO] = None,
                       queryValues: List[QueryValue] = List(),
-                      dataRep: Option[DataRep],
+                      dataRep: Option[DataRep] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
@@ -163,6 +171,13 @@ case class EOsAtKeyPath(eo: EO, keyPath: String)
 
 object RuleUtils {
 
+  def metaDataFetched(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Boolean  = {
+    val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResults,d2wContext)
+    ruleContainerOpt match {
+      case Some(rulesContainer) => rulesContainer.metaDataFetched
+      case None => false
+    }
+  }
 
   def fireRuleFault(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
     val ruleKey = ruleFault.key
@@ -178,12 +193,66 @@ object RuleUtils {
     ruleStringValueWithRuleResult(ruleResult)
   }
 
-  def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[String] = {
+  def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
     val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
-    ruleStringValueWithRuleResult(ruleResult)
+    ruleListValueWithRuleResult(ruleResult)
   }
 
-  def ruleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[RuleResult] = {
+  def pageConfigurationWithRuleResult(propertyKeyOpt: Option[String],ruleResult: RuleResult) = {
+    propertyKeyOpt match {
+      case Some(propertyKey) => {
+        PageConfigurationRuleResults(properties = Map(propertyKey -> PropertyRuleResults(ruleResults = List(ruleResult))))
+      }
+      case _ => {
+        PageConfigurationRuleResults(ruleResults = List(ruleResult))
+      }
+    }
+  }
+
+
+  def registerRuleResult(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleResult: RuleResult): Map[String,Map[String,Map[String,PageConfigurationRuleResults]]] = {
+    val d2wContext = ruleResult.rhs
+    val entityName = d2wContext.entityName.get
+    val task = d2wContext.task.get
+    val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get else PageConfiguration.NoPageConfiguration
+
+
+    val taskSubTree = if (ruleResults.contains(entityName)) {
+      val existingTaskSubTree = ruleResults(entityName)
+      val pageConfigurationSubTree = if (existingTaskSubTree.contains(task)) {
+        val existingPageConfigurationSubTree = existingTaskSubTree(task)
+        val pageConfigurationRuleResults = if (existingPageConfigurationSubTree.contains(pageConfiguration)) {
+          val existingPageConfigurationRuleResults = existingPageConfigurationSubTree(pageConfiguration)
+          d2wContext.propertyKey match {
+            case Some(propertyKey) => {
+              val propertyRuleResults = if (existingPageConfigurationRuleResults.properties.contains(propertyKey)) {
+                val existingPropertyRuleResults = existingPageConfigurationRuleResults.properties(propertyKey)
+                existingPropertyRuleResults.copy(ruleResults = ruleResult :: existingPropertyRuleResults.ruleResults )
+              } else {
+                PropertyRuleResults(ruleResults = List(ruleResult))
+              }
+              val newProperties = existingPageConfigurationRuleResults.properties + (propertyKey -> propertyRuleResults)
+              existingPageConfigurationRuleResults.copy(properties = newProperties)
+            }
+            case _ => {
+              existingPageConfigurationRuleResults.copy(ruleResults = List(ruleResult))
+            }
+          }
+        } else {
+          pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
+        }
+        existingPageConfigurationSubTree + (pageConfiguration -> pageConfigurationRuleResults)
+      } else {
+        Map(pageConfiguration -> pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult))
+      }
+      existingTaskSubTree + (task -> pageConfigurationSubTree)
+    } else {
+      Map(task -> Map(pageConfiguration -> pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)))
+    }
+    ruleResults + (entityName -> taskSubTree)
+  }
+
+  def ruleContainerForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[RulesContainer] = {
     val entityName = d2wContext.entityName.get
     val task = d2wContext.task.get
     val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get.right.get else PageConfiguration.NoPageConfiguration
@@ -196,14 +265,13 @@ object RuleUtils {
           d2wContext.propertyKey match {
             case Some(propertyKey) => {
               if (pageConfigurationSubTree.properties.contains(propertyKey)) {
-                val propertySubTree = pageConfigurationSubTree.properties(propertyKey)
-                ruleResultForContextAndKey(propertySubTree.ruleResults,d2wContext,key)
+                Some(pageConfigurationSubTree.properties(propertyKey))
               } else {
                 None
               }
             }
             case _ => {
-              ruleResultForContextAndKey(pageConfigurationSubTree.ruleResults,d2wContext,key)
+              Some(pageConfigurationSubTree)
             }
           }
         } else None
@@ -211,10 +279,27 @@ object RuleUtils {
     } else None
   }
 
+  def ruleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[RuleResult] = {
+    val ruleContainerOpt = ruleContainerForContext(ruleResults,d2wContext)
+    ruleContainerOpt match {
+      case Some(rulesContainer) => {
+        ruleResultForContextAndKey(rulesContainer.ruleResults,d2wContext,key)
+      }
+      case _ => None
+    }
+  }
+
+
   def ruleStringValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
     ruleResultOpt match {
       case Some(ruleResult) => ruleResult.value.stringV
       case _ => None
+    }
+  }
+  def ruleListValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
+    ruleResultOpt match {
+      case Some(ruleResult) => ruleResult.value.stringsV
+      case _ => List()
     }
   }
 
@@ -236,6 +321,7 @@ object D2WContextUtils {
     None,
     None,
     List(),
+    None,
     d2wContext.propertyKey,
     if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
   )
@@ -253,7 +339,7 @@ object D2WContextUtils {
 
 }
 
-case class SetMetaDataWithActions(taskName: String, actions: List[D2WAction], metaData: EntityMetaData) extends Action
+case class SetMetaDataWithActions(d2WContext: D2WContext, actions: List[D2WAction], metaData: EntityMetaData) extends Action
 
 case class SetRuleResults(ruleResults: List[RuleResult], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action

@@ -25,11 +25,7 @@ object NVListComponent {
     def mounted(p: Props) = {
       val entityName = p.d2wContext.entityName
       log.debug("D2WListPage mounted for entity " + entityName)
-      val ruleContainerOpt = RuleUtils.ruleContainerForContext(p.proxy().ruleResults,p.d2wContext)
-      val metaDataPresent = ruleContainerOpt match {
-        case Some(rulesContainer) => rulesContainer.metaDataFetched
-        case None => false
-      }
+      val metaDataPresent = RuleUtils.metaDataFetched(p.proxy().ruleResults,p.d2wContext)
       log.debug("entityMetaDataNotFetched " + metaDataPresent)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       Callback.when(metaDataPresent)(p.proxy.dispatchCB(InitMetaDataForList(entityName.get)))

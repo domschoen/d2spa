@@ -7,7 +7,7 @@ trait Api {
 
   def getMenus(): Future[Menus]
 
-  def getMetaData(entityName: String): Future[EntityMetaData]
+  def getMetaData(d2wContext: D2WContextFullFledged): Future[EntityMetaData]
 
   def newEO(entity: EOEntity, eo: EO): Future[EO]
 

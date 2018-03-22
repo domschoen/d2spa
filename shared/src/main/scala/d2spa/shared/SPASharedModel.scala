@@ -28,6 +28,7 @@ object RuleKeys {
   val pkAttributeName = "pkAttributeName"
   val listConfigurationName = "listConfigurationName"
   val pageConfiguration = "pageConfiguration"
+  val propertyType = "propertyType"
 }
 
 object ValueType {
@@ -203,8 +204,8 @@ case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName 
                             override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
-
-case class EntityMetaData(entity: EOEntity, displayName: String, queryTask: Task, listTask:Task, inspectTask: Task, editTask: Task)
+// A D2W Context of type page (without property)
+case class EntityMetaData(d2wContext: D2WContextFullFledged, displayName: String, displayPropertyKeys: List[PropertyMetaInfo])
 
 // A container for value should be used. It would give a way to have not only String
 case class QueryValue(key: String,value: String, operator: String)
