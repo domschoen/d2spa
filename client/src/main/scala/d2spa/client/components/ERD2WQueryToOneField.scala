@@ -17,7 +17,7 @@ object ERD2WQueryToOneField  {
 //bss.formControl,
 
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   // keyWhenRelationship is used for the key to match: propertyKey + "." + keyWhenRelationship
@@ -83,5 +83,5 @@ object ERD2WQueryToOneField  {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 }

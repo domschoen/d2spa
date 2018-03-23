@@ -25,10 +25,6 @@ object D2WEditPage {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
-    def getTask(p: Props, entityName: String, taskName: String) = {
-      val entityMetaData = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
-      EntityMetaDataUtils.taskWithTaskName(entityMetaData,taskName)
-    }
 
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
@@ -52,12 +48,14 @@ object D2WEditPage {
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
+      val d2wContext = p.d2wContext
+
+      val entityName = d2wContext.entityName.get
       log.debug("D2WEditPage: will Mount " + entityName)
       val taskName = p.d2wContext.task.get
 
-      val entityMetaDataOpt = p.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
-      val entityMetaDataNotFetched = entityMetaDataOpt.isEmpty
+      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,d2wContext)
+
       log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
@@ -82,30 +80,30 @@ object D2WEditPage {
           )
       }
       val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(p.d2wContext) :: actionList else actionList
-      val ruleContainer = if (entityMetaDataNotFetched) TaskFault(entityName, taskName) else getTask(p,entityName,taskName)
+      //val ruleContainer = if (entityMetaDataNotFetched) TaskFault(entityName, taskName) else getTask(p,entityName,taskName)
 
       Callback.when(true)(p.proxy.dispatchCB(
           FireActions(
-            ruleContainer,
+            d2wContext,
             actionList2
           )
       ))
     }
 
-    def save(router: RouterCtl[TaskAppPage],entity: EOEntity,eo: EO) = {
+    def save(router: RouterCtl[TaskAppPage],entityName: String,eo: EO) = {
       val isNewEO = EOValueUtils.isNew(eo)
       if (isNewEO) {
-        Callback.log(s"Save new EO: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(SaveNewEO(entity,eo)))
+        Callback.log(s"Save new EO: $entityName") >>
+          $.props >>= (_.proxy.dispatchCB(SaveNewEO(entityName,eo)))
       } else {
-        Callback.log(s"Save: $entity") >>
-          $.props >>= (_.proxy.dispatchCB(Save(entity.name,eo)))
+        Callback.log(s"Save: $entityName") >>
+          $.props >>= (_.proxy.dispatchCB(Save(entityName,eo)))
       }
 
     }
 
-    def returnAction (router: RouterCtl[TaskAppPage],entity: EOEntity) = {
-      Callback.log(s"Search: $entity") >>
+    def returnAction (router: RouterCtl[TaskAppPage],entityName: String) = {
+      Callback.log(s"Search: $entityName") >>
         $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
     }
 
@@ -117,13 +115,9 @@ object D2WEditPage {
     def isEdit(p: Props) = p.d2wContext.task.get.equals(TaskDefine.edit)
 
 
-    def entityMetaDataFromProps(p: Props): EntityMetaData =
-      p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(p.d2wContext.entityName.get)).get
 
-    def displayPropertyKeysFromProps(p: Props) = {
-      val entityMetaData = entityMetaDataFromProps(p)
-      val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
-      task.displayPropertyKeys
+    def displayPropertyKeysFromProps(p: Props, d2wContext: D2WContext) = {
+       RuleUtils.ruleListValueForContextAndKey(p.proxy.value.ruleResults,d2wContext,RuleKeys.displayPropertyKeys)
     }
 
 
@@ -143,20 +137,19 @@ object D2WEditPage {
               eoOpt match {
                 case Some(eo) =>
                   val entityName = p.d2wContext.entityName.get
+                  val ruleResults = p.proxy.value.ruleResults
 
                   log.debug("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
-                  val metaDatas = p.proxy.value
-                  val entityMetaDataNotFetched = p.proxy.value.entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
+                  val metaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
 
-                  if (!entityMetaDataNotFetched) {
+                  if (metaDataPresent) {
                     log.debug("entityMetaDatas not empty")
 
-                    val entityMetaData = entityMetaDataFromProps(p)
                     //log.debug("Entity meta Data " + metaDatas)
-                    val displayPropertyKeys = displayPropertyKeysFromProps(p)
-                    val entity = entityMetaData.entity
+                    val displayPropertyKeys = displayPropertyKeysFromProps(p, d2wContext)
                     val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
-                    val task = if (isEdit(p)) entityMetaData.editTask else entityMetaData.inspectTask
+                    val displayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+                    val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
 
                     log.debug("Edit page EO " + eo)
                     <.div(
@@ -172,17 +165,17 @@ object D2WEditPage {
                         ),
                         <.div(^.className := "liner d2wPage", <.img(^.src := "/assets/images/Line.gif")),
                         <.div(^.className := "buttonsbar d2wPage",
-                          <.span(^.className := "buttonsbar attribute beforeFirstButton", entityMetaData.displayName),
+                          <.span(^.className := "buttonsbar attribute beforeFirstButton", displayName),
                           <.span(^.className := "buttonsbar",
                             if (isEdit(p)) {
-                              <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entity, eo))
+                              <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eo))
                             } else {
                               " "
                             },
                             if (isEdit(p)) {
                               " "
                             } else {
-                              <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entity))
+                              <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))
                             }
                           )
                         ),
@@ -194,21 +187,21 @@ object D2WEditPage {
                                   <.table(
                                     <.tbody(
                                       displayPropertyKeys toTagMod (property => {
-                                        val propertyD2WContext = d2wContext.copy(propertyKey = Some(property.name))
+                                        val propertyD2WContext = d2wContext.copy(propertyKey = Some(property))
                                         <.tr(^.className := "attribute",
                                           <.th(^.className := "propertyName query", {
-                                            val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property, propertyD2WContext, RuleKeys.displayNameForProperty)
+                                            val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResults, propertyD2WContext, RuleKeys.displayNameForProperty)
                                             val displayString = displayNameFound match {
                                               case Some(stringValule) => {
                                                 //case Some(stringValule) => {
                                                 stringValule
                                               }
-                                              case _ => property.name
+                                              case _ => property
                                             }
                                             <.span(displayString)
                                           }),
                                           <.td(^.className := "query d2wAttributeValueCell",
-                                            D2WComponentInstaller(p.router, d2wContext, property, eo, p.proxy)
+                                            D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                                           )
                                         )
                                       }

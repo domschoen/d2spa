@@ -23,7 +23,7 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERDList {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
 
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
@@ -128,6 +128,6 @@ object ERDList {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))
 
 }

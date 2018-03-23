@@ -29,12 +29,11 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot
 
 sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
-  def metaDataFetched: Boolean
 }
 
 
-case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), override val metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
-case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), override val metaDataFetched: Boolean = false, typeV: String = "stringV") extends RulesContainer
+case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
+case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), typeV: String = "stringV") extends RulesContainer
 object PageConfiguration {
   val NoPageConfiguration = "NoPageConfiguration"
 }
@@ -56,12 +55,12 @@ case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class UpdateRefreshEOInCache(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class UpdateRefreshEOInCache(eo:EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
-case class FetchedObjectsForEntity(eos: Seq[EO], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class FetchedObjectsForEntity(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
 case class InitMetaData(entityName: String) extends Action
 case class InitMetaDataForList(entityName: String) extends Action
@@ -71,11 +70,11 @@ case class CreateEO(entityName:String) extends Action
 case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
-case class NewEOWithEOModel(eomodel: EOModel, entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEOModel(eomodel: EOModel, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOWithEOModelForEdit(eomodel: EOModel, entityName: String) extends Action
-case class NewEOWithEntityName(entityName: String, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOWithEntityName(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOWithEntityNameForEdit(entityName: String) extends Action
-case class NewEOCreated(eo: EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class NewEOCreated(eo: EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOCreatedForEdit(eo: EO) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
@@ -89,7 +88,7 @@ case object InitAppModel extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
-case class SaveNewEO(entity: EOEntity, eo: EO) extends Action
+case class SaveNewEO(entityName: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class UpdateEOValueForProperty(eo: EO, entityName: String, property: PropertyMetaInfo, value: EOValue) extends Action
@@ -132,8 +131,8 @@ case class D2WContext(entityName: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
-case class DataRep (fs: Option[FetchSpecification])
-case class FetchSpecification (entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering])
+case class DataRep (fs: Option[EOFetchSpecification])
+case class EOFetchSpecification (entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering])
 case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier],
                        orQualifier: List[EOQualifier],
                        keyValueQualifier: Option[EOKeyValueQualifier],
@@ -172,17 +171,17 @@ case class EOsAtKeyPath(eo: EO, keyPath: String)
 object RuleUtils {
 
   def metaDataFetched(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Boolean  = {
-    val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResults,d2wContext)
+    val ruleContainerOpt = RuleUtils.pageConfigurationRuleResultsForContext(ruleResults,d2wContext)
     ruleContainerOpt match {
       case Some(rulesContainer) => rulesContainer.metaDataFetched
       case None => false
     }
   }
 
-  def fireRuleFault(ruleFault: RuleFault, rulesContainer: RulesContainer): Option[RuleResult] = {
+  def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
     val ruleKey = ruleFault.key
     val ruleRhs = D2WContextUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
-    RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults,ruleRhs,ruleKey)
+    RuleUtils.ruleResultForContextAndKey(ruleResults,ruleRhs,ruleKey)
   }
 
   def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
@@ -252,7 +251,7 @@ object RuleUtils {
     ruleResults + (entityName -> taskSubTree)
   }
 
-  def ruleContainerForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[RulesContainer] = {
+  def pageConfigurationRuleResultsForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[PageConfigurationRuleResults] = {
     val entityName = d2wContext.entityName.get
     val task = d2wContext.task.get
     val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get.right.get else PageConfiguration.NoPageConfiguration
@@ -262,21 +261,30 @@ object RuleUtils {
         val taskSubTree = entitySubTree(task)
         if (taskSubTree.contains(pageConfiguration)) {
           val pageConfigurationSubTree = taskSubTree(pageConfiguration)
-          d2wContext.propertyKey match {
-            case Some(propertyKey) => {
-              if (pageConfigurationSubTree.properties.contains(propertyKey)) {
-                Some(pageConfigurationSubTree.properties(propertyKey))
-              } else {
-                None
-              }
-            }
-            case _ => {
-              Some(pageConfigurationSubTree)
-            }
-          }
+          Some(pageConfigurationSubTree)
         } else None
       } else None
     } else None
+  }
+
+  def ruleContainerForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[RulesContainer] = {
+    val pageConfigurationRuleResultsOpt = pageConfigurationRuleResultsForContext(ruleResults,d2wContext)
+    pageConfigurationRuleResultsOpt match {
+      case Some(pageConfigurationRuleResults) =>
+        d2wContext.propertyKey match {
+          case Some(propertyKey) => {
+            if (pageConfigurationRuleResults.properties.contains(propertyKey)) {
+              Some(pageConfigurationRuleResults.properties(propertyKey))
+            } else {
+              None
+            }
+          }
+          case _ => {
+            Some(pageConfigurationRuleResults)
+          }
+        }
+      case _ => None
+    }
   }
 
   def ruleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[RuleResult] = {
@@ -303,7 +311,8 @@ object RuleUtils {
     }
   }
 
-  def existsRuleResultForContextAndKey(property: PropertyMetaInfo, d2wContext: D2WContext, key:String) = ruleResultForContextAndKey(property.ruleResults, d2wContext, key).isDefined
+  def existsRuleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String) =
+    ruleResultForContextAndKey(ruleResults, d2wContext, key).isDefined
 
 
 }
@@ -341,7 +350,7 @@ object D2WContextUtils {
 
 case class SetMetaDataWithActions(d2WContext: D2WContext, actions: List[D2WAction], metaData: EntityMetaData) extends Action
 
-case class SetRuleResults(ruleResults: List[RuleResult], rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action
@@ -377,24 +386,6 @@ object AppModel {
     )
   )
 
-  def propertyMetaDataWithEntityMetaDatas(entityMetaDatas: List[EntityMetaData], entityName: String, taskName: String, propertyName: String) = {
-    val entityMetaData = entityMetaDataFromMegaContentForEntityNamed(entityMetaDatas,entityName).get
-    propertyMetaDataWithEntityMetaData(entityMetaData,taskName,propertyName)
-  }
-
-  def entityMetaDataFromMegaContentForEntityNamed(entityMetaDatas: List[EntityMetaData], entityName: String): Option[EntityMetaData] =
-    entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
-
-  def propertyMetaDataWithEntityMetaData(entityMetaData: EntityMetaData, taskName: String, propertyName: String) = {
-    val task = taskName match {
-      case TaskDefine.edit => entityMetaData.editTask
-      case TaskDefine.list => entityMetaData.listTask
-      case TaskDefine.inspect => entityMetaData.inspectTask
-      case TaskDefine.query => entityMetaData.queryTask
-      case _ => entityMetaData.queryTask
-    }
-    task.displayPropertyKeys.find(p => p.name.equals(propertyName))
-  }
 }
 
 object EOCacheUtils {

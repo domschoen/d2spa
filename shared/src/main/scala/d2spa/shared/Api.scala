@@ -9,7 +9,7 @@ trait Api {
 
   def getMetaData(d2wContext: D2WContextFullFledged): Future[EntityMetaData]
 
-  def newEO(entity: EOEntity, eo: EO): Future[EO]
+  def newEO(entityName: String, eo: EO): Future[EO]
 
   def updateEO(eo: EO): Future[EO]
   def deleteEO(eo: EO): Future[EO]

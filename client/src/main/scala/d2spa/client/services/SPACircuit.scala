@@ -22,7 +22,7 @@ import japgolly.scalajs.react.extra.router._*/
 
 import d2spa.client.AppModel
 
-import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, Task, EO, EOValue}
+import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, EO, EOValue}
 
 // The First page displayed is the Query page. When the query page is mounted, it calls the server for the entities to be displayed.
 // This is done with an action "InitMetaData" which trigger "" on the server "getMetaData"
@@ -88,11 +88,11 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
 
     // get the eomodel
-    case NewEOWithEntityName(selectedEntityName, property, actions) =>
-      log.debug("NewEOPage: " + selectedEntityName)
+    case NewEOWithEntityName(d2wContext, actions) =>
+      log.debug("NewEOWithEntityName: " + d2wContext)
       // Create the EO and set it in the cache
       effectOnly(
-        Effect.action(NewEOWithEOModel(value.get, selectedEntityName, property, actions)) // from edit ?
+        Effect.action(NewEOWithEOModel(value.get, d2wContext, actions)) // from edit ?
       )
 
     case NewEOWithEntityNameForEdit(selectedEntityName) =>
@@ -112,7 +112,7 @@ class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelR
   }
 }
 
-class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String,PageConfigurationRuleResults]]]) extends ActionHandler(modelRW) {
+class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String,PageConfigurationRuleResults]]]]) extends ActionHandler(modelRW) {
 
 
   // case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
@@ -182,17 +182,6 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
       } else {
         log.debug("FireActions " + actions)
 
-      // rulesContainer may have been updated, get it again from the model !
-      val rulesContainer: RulesContainer = rulesCon match {
-        case property: PropertyMetaInfo =>
-          AppModel.propertyMetaDataWithEntityMetaDatas(value, property.entityName, property.task, property.name).get
-        case task: Task =>
-          // val entityMetaData = AppModel.entityMetaDataFromMegaContentForEntityNamed(value, entityMetaInfo.entity.name).get
-          task // TBD refresh ?
-        case taskFault: TaskFault =>
-          taskFault
-      }
-
 
       // take first actions and call FireActions again with the rest
       val fireAction = actions.head
@@ -205,12 +194,12 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
             {
               log.debug("rr " + rr)
-              SetRuleResults(List(rr), rulesContainer, remainingActions)
+              SetRuleResults(List(rr), d2wContext, remainingActions)
             })))
 
         case CreateMemID(entityName) =>
           log.debug("CreateMemID: " + entityName)
-          effectOnly(Effect.action(NewEOWithEntityName(entityName,rulesContainer,remainingActions)))
+          effectOnly(Effect.action(NewEOWithEntityName(d2wContext,remainingActions)))
 
         case FetchMetaData(d2wContext) =>
           //val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
@@ -218,10 +207,10 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataWithActions(d2wContext, remainingActions, _))))
 
         case FireRules(keysSubstrate, rhs, key) =>
-          val ruleResultOpt = RuleUtils.fireRuleFault(keysSubstrate.ruleFault.get, rulesContainer)
+          val ruleResultOpt = RuleUtils.fireRuleFault(value, keysSubstrate.ruleFault.get)
           val updatedActions = ruleResultOpt match {
             case Some(RuleResult(rhs, rk, value)) => {
-              val ruleValue = rulesContainer.ruleResults
+              //val ruleValue = rulesContainer.ruleResults
               val keys: Set[String] = rk match {
                 case RuleKeys.keyWhenRelationship =>
                   Set(value.stringV.get)
@@ -239,7 +228,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
             }
             case _ => remainingActions
           }
-          effectOnly(Effect.action(FireActions(rulesContainer, updatedActions)))
+          effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
 
 
         // Hydration(
@@ -265,13 +254,13 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
           // How to proceed:
           // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
-          val ruleResultOpt = RuleUtils.fireRuleFault(wateringScope.fireRule.get, rulesContainer)
+          val ruleResultOpt = RuleUtils.fireRuleFault(value, wateringScope.fireRule.get)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
 
           ruleResultOpt match {
             case Some(RuleResult(rhs,key,value)) => {
 
-              val ruleValue = rulesContainer.ruleResults
+              //val ruleValue = rulesContainer.ruleResults
               val missingKeys: Set[String] = key match {
                 case RuleKeys.keyWhenRelationship =>
                   Set(value.stringV.get)
@@ -283,7 +272,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
               drySubstrate match {
                 case DrySubstrate(_ , Some(eoFault), _) =>
                   // completeEO ends up with a MegaContent eo update
-                  effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, rulesContainer, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
                 case DrySubstrate(Some(eorefsdef), _ , _) =>
                   eorefsdef match {
                     case EORefsDefinition(Some(eoakp)) =>
@@ -291,19 +280,19 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                       eovalueOpt match {
                         case Some(eovalue) =>
                           val eoRefs = eovalue.eosV
-                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, rulesContainer, remainingActions))))
+                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
 
-                        case _ => effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
+                        case _ => effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
                       }
-                    case _ => effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
+                    case _ => effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
-                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , rulesContainer, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
 
-                case _ =>  effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
+                case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
               }
             }
-            case _ =>  effectOnly(Effect.action(FireActions(rulesContainer,remainingActions))) // we skip the action ....
+            case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
           }
       }
     }
@@ -315,63 +304,13 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
       //case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
     // many rules
-    case SetRuleResults(ruleResults, rulesContainer, actions: List[D2WAction]) =>
-      log.debug("Rule Results " + ruleResults)
-      log.debug("Rule Container " + rulesContainer)
-      //val d2wContext = property.d2wContext
-      //val entity = d2wContext.entity
-      //val task = d2wContext.task
-      rulesContainer match {
-        case property: PropertyMetaInfo =>
-          val propertyKey = property.name
-          val task = property.task
-
-
-
-          // rule results are stored in EntityMetaData -> Task -> property
-          val entityWriter = zoomToEntity(property.entityName,modelRW)
-          entityWriter match {
-            case Some(erw) => zoomToTask(task, erw) match {
-              case Some(trw) => {
-                zoomToProperty(property, trw) match {
-                  case Some(propWriter) => {
-                    ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
-                      Effect.action(FireActions(property, actions)))
-                  }
-                  case None => noChange
-                }
-              }
-              case None     => noChange
-            }
-            case None     => noChange
-          }
-
-        // case class Task(displayPropertyKeys: List[PropertyMetaInfo], override val ruleResults: List[RuleResult] = List()) extends RulesContainer
-        case task: Task =>
-          val property = task.displayPropertyKeys.head
-          val propertyKey = property.name
-          val taskName = task.name
-
-          // rule results are stored in EntityMetaData -> Task -> property
-          val entityWriter = zoomToEntity(property.entityName,modelRW)
-          entityWriter match {
-            case Some(erw) => zoomToTask(taskName, erw) match {
-              case Some(trw) => {
-                zoomToProperty(property, trw) match {
-                  case Some(propWriter) => {
-                    ModelUpdateEffect(propWriter.updated(propWriter.value.copy(ruleResults = ruleResultsWith(propWriter.value.ruleResults,ruleResults))),
-                      Effect.action(FireActions(property, actions)))
-                  }
-                  case None => noChange
-                }
-              }
-              case None     => noChange
-            }
-            case None     => noChange
-          }
-
-
+    case SetRuleResults(ruleResults, d2wContext, actions: List[D2WAction]) =>
+      log.debug("Set Rule Results " + ruleResults + " in d2w context " + d2wContext)
+      var updatedRuleResults = value
+      for (ruleResult <- ruleResults) {
+        updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, ruleResult)
       }
+      updated(updatedRuleResults,Effect.action(FireActions(d2wContext, actions)))
 
   }
 }
@@ -533,10 +472,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // 2) Effect: Save DB
     // 3) SavedEO (EOCache)
     // 4) InstallInspectPage (MenuHandler)
-      case SaveNewEO(selectedEntity, eo) =>
+      case SaveNewEO(entityName, eo) =>
          log.debug("SAVE new eo " + eo)
            // Update the DB and dispatch the result withing UpdatedEO action
-           effectOnly(Effect(AjaxClient[Api].newEO(selectedEntity, eo).call().map(newEO => {
+           effectOnly(Effect(AjaxClient[Api].newEO(entityName, eo).call().map(newEO => {
              val onError = newEO.validationError.isDefined
              if (onError) {
                EditEO("edit", newEO)
@@ -630,15 +569,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         updated(updatedOutOfDBCacheWithEOs(Seq(newEO)))
       }
 
-    case NewEOWithEOModel(eomodel, selectedEntityName, property, actions: List[D2WAction]) =>
-      log.debug("CreateNewEO: " + selectedEntityName)
+    case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>
+      log.debug("NewEOWithEOModel: " + d2wContext)
       // Create the EO and set it in the cache
-      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, selectedEntityName)
+      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, d2wContext.entityName.get)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
       updated(updatedMemCache(newValue),
-              Effect.action(NewEOCreated(newEO,property,actions)))
+              Effect.action(NewEOCreated(newEO,d2wContext,actions)))
 
     case NewEOWithEOModelForEdit(eomodel, entityName) =>
       val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
@@ -680,10 +619,11 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
     case InitMetaData(entityName) =>
       log.debug("InitMetaData for Query page " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.query))
+      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
       updated(
         // change context to inspect
         Some(d2wContext),
-        Effect(AjaxClient[Api].getMetaData(entityName).call().map(SetMetaData(_))))
+        Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
 
     case RegisterPreviousPage(d2WContext) =>
       val  stack = stackD2WContext(d2WContext)

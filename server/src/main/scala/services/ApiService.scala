@@ -596,10 +596,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // call Project.json with: {"descr":"bb","projectNumber":2}
   // {"id":2,"type":"Project","descr":"bb","projectNumber":2,"customer":null}
 
-  def newEO(entity: EOEntity, eo: EO): Future[EO] = {
+  def newEO(entityName: String, eo: EO): Future[EO] = {
     Logger.debug("New EO: " + eo)
 
-    val url = d2spaServerBaseUrl + "/" + entity.name + ".json"
+    val url = d2spaServerBaseUrl + "/" + entityName + ".json"
 
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
 
@@ -621,6 +621,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       try {
         val resultBody = response.json
         val jsObj = resultBody.asInstanceOf[JsObject]
+        val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
+
         val pkAttributeName = entity.pkAttributeName
         val pkValue = jsObj.value(pkAttributeName)
         pkValue match {

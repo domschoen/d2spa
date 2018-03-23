@@ -21,7 +21,7 @@ import d2spa.shared.{ EOValue, EOKeyValueQualifier, PropertyMetaInfo, QueryValue
 object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
 //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -47,5 +47,5 @@ object ERD2WQueryStringOperator  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 }

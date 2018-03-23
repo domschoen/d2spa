@@ -24,7 +24,7 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 object ERD2WDisplayString  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -52,6 +52,6 @@ object ERD2WDisplayString  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))
 
 }

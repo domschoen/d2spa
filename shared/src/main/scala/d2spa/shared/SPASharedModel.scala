@@ -230,21 +230,6 @@ object EOModelUtils {
 }
 
 
-object EntityMetaDataUtils {
-
-
-
-  def taskWithTaskName(entityMetaData: EntityMetaData, taskName: String) = {
-    taskName match {
-      case TaskDefine.edit => entityMetaData.editTask
-      case TaskDefine.inspect => entityMetaData.inspectTask
-      case TaskDefine.list => entityMetaData.listTask
-      case TaskDefine.query => entityMetaData.queryTask
-      case _ =>  entityMetaData.queryTask
-    }
-  }
-
-}
 
 
 
