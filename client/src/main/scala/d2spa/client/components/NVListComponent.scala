@@ -24,12 +24,15 @@ object NVListComponent {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def mounted(p: Props) = {
-      val entityName = p.d2wContext.entityName
-      log.debug("D2WListPage mounted for entity " + entityName)
-      val metaDataPresent = RuleUtils.metaDataFetched(p.proxy().ruleResults,p.d2wContext)
-      log.debug("entityMetaDataNotFetched " + metaDataPresent)
-      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      Callback.when(metaDataPresent)(p.proxy.dispatchCB(InitMetaDataForList(entityName.get)))
+      log.debug("NVListComponent did mount " + p.d2wContext)
+
+      //val entityName = p.d2wContext.entityName.get
+      //log.debug("D2WListPage mounted for entity " + entityName)
+      //val metaDataPresent = RuleUtils.metaDataFetched(p.proxy().ruleResults,p.d2wContext)
+      //log.debug("entityMetaDataNotFetched " + metaDataPresent)
+      val metaDataPresent = false
+      val entityName = "Customer"
+      Callback.when(metaDataPresent)(p.proxy.dispatchCB(InitMetaDataForList(entityName)))
     }
 
     def returnAction(router: RouterCtl[TaskAppPage], entityName: String) = {
@@ -54,11 +57,55 @@ object NVListComponent {
       Callback.log(s"Delete: $eo") >>
         $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list", eo)))
     }
+    def render2(p: Props) = {
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      log.debug("Render NVListComponent for entity: " + entityName)
 
+
+      val ruleResultsModel = p.proxy.value.ruleResults
+
+      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+      log.debug("list task displayPropertyKeys " + displayPropertyKeys)
+      val entityDisplayName = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+      val eosPot: Option[Map[Int, EO]] = if (p.proxy.value.cache.eos.contains(entityName)) Some(p.proxy.value.cache.eos(entityName)) else None
+      eosPot match {
+        case Some(eosByID) =>
+          log.debug("list task inside " + eosByID)
+          val eos = eosByID.values.toList
+          val countText = eos.size + " " + entityDisplayName
+
+          <.div(
+            {
+              val eoOnError = eos.find(x => (x.validationError.isDefined))
+              if (eoOnError.isDefined) {
+                val validationError = eoOnError.get.validationError.get
+                <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
+              } else <.div()
+            },
+            <.table(^.className := "listPage",
+              <.tbody(
+                <.tr(^.className := "listHeader",
+                  <.td(^.className := "listHeaderEntityName",
+                    <.span(^.className := "attribute", countText)
+                  ),
+                  <.td(^.className := "listHeaderReturnButton", <.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))))
+                )
+              )
+            )
+          )
+        case _ => <.div("No eos")
+
+      }
+    }
     def render(p: Props) = {
+      log.debug("Render NVListComponent")
       val d2wContext = p.d2wContext
 
       val entityName = d2wContext.entityName.get
+      log.debug("Render NVListComponent for entity: " + entityName)
+
+
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
@@ -140,6 +187,8 @@ object NVListComponent {
               )
             )
           )
+        case _ => <.div("No eos")
+
       }
     }
   }
