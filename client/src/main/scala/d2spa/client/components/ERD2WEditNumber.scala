@@ -28,16 +28,17 @@ object ERD2WEditNumber {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
-          val propertyName = p.property.name
           val value = EOValueUtils.stringValueForKey(eo, propertyName)
           <.div(
             <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext.entityName.get, p.property,
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext,
                   EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))
               })
           )

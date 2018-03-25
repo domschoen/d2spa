@@ -37,12 +37,13 @@ object ERDList {
       //val destinationEntity = EOModelUtilsdes
       log.debug("ERDList mounted")
       val eomodel = p.proxy.value.eomodel.get
-      val entityName = p.property.entityName
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val propertyName = p.property.name
+      val ruleResultsModel = p.proxy.value.ruleResults
 
-      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
       log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
       log.debug("ERDList mounted: entity" + entity)
@@ -67,7 +68,7 @@ object ERDList {
       // TBD should we use D2WContext or full fledged ?
       val displayPKeysContext = D2WContext(
         Some(destinationEntity.name),
-        Some(d2spa.shared.TaskDefine.list) , None,  None, List(), None,
+        Some(d2spa.shared.TaskDefine.list) , None,  None, List(), None, None,
         Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
       log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
@@ -77,7 +78,7 @@ object ERDList {
       // hydrated destination EOs are simply stored in MegaContent eos
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
-          p.property,
+          d2wContext,
           List(
             fireListConfiguration, // standard FieRule
             fireListDisplayPropertyKeys, // standard FieRule
@@ -97,7 +98,7 @@ object ERDList {
               //   2) displayPropertyKeys (fireRule is used)
               // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
               Hydration(
-                  DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,p.property.name))))), // Hydration of objects at the end of relationship, stored in cache
+                  DrySubstrate(Some(EORefsDefinition(Some(EOsAtKeyPath(p.eo,propertyName))))), // Hydration of objects at the end of relationship, stored in cache
                   WateringScope(Some(
                     ruleFaultListDisplayPropertyKeys))), // populate with properties to be fired rule
               FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)),displayPKeysContext, RuleKeys.componentName)
@@ -107,12 +108,13 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
 
       eoOpt match {
         case Some(eo) =>
-          val propertyName = p.property.name
+          val propertyName = d2wContext.propertyKey.get
 
           val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
           val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0

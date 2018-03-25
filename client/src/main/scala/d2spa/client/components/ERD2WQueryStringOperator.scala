@@ -27,18 +27,18 @@ object ERD2WQueryStringOperator  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.proxy.value.previousPage.get
-
+      val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+
       val queryValues = d2wContext.queryValues
-      log.debug("ERD2WQueryStringOperator " + p.property)
-      val propertyKey = p.property.name
-      val queryValue = queryValues.find(r => {r.key.equals(propertyKey)})
+      log.debug("ERD2WQueryStringOperator " + propertyName)
+      val queryValue = queryValues.find(r => {r.key.equals(propertyName)})
       val value = if (queryValue.isDefined) queryValue.get.value else ""
       <.div(
         <.input(^.id := "description", ^.value := value,
           ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,
-            QueryValue(propertyKey,e.target.value,QueryOperator.Match)))} )
+            QueryValue(propertyName,e.target.value,QueryOperator.Match)))} )
       )
     }
   }

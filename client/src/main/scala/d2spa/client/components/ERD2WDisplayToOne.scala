@@ -55,14 +55,15 @@ object ERD2WDisplayToOne  {
   class Backend($ : BackendScope[Props, Unit]) {
     def mounted(p: Props) = {
       log.debug("ERD2WEditToOneRelationship mounted")
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
 
-      val propertyName = p.property.name
-      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+      val ruleResultsModel = p.proxy.value.ruleResults
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
 
-      val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
@@ -81,7 +82,7 @@ object ERD2WDisplayToOne  {
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
-          p.property,
+          d2wContext,
           List[D2WAction](
             keyWhenRelationshipFireRule,
             Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))

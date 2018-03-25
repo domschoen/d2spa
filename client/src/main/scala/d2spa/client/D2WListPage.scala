@@ -11,7 +11,7 @@ import org.scalajs.dom.ext.KeyCode
 import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
-import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
+import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField, NVListComponent}
 import d2spa.client.logger.log
 import d2spa.shared._
 import diode.data.Ready
@@ -22,58 +22,20 @@ object D2WListPage {
 
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(props: Props) = {
-      val entityName = props.d2wContext.entityName
-      log.debug("D2WListPage mounted for entity " + entityName)
-      val entityMetaDataNotFetched = props.proxy().entityMetaDatas.indexWhere(n => n.entity.name.equals(entityName)) < 0
-      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
-      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      Callback.when(entityMetaDataNotFetched)(props.proxy.dispatchCB(InitMetaDataForList(entityName.get)))
-    }
-
-
-
-
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
-      log.debug("Render List page for entity: " + entityName)
-      val menuModelPot = p.proxy.value.menuModel
-      menuModelPot match {
-        case Ready(menuModel) => {
-          val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(entityName)).get
-          val task = entityMetaData.listTask
-          val entity = entityMetaData.entity
-          //val eos = if (task.eos.isReady) task.eos.get else Vector()
-              <.div(
-                <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
-                <.div(^.id:="a",NVListComponent(p.router,p.d2wContext,p.proxy)
-
-                )
-              )
-            case _ =>
-              <.div(
-                <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
-                <.div(^.id:="a","No matching " + entityName + " records found."
-                )
-              )
-          }
-        }
-        case _ => {
-          <.div(
-            <.div(^.id:="b",MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
-            <.div(^.id:="a","No matching " + entityName + " records found."
-            )
-          )
-        }
-      }
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      <.div(
+        <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
+        <.div(^.id:="a",NVListComponent(p.router,p.d2wContext,p.proxy))
+      )
     }
   }
 
 
   private val component = ScalaComponent.builder[Props]("D2WListPage")
     .renderBackend[Backend]
-    //.componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
@@ -82,34 +44,3 @@ object D2WListPage {
   }
 }
 
-
-/*
-                listTask.eos match {
-                   case Ready(eos) => {
-                      eos.map(eo =>
-                        <.tr(displayPropertyKeys.map(
-                          property =>
-                            <.td(
-                              eo.values(property.key).value
-                            )
-                          )
-                        )
-                      )
-                   }
-                   case Empty => {
-                      <.tr(
-                        <.td(
-                          "It's empty"
-                        )
-                      )
-                   }
-                   case Pending(_) => {
-                      <.tr(
-                        <.td(
-                          "It's pending"
-                        )
-                      )
-                   }
-                }
-
- */

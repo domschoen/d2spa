@@ -509,11 +509,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(FireActions(property, actions))
       )
 
-    case SearchResult(entity, eoses) =>
+    case SearchResult(entityName, eoses) =>
       log.debug("length " + eoses.length)
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
-        Effect(AfterEffectRouter.setListPageForEntity(entity.name))
+        Effect(AfterEffectRouter.setListPageForEntity(entityName))
       )
     case DeleteEOFromList(fromTask, eo) =>
       /*val eos = value.get
@@ -554,13 +554,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(updatedOutOfDBCache(newValue))
 
 
-    case UpdateEOValueForProperty(eo, entityName, property, newEOValue) =>
-      log.debug("Update EO Property: for entity " + entityName + " property: " + property + " " + newEOValue)
+    case UpdateEOValueForProperty(eo, d2wContext, newEOValue) =>
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+
+      log.debug("Update EO Property: for entity " + entityName + " property: " + propertyName + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       log.debug("EO: " + eo)
-      val propertyName = property.name
       val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
 
       if (newEO.memID.isDefined) {
@@ -659,13 +661,12 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(Some(newD2wContext))
 
 
-    case Search(selectedEntity) =>
+    case Search(entityName) =>
       val queryValues = value match {
         case Some(d2wContext) =>
            d2wContext.queryValues
         case _ => List()  // shouldn't come here because the query page initialized it
       }
-      val entityName = selectedEntity.name
       log.debug("Search: for entity " + entityName + " with query values " + queryValues)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
@@ -675,7 +676,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].search(selectedEntity.name, queryValues).call().map(SearchResult(selectedEntity, _)))
+        Effect(AjaxClient[Api].search(entityName, queryValues).call().map(SearchResult(entityName, _)))
       )
 
   }

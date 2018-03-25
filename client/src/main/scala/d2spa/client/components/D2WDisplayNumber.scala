@@ -23,7 +23,9 @@ object D2WDisplayNumber {
 
     def render(p: Props) = {
       val eo = p.eo
-      val propertyName = p.property.name
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
       if (eo.values.contains(propertyName)) {
 
         val eoValue = eo.values(propertyName)

@@ -91,11 +91,11 @@ case class Save(entityName: String, eo: EO) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
-case class UpdateEOValueForProperty(eo: EO, entityName: String, property: PropertyMetaInfo, value: EOValue) extends Action
+case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOValue) extends Action
 
-case class Search(entity: EOEntity) extends Action
+case class Search(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult(entity: EOEntity, eos: Seq[EO]) extends Action
+case class SearchResult(entityName: String, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 

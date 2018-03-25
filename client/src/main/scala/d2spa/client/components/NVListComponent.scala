@@ -4,6 +4,7 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
+
 import scalacss.ScalaCssReact._
 import org.scalajs.dom.ext.KeyCode
 import diode.Action
@@ -11,7 +12,7 @@ import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
 import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
 import d2spa.client.logger.log
-import d2spa.client.{D2WContext, InitMetaDataForList, MegaContent, RuleUtils}
+import d2spa.client._
 import d2spa.shared._
 import diode.data.Ready
 
@@ -58,10 +59,11 @@ object NVListComponent {
       val d2wContext = p.d2wContext
 
       val entityName = d2wContext.entityName.get
+      val ruleResultsModel = p.proxy.value.ruleResults
 
-      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
+      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
       log.debug("list task displayPropertyKeys " + displayPropertyKeys)
-      val entityDisplayName = RuleUtils.ruleStringValueForContextAndKey(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+      val entityDisplayName = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
       val eosPot: Option[Map[Int, EO]] = if (p.proxy.value.cache.eos.contains(entityName)) Some(p.proxy.value.cache.eos(entityName)) else None
       eosPot match {
         case Some(eosByID) =>
@@ -93,16 +95,16 @@ object NVListComponent {
                       <.tbody(
                         <.tr(^.className := "listRepetitionColumnHeader",
                           <.td(), {
-                            displayPropertyKeys toTagMod (property =>
+                            displayPropertyKeys toTagMod (propertyKey =>
                               <.td(^.className := "listRepetitionColumnHeader", {
-                                val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
-                                val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property, d2wContext, RuleKeys.keyWhenRelationship)
+                                val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.keyWhenRelationship)
                                 val displayString = displayNameFound match {
                                   case Some(stringValue) => {
                                     //case Some(stringValue) => {
                                     stringValue
                                   }
-                                  case _ => property.name
+                                  case _ => propertyKey
                                 }
                                 <.span(^.className := "listRepetitionColumnHeader", displayString)
                               })
@@ -119,10 +121,10 @@ object NVListComponent {
                               <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
                             ),
                             displayPropertyKeys toTagMod (
-                              property => {
-                                val propertyD2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
+                              propertyKey => {
+                                val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
                                 <.td(^.className := "list1",
-                                  D2WComponentInstaller(p.router, propertyD2wContext, property, eo, p.proxy)
+                                  D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                                 )
 
                               }

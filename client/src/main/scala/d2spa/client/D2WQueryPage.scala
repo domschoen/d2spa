@@ -45,88 +45,97 @@ object D2WQueryPage {
 
 
 
-    def mounted(props: Props) = {
-      val entityName = props.d2wContext.entityName.get
+    def mounted(p: Props) = {
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
       log.debug("D2WQueryPage " + entityName)
 
-      val entityMetaData = props.proxy().entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
-      log.debug("entityMetaDataNotFetched " + entityMetaData)
-      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-
-      Callback.when(entityMetaData.isEmpty)(props.proxy.dispatchCB(InitMetaData(entityName)))
+      val ruleResults = p.proxy.value.ruleResults
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName)))
     }
 
 
 
-    def search(router: RouterCtl[TaskAppPage],entity: EOEntity) = {
-      Callback.log(s"Search: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entity)))
+    def search(router: RouterCtl[TaskAppPage],entityName: String) = {
+      Callback.log(s"Search: $entityName") >>
+        $.props >>= (_.proxy.dispatchCB(Search(entityName)))
     }
 
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
       log.debug("Render Query page for entity: " + entityName)
-      val entityMetaData = p.proxy.value.entityMetaDatas.find(emd => emd.entity.name.equals(entityName))
-      entityMetaData match {
-        case Some(entityMetaData) =>
+      val ruleResultsModel = p.proxy.value.ruleResults
 
-        val task = entityMetaData.queryTask
-        val displayPropertyKeys = task.displayPropertyKeys
-        <.div(
-          <.div(^.id:="b",MenuHeader(p.router, entityName, p.proxy)),
-          <.div(^.id:="a",
-            <.div(^.className := "banner d2wPage",
-              <.span(<.img(^.src := "/assets/images/SearchBan.gif"))
-            ),
-            <.div(^.className :="liner d2wPage",<.img(^.src := "/assets/images/Line.gif")),
-            <.div(^.className :="buttonsbar d2wPage",
-              <.span(^.className :="buttonsbar attribute beforeFirstButton",entityMetaData.displayName),
-              <.span(^.className :="buttonsbar",
-                <.img(^.src := "/assets/images/ButtonSearch.gif",^.onClick --> search(p.router,entityMetaData.entity))
-                //p.router.link(ListPage(p.entity))("Search")
-              )
-            ),
-            <.div(^.className :="repetition d2wPage",
-              <.table(^.className :="query",
-                <.tbody(
-                  <.tr(^.className :="attribute customer",
-                    <.td(
-                      <.table(
-                        <.tbody(
-                          displayPropertyKeys toTagMod (property => {
-                            val d2wContext = p.d2wContext.copy(propertyKey = Some(property.name))
-                            <.tr(^.className :="attribute",
-                              <.th(^.className :="propertyName query",{
-                                val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(property,d2wContext, RuleKeys.displayNameForProperty)
-                                displayNameFound match {
-                                  case Some(stringValue) => stringValue
-                                  //case Some(stringValue) => stringValue
-                                  case _ => ""
-                                }
-                              }
-                              ),
-                              // Component part
-                              <.td(^.className := "query d2wAttributeValueCell",
-                                D2WComponentInstaller(p.router, d2wContext, property, null, p.proxy)
+      val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)
+
+      ruleContainerOpt match {
+        case Some(ruleContainer) => {
+
+          val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+          val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+
+          entityDisplayNameOpt match {
+            case Some(entityDisplayName) =>
+              <.div(
+                <.div(^.id := "b", MenuHeader(p.router, entityName, p.proxy)),
+                <.div(^.id := "a",
+                  <.div(^.className := "banner d2wPage",
+                    <.span(<.img(^.src := "/assets/images/SearchBan.gif"))
+                  ),
+                  <.div(^.className := "liner d2wPage", <.img(^.src := "/assets/images/Line.gif")),
+                  <.div(^.className := "buttonsbar d2wPage",
+                    <.span(^.className := "buttonsbar attribute beforeFirstButton", entityDisplayName),
+                    <.span(^.className := "buttonsbar",
+                      <.img(^.src := "/assets/images/ButtonSearch.gif", ^.onClick --> search(p.router, entityName))
+                      //p.router.link(ListPage(p.entity))("Search")
+                    )
+                  ),
+                  <.div(^.className := "repetition d2wPage",
+                    <.table(^.className := "query",
+                      <.tbody(
+                        <.tr(^.className := "attribute customer",
+                          <.td(
+                            <.table(
+                              <.tbody(
+                                displayPropertyKeys toTagMod (
+                                  propertyKey =>
+                                  {
+                                    val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                    <.tr(^.className := "attribute",
+                                      <.th(^.className := "propertyName query",
+                                        {
+                                          val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
+                                          displayNameFound match {
+                                            case Some(stringValue) => stringValue
+                                            case _ => ""
+                                          }
+                                        }
+                                      ),
+                                      // Component part
+                                      <.td(^.className := "query d2wAttributeValueCell",
+                                        D2WComponentInstaller(p.router, propertyD2WContext, null, p.proxy)
+                                      )
+                                    )
+                                  }
+                                )
                               )
-
-
-                            )    }
                             )
+                          )
                         )
                       )
                     )
                   )
                 )
               )
-            )
-          )
-        )
+            case _ => <.div("no entity display name")
+          }
+        }
         case _ =>
           <.div("no meta datas")
       }
-
     }
   }
 

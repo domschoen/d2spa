@@ -119,7 +119,7 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship render")
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
-      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+      val entity = EOModelUtils.entityNamed(eomodel, entityName).get
 
       val d2wContext = p.d2wContext
       val taskName = d2wContext.task.get
@@ -135,23 +135,22 @@ object ERD2WEditToOneRelationship   {
           log.debug("task  " + taskName)
 
           //log.debug("Edit To One Relationship " + eo)
-          val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)
+          val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
           ruleResultsOpt match {
             case Some(ruleResults) => {
               log.debug("ERD2WEditToOneRelationship render propertyMetaInfo rule result" + ruleResults)
 
 
-              val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(propertyMetaInfo,properyD2WContext, RuleKeys.keyWhenRelationship)
+              val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
               keyWhenRelationshipRuleOpt match {
                 case Some(keyWhenRelationship) => {
-                  //case Some(keyWhenRelationship) => {
                   val destinationEntity = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
                   val eoCache = p.proxy.value.cache.eos
 
                   log.debug("Look into the cache for objects for entity named " + destinationEntity.name)
                   log.debug("eoCache " + eoCache)
-                  val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache,destinationEntity.name)
+                  val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
 
                   <.div(
                     //{
@@ -163,9 +162,9 @@ object ERD2WEditToOneRelationship   {
                     destinationEOs match {
                       case Some(eos) => {
                         log.debug("eoRefs " + eos)
-                        val destinationEO = EOValueUtils.valueForKey(eo,propertyName)
+                        val destinationEO = EOValueUtils.valueForKey(eo, propertyName)
                         val defaultValue = destinationEO match {
-                          case Some(EOValue(_,_,_,eoV,_)) => eoV match {
+                          case Some(EOValue(_, _, _, eoV, _)) => eoV match {
                             case Some(eo) => EOValueUtils.pk(eo).get.toString
                             case _ => "None"
                           }
@@ -173,47 +172,40 @@ object ERD2WEditToOneRelationship   {
                         }
                         <.div(
                           <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, entityName, p.property, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
-                          },
-                            {
-                              val tupleOpts = eos map (x => {
+                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
+                          }),
+                          {
+                            val tupleOpts = eos map (x => {
 
-                                val id = EOValueUtils.pk(x)
-                                log.debug("id " + id + " for eo: " + x)
-                                if (id.isDefined) {
-                                  val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
-                                  Some((id.get.toString,displayName))
-                                } else None
-                              })
-                              // remove None
-                              val tupleValids = tupleOpts.flatten.toList
-                              val tuplesWithNone = ("None", "- none -") :: tupleValids
-                              log.debug("valid tuples " + tupleValids)
-                              tuplesWithNone toTagMod (eo => {
-                                <.option(^.value := eo._1, eo._2)
-                              })
-                            }
-                          )
+                              val id = EOValueUtils.pk(x)
+                              log.debug("id " + id + " for eo: " + x)
+                              if (id.isDefined) {
+                                val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
+                                Some((id.get.toString, displayName))
+                              } else None
+                            })
+                            // remove None
+                            val tupleValids = tupleOpts.flatten.toList
+                            val tuplesWithNone = ("None", "- none -") :: tupleValids
+                            log.debug("valid tuples " + tupleValids)
+                            tuplesWithNone toTagMod (eo => {
+                              <.option(^.value := eo._1, eo._2)
+                            })
+                          }
                         )
                       }
                       case _ => {
-                        <.div("No " + destinationEntity.name + " available !")
+                        <.div("keyWhenRelationshipRule is None")
                       }
                     }
-
                   )
                 }
-                case _ => {
-                  <.div("keyWhenRelationshipRule is None")
-                }
               }
-              case None => <.div("")
             }
-
-          }
             case _ => <.div("No rule results")
-
           }
+        case _ => <.div("No eo")
+      }
     }
   }
 

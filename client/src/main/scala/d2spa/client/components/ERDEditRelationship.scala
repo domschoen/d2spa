@@ -24,10 +24,12 @@ object ERDEditRelationship  {
     def mounted(p: Props) = {
       val propertyName = p.property.name
       val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship)
+      val ruleResultsModel = p.proxy.value.ruleResults
+
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
-        FireActions(p.property,
+        FireActions(d2wContext,
           List(
             FireRule(d2wContext, RuleKeys.keyWhenRelationship),
             FireRule(d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
@@ -37,12 +39,13 @@ object ERDEditRelationship  {
     }
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
-      val propertyName = p.property.name
-      val d2wContext = p.d2wContext.copy(propertyKey = Some(propertyName))
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+      val ruleResultsModel = p.proxy.value.ruleResults
 
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.displayNameForKeyWhenRelationship).get
-      val keyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(p.property, d2wContext, RuleKeys.keyWhenRelationship).get
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForKeyWhenRelationship).get
+      val keyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship).get
 
       val queryKey = p.property.name + "." + keyWhenRelationship
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "

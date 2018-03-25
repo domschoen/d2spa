@@ -31,38 +31,41 @@ object ERD2WQueryToOneField  {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
-    def d2wContext(props: Props) = props.d2wContext.copy(propertyKey = Some(props.property.name))
 
     def mounted(p: Props) = {
-      val currentD2wContext = d2wContext(p)
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(p.property, currentD2wContext, RuleKeys.keyWhenRelationship)
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+      val ruleResultsModel = p.proxy.value.ruleResults
+
+      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
-          p.property,
+          d2wContext,
           List(
-            FireRule(currentD2wContext, RuleKeys.keyWhenRelationship),
-            FireRule(currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+            FireRule(d2wContext, RuleKeys.keyWhenRelationship),
+            FireRule(d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
           )
         )
       ))
     }
 
     def render(p: Props) = {
-      val entityName = p.d2wContext.entityName.get
-      //val eomodel = p.proxy.value.eomodel.get
-      //val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      val currentD2wContext = d2wContext(p)
-      val property = p.property
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(property, currentD2wContext, RuleKeys.displayNameForKeyWhenRelationship)
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
+      val ruleResultsModel = p.proxy.value.ruleResults
+
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
       val whereDisplayText = displayNameForKeyWhenRelationship match {
         case Some(text) => text
         case _ => ""
       }
 
-      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(property,currentD2wContext,RuleKeys.keyWhenRelationship)
+      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext,RuleKeys.keyWhenRelationship)
       keyWhenRelationshipOpt match {
         case Some(keyWhenRelationship) => {
-          val queryKey = property.name + "." + keyWhenRelationship
+          val queryKey = propertyName + "." + keyWhenRelationship
           val pretext = "where " + whereDisplayText + " is "
           val queryValues = p.d2wContext.queryValues
           val queryValue = queryValues.find(r => {r.key.equals(queryKey)})
