@@ -51,7 +51,7 @@ object D2WQueryPage {
       log.debug("D2WQueryPage " + entityName)
 
       val ruleResults = p.proxy.value.ruleResults
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+      val dataNotFetched = !RuleUtils.metaDataFetched(ruleResults, d2wContext)
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName)))
     }
 
@@ -73,9 +73,11 @@ object D2WQueryPage {
 
       ruleContainerOpt match {
         case Some(ruleContainer) => {
+          log.debug("Render Query ruleContainer: " + ruleContainer)
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+          log.debug("Render Query displayPropertyKeys: " + displayPropertyKeys)
 
           entityDisplayNameOpt match {
             case Some(entityDisplayName) =>

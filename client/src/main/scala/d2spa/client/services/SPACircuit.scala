@@ -134,6 +134,9 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
     val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
     var updatedRuleResults = RuleUtils.registerRuleResult(value, RuleResult(fullFledged,RuleKeys.displayNameForEntity,RuleValue(stringV = Some(entityMetaData.displayName))))
+    val displayPropertyKeys = entityMetaData.displayPropertyKeys map (p => p.name)
+    updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, RuleResult(fullFledged,RuleKeys.displayPropertyKeys,RuleValue(stringsV = displayPropertyKeys)))
+
     for (prop <- entityMetaData.displayPropertyKeys) {
       val propertyD2WContext = fullFledged.copy(propertyKey = Some(prop.name))
       updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults,RuleResult(propertyD2WContext,RuleKeys.propertyType,RuleValue(stringV = Some(prop.typeV))))

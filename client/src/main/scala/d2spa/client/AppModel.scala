@@ -234,13 +234,14 @@ object RuleUtils {
               existingPageConfigurationRuleResults.copy(properties = newProperties)
             }
             case _ => {
-              existingPageConfigurationRuleResults.copy(ruleResults = List(ruleResult))
+              existingPageConfigurationRuleResults.copy(ruleResults = ruleResult :: existingPageConfigurationRuleResults.ruleResults)
             }
           }
         } else {
           pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
         }
-        existingPageConfigurationSubTree + (pageConfiguration -> pageConfigurationRuleResults)
+        val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
+        existingPageConfigurationSubTree + (pageConfiguration -> flaggedPageConfigurationRuleResults)
       } else {
         Map(pageConfiguration -> pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult))
       }
