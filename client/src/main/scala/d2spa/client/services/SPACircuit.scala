@@ -96,6 +96,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
       )
 
     case NewEOWithEntityNameForEdit(selectedEntityName) =>
+      log.debug("NewEOWithEntityNameForEdit " + selectedEntityName)
       effectOnly(
         Effect.action(NewEOWithEOModelForEdit(value.get, selectedEntityName)) // from edit ?
       )
@@ -133,6 +134,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
     // convert data from entityMetaData to ruleResults
     val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
+    log.debug("Register displayNameForEntity " + entityMetaData.displayName + " for task " + d2wContext.task)
     var updatedRuleResults = RuleUtils.registerRuleResult(value, RuleResult(fullFledged,RuleKeys.displayNameForEntity,RuleValue(stringV = Some(entityMetaData.displayName))))
     val displayPropertyKeys = entityMetaData.displayPropertyKeys map (p => p.name)
     updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, RuleResult(fullFledged,RuleKeys.displayPropertyKeys,RuleValue(stringsV = displayPropertyKeys)))
@@ -581,10 +583,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
+      val newD2WContext = d2wContext.copy(eo = Some(D2WContextEO(memID = newEO.memID)))
       updated(updatedMemCache(newValue),
-              Effect.action(NewEOCreated(newEO,d2wContext,actions)))
+              Effect.action(FireActions(newD2WContext,actions)))
 
     case NewEOWithEOModelForEdit(eomodel, entityName) =>
+      log.debug("NewEOWithEOModelForEdit " + entityName)
       val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
 
       log.debug("newValue " + newValue)

@@ -243,11 +243,16 @@ object RuleUtils {
         val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
         existingPageConfigurationSubTree + (pageConfiguration -> flaggedPageConfigurationRuleResults)
       } else {
-        Map(pageConfiguration -> pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult))
+        val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
+        val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
+        Map(pageConfiguration -> flaggedPageConfigurationRuleResults)
       }
       existingTaskSubTree + (task -> pageConfigurationSubTree)
     } else {
-      Map(task -> Map(pageConfiguration -> pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)))
+      val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
+      val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
+
+      Map(task -> Map(pageConfiguration -> flaggedPageConfigurationRuleResults))
     }
     ruleResults + (entityName -> taskSubTree)
   }

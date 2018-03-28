@@ -45,7 +45,6 @@ object D2WEditPage {
     }
 
 
-
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
       val d2wContext = p.d2wContext
@@ -56,11 +55,11 @@ object D2WEditPage {
 
       val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,d2wContext)
 
-      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      log.debug("D2WEditPage: willMount entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
 
-      log.debug("D2WEditPage: eo " + p.d2wContext.eo)
+      log.debug("D2WEditPage: willMount eo " + p.d2wContext.eo)
 
       val actionList = p.d2wContext.eo match {
         case Some(D2WContextEO(Some(pkIntValue),_)) =>
@@ -71,6 +70,10 @@ object D2WEditPage {
             // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
             Hydration(DrySubstrate(eo = Some(eoFault)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
           )
+        case Some(D2WContextEO(_, Some(memID))) =>
+          List(
+            fireDisplayPropertyKeys
+          )
         case None =>
           List(
             fireDisplayPropertyKeys,
@@ -80,15 +83,17 @@ object D2WEditPage {
           )
       }
       val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(p.d2wContext) :: actionList else actionList
-      //val ruleContainer = if (entityMetaDataNotFetched) TaskFault(entityName, taskName) else getTask(p,entityName,taskName)
+      log.debug("D2WEditPage: willMount actionList " + actionList2)
+      val callIt = !actionList2.isEmpty
 
-      Callback.when(true)(p.proxy.dispatchCB(
-          FireActions(
-            d2wContext,
-            actionList2
-          )
+      Callback.when(callIt)(p.proxy.dispatchCB(
+        FireActions(
+          d2wContext,
+          actionList2
+        )
       ))
     }
+
 
     def save(router: RouterCtl[TaskAppPage],entityName: String,eo: EO) = {
       val isNewEO = EOValueUtils.isNew(eo)
@@ -122,92 +127,89 @@ object D2WEditPage {
 
 
     def render(p: Props) = {
-      val d2wContextOpt = p.proxy.value.previousPage
-      log.debug("D2WEditPage: render eo ref: " + d2wContextOpt)
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      log.debug("D2WEditPage: render eo for entity Name: " + d2wContext)
 
-      d2wContextOpt match {
-        case Some(d2wContext) =>
-          val fullFledgedD2WContext = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-          val eoRefOpt = d2wContext.eo
-          eoRefOpt match {
-            case Some(eoRef) =>
-              val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, d2wContext.entityName.get, eoRef)
-              log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
+      val eoRefOpt = d2wContext.eo
+      eoRefOpt match {
+        case Some(eoRef) =>
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, d2wContext.entityName.get, eoRef)
+          log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
 
-              eoOpt match {
-                case Some(eo) =>
-                  val entityName = p.d2wContext.entityName.get
-                  val ruleResults = p.proxy.value.ruleResults
+          eoOpt match {
+            case Some(eo) =>
+              val entityName = p.d2wContext.entityName.get
+              val ruleResults = p.proxy.value.ruleResults
 
-                  log.debug("Render Edit page for entity: " + entityName + " and task " + p.d2wContext.task)
-                  val metaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
+              log.debug("D2WEditPage: render check meta data fetched with d2wContext " + d2wContext)
+              log.debug("D2WEditPage: render check meta data fetched in rules " + ruleResults)
+              val metaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
 
-                  if (metaDataPresent) {
-                    log.debug("entityMetaDatas not empty")
+              if (metaDataPresent) {
+                log.debug("entityMetaDatas not empty")
 
-                    //log.debug("Entity meta Data " + metaDatas)
-                    val displayPropertyKeys = displayPropertyKeysFromProps(p, d2wContext)
-                    val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
-                    val displayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
-                    val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
+                //log.debug("Entity meta Data " + metaDatas)
+                val displayPropertyKeys = displayPropertyKeysFromProps(p, d2wContext)
+                val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
+                val displayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+                val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
 
-                    log.debug("Edit page EO " + eo)
-                    <.div(
-                      <.div(^.id := "b", MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
-                      <.div(^.id := "a",
-                        {
-                          if (eo.validationError.isDefined) {
-                            <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := eo.validationError.get))
-                          } else <.div()
+                log.debug("Edit page EO " + eo)
+                <.div(
+                  <.div(^.id := "b", MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
+                  <.div(^.id := "a",
+                    {
+                      if (eo.validationError.isDefined) {
+                        <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := eo.validationError.get))
+                      } else <.div()
+                    },
+                    <.div(^.className := "banner d2wPage",
+                      <.span(<.img(^.src := banImage))
+                    ),
+                    <.div(^.className := "liner d2wPage", <.img(^.src := "/assets/images/Line.gif")),
+                    <.div(^.className := "buttonsbar d2wPage",
+                      <.span(^.className := "buttonsbar attribute beforeFirstButton", displayName),
+                      <.span(^.className := "buttonsbar",
+                        if (isEdit(p)) {
+                          <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eo))
+                        } else {
+                          " "
                         },
-                        <.div(^.className := "banner d2wPage",
-                          <.span(<.img(^.src := banImage))
-                        ),
-                        <.div(^.className := "liner d2wPage", <.img(^.src := "/assets/images/Line.gif")),
-                        <.div(^.className := "buttonsbar d2wPage",
-                          <.span(^.className := "buttonsbar attribute beforeFirstButton", displayName),
-                          <.span(^.className := "buttonsbar",
-                            if (isEdit(p)) {
-                              <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eo))
-                            } else {
-                              " "
-                            },
-                            if (isEdit(p)) {
-                              " "
-                            } else {
-                              <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))
-                            }
-                          )
-                        ),
-                        <.div(^.className := "repetition d2wPage",
-                          <.table(^.className := "query",
-                            <.tbody(
-                              <.tr(^.className := "attribute customer",
-                                <.td(
-                                  <.table(
-                                    <.tbody(
-                                      displayPropertyKeys toTagMod (property => {
-                                        val propertyD2WContext = d2wContext.copy(propertyKey = Some(property))
-                                        <.tr(^.className := "attribute",
-                                          <.th(^.className := "propertyName query", {
-                                            val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResults, propertyD2WContext, RuleKeys.displayNameForProperty)
-                                            val displayString = displayNameFound match {
-                                              case Some(stringValule) => {
-                                                //case Some(stringValule) => {
-                                                stringValule
-                                              }
-                                              case _ => property
-                                            }
-                                            <.span(displayString)
-                                          }),
-                                          <.td(^.className := "query d2wAttributeValueCell",
-                                            D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
-                                          )
-                                        )
-                                      }
-                                        )
+                        if (isEdit(p)) {
+                          " "
+                        } else {
+                          <.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))
+                        }
+                      )
+                    ),
+                    <.div(^.className := "repetition d2wPage",
+                      <.table(^.className := "query",
+                        <.tbody(
+                          <.tr(^.className := "attribute customer",
+                            <.td(
+                              <.table(
+                                <.tbody(
+                                  displayPropertyKeys toTagMod (property => {
+                                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(property))
+                                    <.tr(^.className := "attribute",
+                                      <.th(^.className := "propertyName query", {
+                                        val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResults, propertyD2WContext, RuleKeys.displayNameForProperty)
+                                        val displayString = displayNameFound match {
+                                          case Some(stringValule) => {
+                                            //case Some(stringValule) => {
+                                            stringValule
+                                          }
+                                          case _ => property
+                                        }
+                                        <.span(displayString)
+                                      }),
+                                      <.td(^.className := "query d2wAttributeValueCell",
+                                        D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                                      )
                                     )
-                                  )
+                                  }
+                                    )
                                 )
                               )
                             )
@@ -215,18 +217,16 @@ object D2WEditPage {
                         )
                       )
                     )
-                  } else {
-                    <.div("no meta datas")
-                  }
-                case None => <.div("Object not found in cache")
+                  )
+                )
+              } else {
+                <.div("no meta datas " + d2wContext)
               }
-            case _ => <.div("Object Ref not found")
+            case None => <.div("Object not found in cache")
           }
-        case _ => <.div("No D2W Context")
+        case _ => <.div("Object Ref not found")
 
       }
-
-
     }
   }
 
