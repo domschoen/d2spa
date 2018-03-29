@@ -60,7 +60,8 @@ This is the standard Play Framework logging system.
 
 To turn on the log, no need to recompile, you just need to replace the content of file  d2spa/server/src/main/resources/logback.xml by the content of logback.xml.dev (same path)
 
-
+To make it active:
+  - restart the application
 
 ## Difficulties
 ### No location with Dynamic route

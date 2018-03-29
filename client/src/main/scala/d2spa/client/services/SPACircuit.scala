@@ -261,6 +261,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
           val ruleResultOpt = RuleUtils.fireRuleFault(value, wateringScope.fireRule.get)
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
+          log.debug("Hydration drySubstrate " + drySubstrate)
 
           ruleResultOpt match {
             case Some(RuleResult(rhs,key,value)) => {
@@ -274,6 +275,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                   value.stringsV.toSet
                   //Set(value)
               }
+              log.debug("Hydration missingKeys " + missingKeys)
+
               drySubstrate match {
                 case DrySubstrate(_ , Some(eoFault), _) =>
                   // completeEO ends up with a MegaContent eo update
@@ -292,6 +295,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                     case _ => effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
+                  log.debug("Hydration with fs " + fs)
+
                   effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
 
                 case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
@@ -506,12 +511,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(FireActions(property,actions))
       )
 
-    case FetchedObjectsForEntity(eoses, property, actions) =>
-      log.debug("FetchedObjectsForEntity property " + property)
+    case FetchedObjectsForEntity(eoses, d2wContext, actions) =>
+      log.debug("FetchedObjectsForEntity d2wContext " + d2wContext)
+      log.debug("FetchedObjectsForEntity eoses " + eoses)
 
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
-        Effect.action(FireActions(property, actions))
+        Effect.action(FireActions(d2wContext, actions))
       )
 
     case SearchResult(entityName, eoses) =>

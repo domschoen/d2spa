@@ -40,21 +40,21 @@ object ERD2WEditToOneRelationship   {
       val ruleResults = p.proxy.value.ruleResults
       val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
 
-      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
+      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched " + dataNotFetched)
 
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
+      log.debug("ERD2WEditToOneRelationship mounted: entity " + entity)
+      log.debug("ERD2WEditToOneRelationship mounted: propertyName " + propertyName)
 
-      log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
+      log.debug("ERD2WEditToOneRelationship mounted: eomodel " + eomodel)
       val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity " + destinationEntity)
 
 
       val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
-      val fireDisplayPropertyKeys = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.displayPropertyKeys)
+      //val fireDisplayPropertyKeys = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.displayPropertyKeys)
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
 
       Callback.when(dataNotFetched)(p.proxy.dispatchCB(
@@ -120,10 +120,12 @@ object ERD2WEditToOneRelationship   {
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+      log.debug("ERD2WEditToOneRelationship render entity " + entity)
 
       val d2wContext = p.d2wContext
       val taskName = d2wContext.task.get
       val ruleResultsModel = p.proxy.value.ruleResults
+      log.debug("ERD2WEditToOneRelationship render ruleResultsModel " + ruleResultsModel)
 
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, d2wContext.eo.get)
       eoOpt match {
@@ -173,7 +175,7 @@ object ERD2WEditToOneRelationship   {
                         <.div(
                           <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
                             p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
-                          }),
+                          },
                           {
                             val tupleOpts = eos map (x => {
 
@@ -193,13 +195,15 @@ object ERD2WEditToOneRelationship   {
                             })
                           }
                         )
+                        )
                       }
                       case _ => {
-                        <.div("keyWhenRelationshipRule is None")
+                        <.div("No destination objects")
                       }
                     }
                   )
                 }
+                case _ => <.div("keyWhenRelationshipRule is None")
               }
             }
             case _ => <.div("No rule results")

@@ -28,7 +28,7 @@ object D2WListPage {
       val entityName = d2wContext.entityName.get
       <.div(
         <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
-        <.div(^.id:="a",NVListComponent(p.router,p.d2wContext,p.proxy))
+        <.div(^.id:="a",NVListComponent(p.router,p.d2wContext,false,p.proxy))
         //<.div(^.id:="a","simply")
       )
     }

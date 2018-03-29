@@ -115,11 +115,18 @@ object ERDList {
       eoOpt match {
         case Some(eo) =>
           val propertyName = d2wContext.propertyKey.get
+          val eomodel = p.proxy.value.eomodel.get
+          val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+          val destinationEntityName = destinationEntity.name
 
           val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
           val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
           //val size = 1
-          <.div(size + "Projects " + propertyName)
+          val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list))
+          <.div(NVListComponent(p.router,embeddedListD2WContext,true, p.proxy))
+
+          //<.div(size + " " + destinationEntityName + " " + propertyName)
         case None => <.div("")
       }
     }
