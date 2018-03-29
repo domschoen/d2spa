@@ -177,7 +177,7 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 case class EOFault(entityName : String, pk: Int)
-case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
+//case class FetchSpecification(entityName: String, qualifier: Option[String] = None)
 
 //case class PreviousTask(task: String, pk: Option[Int])
 

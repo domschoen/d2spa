@@ -127,7 +127,7 @@ object ERD2WEditToOneRelationship   {
       val ruleResultsModel = p.proxy.value.ruleResults
       log.debug("ERD2WEditToOneRelationship render ruleResultsModel " + ruleResultsModel)
 
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
           val propertyName = d2wContext.propertyKey.get

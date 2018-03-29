@@ -110,7 +110,7 @@ object ERDList {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, p.d2wContext.eo.get)
 
       eoOpt match {
         case Some(eo) =>
@@ -123,7 +123,7 @@ object ERDList {
           val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
           val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
           //val size = 1
-          val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list))
+          val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo,propertyName)))))
           <.div(NVListComponent(p.router,embeddedListD2WContext,true, p.proxy))
 
           //<.div(size + " " + destinationEntityName + " " + propertyName)

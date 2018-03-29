@@ -134,7 +134,7 @@ object D2WEditPage {
       val eoRefOpt = d2wContext.eo
       eoRefOpt match {
         case Some(eoRef) =>
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, d2wContext.entityName.get, eoRef)
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, d2wContext.entityName.get, eoRef)
           log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
 
           eoOpt match {

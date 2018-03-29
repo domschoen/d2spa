@@ -131,7 +131,7 @@ case class D2WContext(entityName: Option[String],
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
-case class DataRep (fs: Option[EOFetchSpecification])
+case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 case class EOFetchSpecification (entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering])
 case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier],
                        orQualifier: List[EOQualifier],
@@ -162,7 +162,7 @@ object EOQualifierType {
 
 case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
-case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[FetchSpecification] = None)
+case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
 case class WateringScope(fireRule: Option[RuleFault] = None)
 case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
 case class EOsAtKeyPath(eo: EO, keyPath: String)
@@ -407,7 +407,12 @@ object EOCacheUtils {
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def outOfCacheEOUsingPkFromEO(cache: MegaContent, entityName: String, eo: D2WContextEO): Option[EO] = {
+  def outOfCacheEOsUsingPkFromEOs(cache: MegaContent, entityName: String, eos: List[EO]): List[EO] = {
+    // TODO Implementation
+    List()
+  }
+
+  def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: D2WContextEO): Option[EO] = {
     eo.memID match {
       case Some(memID) =>
         val memCache = cache.cache.insertedEOs

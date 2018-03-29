@@ -36,7 +36,7 @@ object ERD2WEditString  {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value, entityName, p.d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, p.d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
           val value = EOValueUtils.stringValueForKey(eo,propertyName)
