@@ -20,7 +20,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, pk: Option[Int], proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -61,26 +61,37 @@ object D2WEditPage {
 
       log.debug("D2WEditPage: willMount eo " + p.d2wContext.eo)
 
-      val actionList = p.d2wContext.eo match {
-        case Some(D2WContextEO(Some(pkIntValue),_)) =>
-          val eoFault = EOFault(entityName,pkIntValue)
-          List(
-            fireDisplayPropertyKeys,
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(eoFault)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-          )
-        case Some(D2WContextEO(_, Some(memID))) =>
-          List(
-            fireDisplayPropertyKeys
-          )
-        case None =>
-          List(
-            fireDisplayPropertyKeys,
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            CreateMemID(entityName)
-          )
+      lazy val noneFireActions = List(
+        fireDisplayPropertyKeys,
+        // in order to have an EO completed with all attributes for the task,
+        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+        CreateMemID(entityName)
+      )
+
+      val eoOpt = p.d2wContext.eo
+      val actionList = eoOpt match {
+        case Some(eo) =>
+          eo.memID match {
+            case Some(memID) =>
+              List(
+                fireDisplayPropertyKeys
+              )
+            case _ =>
+              val pkOpt = EOValueUtils.pk(eo)
+              pkOpt match {
+                case Some(pk) =>
+                  val eoFault = EOFault(entityName,pk)
+                  List(
+                    fireDisplayPropertyKeys,
+                    // in order to have an EO completed with all attributes for the task,
+                    // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                    Hydration(DrySubstrate(eo = Some(eoFault)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+                  )
+                case _ => noneFireActions
+
+              }
+          }
+        case None => noneFireActions
       }
       val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(p.d2wContext) :: actionList else actionList
       log.debug("D2WEditPage: willMount actionList " + actionList2)
@@ -236,8 +247,8 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, pk: Option[Int], proxy: ModelProxy[MegaContent]) = {
     log.debug("ctl " + ctl.hashCode())
-    component(Props(ctl, d2wContext, proxy))
+    component(Props(ctl, d2wContext, pk, proxy))
   }
 }

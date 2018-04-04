@@ -117,6 +117,33 @@ case class FetchMetaData(d2wContext: D2WContext) extends D2WAction
 
 case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
+
+object QueryOperator {
+  val Match = "Match"
+  val Min = "Min"
+  val Max = "Max"
+}
+
+
+// A container for value should be used. It would give a way to have not only String
+case class QueryValue(key: String,value: String, operator: String)
+
+object QueryValue {
+  val operatorByQueryOperator = Map(
+    NSSelector.QualifierOperatorLessThanOrEqualTo -> QueryOperator.Max,
+    NSSelector.QualifierOperatorGreaterThanOrEqualTo -> QueryOperator.Min,
+    NSSelector.QualifierOperatorEqual -> QueryOperator.Match
+  )
+
+  def qualifierFromQueryValues(queryValues: List[QueryValue]) : Option[EOQualifier] = {
+    val qualifiers = queryValues.map(qv => {
+      EOQualifier(eoqualifierType = EOQualifier.EOKeyValueQualifier, keyValueQualifier = Some(EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),EOValue(stringV = Some(qv.value)))))
+    })
+    if (qualifiers.isEmpty) None else Some(EOQualifier(eoqualifierType = EOQualifier.EOAndQualifier, andQualifiers = qualifiers))
+  }
+}
+
+
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
 // The D2WContext will contains also the queryValues
@@ -125,27 +152,20 @@ case class D2WContext(entityName: Option[String],
                       task: Option[String],
                       previousTask: Option[D2WContext] = None,
                       //pageCounter: Int = 0,
-                      eo: Option[D2WContextEO] = None,
+                      eo: Option[EO] = None,
                       queryValues: List[QueryValue] = List(),
                       dataRep: Option[DataRep] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
 
 case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
-case class EOFetchSpecification (entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering])
-case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier],
-                       orQualifier: List[EOQualifier],
-                       keyValueQualifier: Option[EOKeyValueQualifier],
-                       notQualifier: EOQualifier
-                      )
-case class EOKeyValueQualifier(key: String, selector : String, value: Any)
-case class EOSortOrdering(key: String, selector: String)
 
 object NSSelector {
   val QualifierOperatorEqual = "QualifierOperatorEqual"
   val QualifierOperatorNotEqual = "QualifierOperatorNotEqual"
   val QualifierOperatorLessThan = "QualifierOperatorLessThan"
   val QualifierOperatorGreaterThan = "QualifierOperatorGreaterThan"
+  val QualifierOperatorGreaterThanOrEqualTo = "QualifierOperatorGreaterThanOrEqualTo"
   val QualifierOperatorLessThanOrEqualTo = "QualifierOperatorLessThanOrEqualTo"
   val QualifierOperatorContains = "QualifierOperatorContains"
   val QualifierOperatorLike = "QualifierOperatorLike"
@@ -162,9 +182,9 @@ object EOQualifierType {
 
 case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
 case class RuleFault(rhs: D2WContextFullFledged, key: String)
-case class DrySubstrate(eorefs: Option[EORefsDefinition] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
+case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
 case class WateringScope(fireRule: Option[RuleFault] = None)
-case class EORefsDefinition(eosAtKeyPath: Option[EOsAtKeyPath])
+//case class EORefsDefinition()
 case class EOsAtKeyPath(eo: EO, keyPath: String)
 //case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
@@ -395,9 +415,11 @@ object AppModel {
 }
 
 object EOCacheUtils {
+
+  // Returns None if nothing registered in the cache for that entityName
   def objectsForEntityNamed(eos: Map[String, Map[Int,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
     val entityEOs = eos(entityName).values.toList
-    if (entityEOs.isEmpty) None else Some(entityEOs)
+    Some(entityEOs)
   } else None
 
   def objectForEntityNamedAndPk(eos: Map[String, Map[Int,EO]], entityName: String, pk: Int): Option[EO] =
@@ -407,12 +429,36 @@ object EOCacheUtils {
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def outOfCacheEOsUsingPkFromEOs(cache: MegaContent, entityName: String, eos: List[EO]): List[EO] = {
-    // TODO Implementation
-    List()
+  def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fetchSpecification: EOFetchSpecification) : Option[List[EO]] = {
+    val entityNameEOs = objectsForEntityNamed(eos,fetchSpecification.entityName)
+    entityNameEOs match {
+      case Some(eos) =>
+        Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fetchSpecification))
+      case _ => None
+    }
   }
 
-  def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: D2WContextEO): Option[EO] = {
+  def outOfCacheEOsUsingPkFromEOs(cache: MegaContent, entityName: String, eos: List[EO]): List[EO] = {
+    eos.map(eo => outOfCacheEOUsingPkFromD2WContextEO(cache,entityName,eo)).flatten
+  }
+
+  def objectsWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
+    val eosOpt = objectsWithFetchSpecification(cache.eos,fetchSpecification)
+    val insertedEOsOpt = objectsWithFetchSpecification(cache.insertedEOs,fetchSpecification)
+    eosOpt match {
+      case Some(eos) =>
+        insertedEOsOpt match {
+          case Some(insertedEOs) =>
+            // TODO sorting
+            eos ++ insertedEOs
+          case _ => eos
+        }
+      case _ => List.empty[EO]
+    }
+
+  }
+
+  def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: EO): Option[EO] = {
     eo.memID match {
       case Some(memID) =>
         val memCache = cache.cache.insertedEOs
@@ -422,7 +468,7 @@ object EOCacheUtils {
         EOCacheUtils.objectForEntityNamedAndPk(memCache,entityName,memID)
       case None =>
         val dbCache = cache.cache.eos
-        val pkOpt = eo.pk
+        val pkOpt = EOValueUtils.pk(eo)
         pkOpt match {
           case Some(pk) =>
             EOCacheUtils.objectForEntityNamedAndPk(dbCache,entityName,pk)

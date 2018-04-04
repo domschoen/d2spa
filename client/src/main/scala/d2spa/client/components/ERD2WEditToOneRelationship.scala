@@ -75,7 +75,7 @@ object ERD2WEditToOneRelationship   {
             //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
             //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
 
-            Hydration(DrySubstrate(fetchSpecification = Some(FetchSpecification(destinationEntity.name, None))),WateringScope(Some(keyWhenRelationshipRuleFault)))
+            Hydration(DrySubstrate(fetchSpecification = Some(EOFetchSpecification(destinationEntity.name))),WateringScope(Some(keyWhenRelationshipRuleFault)))
           )
         )
       ))

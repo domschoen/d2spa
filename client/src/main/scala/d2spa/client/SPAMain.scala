@@ -32,7 +32,6 @@ object SPAMain extends js.JSApp {
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
   case class EditPage(entity: String,  pk: Int) extends TaskAppPage
-  case class EditPageWithNewEO(entity: String,  memID: Int) extends TaskAppPage
   case class NewEOPage(entity: String) extends TaskAppPage
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
@@ -69,19 +68,13 @@ object SPAMain extends js.JSApp {
         | dynamicRouteCT(("#task/edit/entity" / string(".*") / int ).caseClass[EditPage]) ~> dynRenderR(
              (m, ctl) => {
                 AfterEffectRouter.setCtl(ctl)
-                menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(pk = Some(m.pk)))), p ))
+                menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit)),Some(m.pk), p ))
               }
            )
         | dynamicRouteCT(("#task/inspect/entity" / string(".*") / int).caseClass[InspectPage]) ~> dynRenderR(
             (m, ctl) => {
               AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), eo = Some(D2WContextEO(pk = Some(m.pk)))), p))
-            }
-          )
-        | dynamicRouteCT(("#task/new/entity" / string(".*") / int).caseClass[EditPageWithNewEO]) ~> dynRenderR(
-            (m, ctl) => {
-              AfterEffectRouter.setCtl(ctl)
-              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(memID = Some(m.memID)))), p))
+              menusConnection(p => D2WEditPage(ctl, D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect)),Some(m.pk), p))
             }
           )
         | dynamicRouteCT(("#task/new/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
@@ -89,15 +82,18 @@ object SPAMain extends js.JSApp {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
               println ("m " + m)
-              D2WEditPage(ctl, D2WContext(entityName = Some(m.entity),  task = Some(TaskDefine.edit), eo = None), p)
+              D2WEditPage(ctl, D2WContext(entityName = Some(m.entity),  task = Some(TaskDefine.edit)), None, p)
             })
           }
         )
       )
 
     }
-
   }
+
+  // case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
+
+
   val nestedModule =
     TaskAppPage.routes.pmap[AppPage](NestedTaskAppPage){ case NestedTaskAppPage(m) => m }
 

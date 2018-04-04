@@ -281,18 +281,14 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                 case DrySubstrate(_ , Some(eoFault), _) =>
                   // completeEO ends up with a MegaContent eo update
                   effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
-                case DrySubstrate(Some(eorefsdef), _ , _) =>
-                  eorefsdef match {
-                    case EORefsDefinition(Some(eoakp)) =>
-                      val eovalueOpt = EOValueUtils.valueForKey(eoakp.eo, eoakp.keyPath)
-                      eovalueOpt match {
-                        case Some(eovalue) =>
-                          val eoRefs = eovalue.eosV
-                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs,missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
+                case DrySubstrate(Some(eoakp), _, _) =>
+                  val eovalueOpt = EOValueUtils.valueForKey(eoakp.eo, eoakp.keyPath)
+                  eovalueOpt match {
+                    case Some(eovalue) =>
+                      val eoRefs = eovalue.eosV
+                      effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
 
-                        case _ => effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
-                      }
-                    case _ => effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
+                    case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
                   log.debug("Hydration with fs " + fs)
@@ -456,8 +452,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       log.debug("SavedEO " + eo)
       val insertedEOs = removeEOFromMemCache(eo,value.insertedEOs)
       val eos = addEOToDBCache(eo,value.eos)
-      val pk = EOValueUtils.pk(eo)
-      val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(D2WContextEO(pk,None)))
+      val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(eo))
       updated(
         EOCache(eos,insertedEOs),
         Effect.action(RegisterPreviousPage(d2WContext))
@@ -584,12 +579,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>
       log.debug("NewEOWithEOModel: " + d2wContext)
+      val entityName = d2wContext.entityName.get
       // Create the EO and set it in the cache
-      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, d2wContext.entityName.get)
+      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
-      val newD2WContext = d2wContext.copy(eo = Some(D2WContextEO(memID = newEO.memID)))
+
+      val eo = EOValueUtils.memEOWith(eomodel, entityName, newEO.memID)
+      val newD2WContext = d2wContext.copy(eo = Some(eo))
       updated(updatedMemCache(newValue),
               Effect.action(FireActions(newD2WContext,actions)))
 
@@ -599,7 +597,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.edit), eo = Some(D2WContextEO(memID = newEO.memID)))
+      val eo = EOValueUtils.memEOWith(eomodel, entityName, newEO.memID)
+
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.edit), eo = Some(eo))
 
       updated(updatedMemCache(newValue),
         Effect.action(RegisterPreviousPage(d2wContext)))
@@ -675,13 +675,15 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
     case Search(entityName) =>
-      val queryValues = value match {
+      val qualifierOpt = value match {
         case Some(d2wContext) =>
-           d2wContext.queryValues
-        case _ => List()  // shouldn't come here because the query page initialized it
+          QueryValue.qualifierFromQueryValues(d2wContext.queryValues)
+        case _ => None  // shouldn't come here because the query page initialized it
       }
-      log.debug("Search: for entity " + entityName + " with query values " + queryValues)
+      log.debug("Search: for entity " + entityName + " query with qualifier " + qualifierOpt)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
+
+      // Convert qualifierFromQueryValues
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val  stack = stackD2WContext(d2wContext)
@@ -689,12 +691,11 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].search(entityName, queryValues).call().map(SearchResult(entityName, _)))
+        Effect(AjaxClient[Api].search(entityName, qualifierOpt).call().map(SearchResult(entityName, _)))
       )
 
   }
 }
-
 
 
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {

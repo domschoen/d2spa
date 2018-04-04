@@ -3,12 +3,6 @@ package d2spa.shared
 import boopickle.Default._
 
 
-object QueryOperator {
-  val Match = "Match"
-  val Min = "Min"
-  val Max = "Max"
-}
-
 
 object TaskDefine {
   val edit = "edit"
@@ -38,7 +32,6 @@ object ValueType {
   val eosV = "eosV"
 }
 
-case class EOKeyValueQualifier(key: String,value: String)
 
 //case class DateValue(value: java.util.Date) extends EOValue
 case class EOValue(typeV: String = "stringV", stringV: Option[String] = None, intV: Option[Int] = None, eoV: Option[EO] = None, eosV: Seq[EO] = Seq())
@@ -162,8 +155,75 @@ object EOValueUtils {
     }
   }
 
+
 }
 
+case class EOFetchSpecification (entityName: String, qualifier: Option[EOQualifier] = None, sortOrderings: List[EOSortOrdering] = List())
+
+object EOFetchSpecification {
+  def objectsWithFetchSpecification(eos : List[EO], fetchSpecification: EOFetchSpecification): List[EO] = {
+
+    // TODO sort orderings
+    fetchSpecification.qualifier match {
+      case Some(qualifier) => EOQualifier.filteredEOsWithQualifier(eos,qualifier)
+      case _ => eos
+    }
+
+  }
+
+}
+
+object EOQualifier {
+  val EOAndQualifier = "EOAndQualifier"
+  val EOOrQualifier = "EOOrQualifier"
+  val EOKeyValueQualifier = "EOKeyValueQualifier"
+  val EONotQualifier = "EONotQualifier"
+
+
+  def filteredEOsWithQualifier(eos : List[EO], qualifier: EOQualifier) = {
+     eos.filter(eo => evaluateWithEO(eo,qualifier))
+  }
+
+  def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
+    qualifier.eoqualifierType match {
+      case EOAndQualifier =>
+        val qualifiers = qualifier.andQualifiers
+        val headQ = qualifiers.head
+        val remaining = qualifiers.tail
+        val headQValue = evaluateWithEO(eo,headQ)
+        if (!headQValue) {
+          false
+        } else {
+          if (remaining.isEmpty) true else evaluateWithEO(eo, EOQualifier(EOAndQualifier,andQualifiers = remaining))
+        }
+      case EOOrQualifier =>
+        val qualifiers = qualifier.andQualifiers
+        val headQ = qualifiers.head
+        val remaining = qualifiers.tail
+        if (evaluateWithEO(eo,headQ)) {
+          true
+        } else {
+          if (remaining.isEmpty) false else evaluateWithEO(eo, EOQualifier(EOOrQualifier,orQualifiers = remaining))
+        }
+      case EOKeyValueQualifier =>
+        val keyValueQualifier = qualifier.keyValueQualifier.get
+        val eoValue = EOValueUtils.valueForKey(eo,keyValueQualifier.key)
+
+        // TODO check the value
+        eoValue.equals(keyValueQualifier.value)
+      case EONotQualifier =>
+        !evaluateWithEO(eo,qualifier.notQualifier.get)
+    }
+  }
+}
+
+case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier] = List(),
+                       orQualifiers: List[EOQualifier] = List(),
+                       keyValueQualifier: Option[EOKeyValueQualifier] = None,
+                       notQualifier: Option[EOQualifier] = None
+                      )
+case class EOKeyValueQualifier(key: String, selector : String, value: EOValue)
+case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
@@ -207,8 +267,6 @@ case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName 
 // A D2W Context of type page (without property)
 case class EntityMetaData(d2wContext: D2WContextFullFledged, displayName: String, displayPropertyKeys: List[PropertyMetaInfo])
 
-// A container for value should be used. It would give a way to have not only String
-case class QueryValue(key: String,value: String, operator: String)
 
 // Task
 //case class Task(task: String, displayPropertyKeys: List[PropertyMetaInfo])
