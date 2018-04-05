@@ -77,7 +77,7 @@ object D2WEditPage {
                 fireDisplayPropertyKeys
               )
             case _ =>
-              val pkOpt = EOValueUtils.pk(eo)
+              val pkOpt = EOValue.pk(eo)
               pkOpt match {
                 case Some(pk) =>
                   val eoFault = EOFault(entityName,pk)
@@ -107,7 +107,7 @@ object D2WEditPage {
 
 
     def save(router: RouterCtl[TaskAppPage],entityName: String,eo: EO) = {
-      val isNewEO = EOValueUtils.isNew(eo)
+      val isNewEO = EOValue.isNew(eo)
       if (isNewEO) {
         Callback.log(s"Save new EO: $entityName") >>
           $.props >>= (_.proxy.dispatchCB(SaveNewEO(entityName,eo)))

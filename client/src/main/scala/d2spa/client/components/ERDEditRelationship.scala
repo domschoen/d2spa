@@ -11,7 +11,7 @@ import japgolly.scalajs.react.{ReactEventFromInput, _}
 
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client.{MegaContent, UpdateQueryProperty}
-import d2spa.shared.{PropertyMetaInfo, QueryValue, RuleKeys, QueryOperator}
+import d2spa.shared.{PropertyMetaInfo, RuleKeys}
 
 object ERDEditRelationship  {
 

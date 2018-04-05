@@ -1,7 +1,7 @@
 package d2spa.shared
 
 import boopickle.Default._
-
+import boopickle.{MaterializePicklerFallback, TransformPicklers}
 
 
 object TaskDefine {
@@ -25,22 +25,61 @@ object RuleKeys {
   val propertyType = "propertyType"
 }
 
-object ValueType {
-  val stringV = "stringV"
-  val intV = "intV"
-  val eoV = "eoV"
-  val eosV = "eosV"
+//case class DateValue(value: java.util.Date) extends EOValue
+
+case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
+
+
+object EO extends MaterializePicklerFallback {
+  import boopickle.Default._
+
+  implicit val eoValuePickler = compositePickler[EOValue]
+  implicit val eoPicker: Pickler[EO] = generatePickler[EO]
+
+  eoValuePickler.addConcreteType[StringValue].addConcreteType[IntValue].addConcreteType[ObjectValue].addConcreteType[ObjectsValue]
+
+  implicit val qualifierPickler = compositePickler[EOQualifier]
+  qualifierPickler.addConcreteType[EOAndQualifier].addConcreteType[EOOrQualifier].addConcreteType[EONotQualifier].addConcreteType[EOKeyValueQualifier]
+
+  implicit val bPickler = generatePickler[EOQualifier]
+  def serializer(c: EOFetchSpecification) = Pickle.intoBytes(c)
+
+
+  //qualifierPickler.join[EOQualifier]
+
+  /*implicit val eoAndQualifierPicker: Pickler[EOAndQualifier] =
+    transformPickler[EOAndQualifier, (List[EOQualifier])]((q)  => new EOAndQualifier(q))((q) => (q.qualifiers))
+  implicit val eoOrQualifierPicker: Pickler[EOOrQualifier] =
+    transformPickler[EOOrQualifier, (List[EOQualifier])]((q)  => new EOOrQualifier(q))((q) => (q.qualifiers))
+  implicit val eoNotQualifierPicker: Pickler[EONotQualifier] =
+    transformPickler[EONotQualifier, (EOQualifier)]((q)  => new EONotQualifier(q))((q) => (q.qualifier))*/
+
+
+
+
+  // case class EOFetchSpecification (entityName: String, qualifier: Option[EOQualifier] = None, sortOrderings: List[EOSortOrdering] = List())
+  //implicit val eoFetchSpecificationPicker: Pickler[EOFetchSpecification] =
+  //  transformPickler[EOFetchSpecification, (String, EOQualifier, List[EOSortOrdering])]((fs)  => new EOFetchSpecification(fs._1, if (fs._2 == null) None else Some(fs._2),fs._3))((fs) => (fs.entityName, (if (fs.qualifier.isDefined) fs.qualifier.get else null), fs.sortOrderings))
+
+
 }
 
 
-//case class DateValue(value: java.util.Date) extends EOValue
-case class EOValue(typeV: String = "stringV", stringV: Option[String] = None, intV: Option[Int] = None, eoV: Option[EO] = None, eosV: Seq[EO] = Seq())
+sealed trait EOValue
+case class StringValue(value: Option[String]) extends EOValue
+case class IntValue(value : Option[Int]) extends EOValue
+case class ObjectValue(eo: Option[EO]) extends EOValue
+case class ObjectsValue(eos: Seq[EO]) extends EOValue
 
-object EOValueUtils {
-  def stringV(value: String) = EOValue(stringV = if (value == null) None else Some(value))
-  def eoV(value: EO) = EOValue(typeV=ValueType.eoV, eoV = if (value == null) None else Some(value))
-  def eosV(value: Seq[EO]) = EOValue(typeV=ValueType.eosV, eosV = value)
-  def intV(value: Int) = EOValue(typeV=ValueType.intV, intV = Some(value))
+
+
+object EOValue {
+
+
+  def stringV(value: String) = StringValue(if (value == null) None else Some(value))
+  def intV(value: Int) = IntValue(if (value == null) None else Some(value))
+  def eoV(value: EO) = ObjectValue(if (value == null) None else Some(value))
+  def eosV(value: Seq[EO]) = ObjectsValue(eos = value)
 
 
   //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
@@ -90,19 +129,19 @@ object EOValueUtils {
 
 
   def juiceString(value: EOValue) : String = if (value == null) "" else {
-    value.typeV match {
-      case ValueType.stringV => if (value.stringV.isDefined) value.stringV.get else ""
-      case ValueType.intV => if (value.intV.isDefined) value.intV.get.toString else ""
-      case ValueType.eoV => if (value.eoV.isDefined) value.eoV.get.toString else ""
+    value match {
+      case StringValue(value) => if (value.isDefined) value.get else ""
+      case IntValue(value) => if (value.isDefined) value.get.toString else ""
+      case ObjectValue(eo) => if (eo.isDefined) eo.get.toString else ""
       case _ => ""
     }
   }
   def isDefined(value: EOValue) : Boolean =
-    value.typeV match {
-      case ValueType.stringV => value.stringV.isDefined
-      case ValueType.intV => value.intV.isDefined
-      case ValueType.eoV => value.eoV.isDefined
-      case ValueType.eosV => !value.eosV.isEmpty
+    value match {
+      case StringValue(value) => value.isDefined
+      case IntValue(value) => value.isDefined
+      case ObjectValue(eo) => eo.isDefined
+      case ObjectsValue(eos) => !eos.isEmpty
       case _ => false
     }
 
@@ -113,12 +152,6 @@ object EOValueUtils {
     }
   }
 
-  def eoValueForKey(eo: EO, key: String) : Option[EO] = {
-    valueForKey(eo,key) match {
-      case Some(value) => value.eoV
-      case None => None
-    }
-  }
 
   def valueForKey(eo: EO, key: String) = {
     if (eo.values.contains(key)) {
@@ -136,7 +169,7 @@ object EOValueUtils {
   }
 
   def isNew(eo:EO) = {
-    val pk = EOValueUtils.pk(eo)
+    val pk = EOValue.pk(eo)
     (pk.isDefined && pk.get < 0) || pk.isEmpty
     //eo.memID.isDefined
   }
@@ -147,10 +180,14 @@ object EOValueUtils {
      } else pk(eo)
   }
 
-  def pk(eo:EO) = {
-    val eoValue = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
-    eoValue match {
-      case Some(myEoValue) =>  myEoValue._2.intV
+  def pk(eo:EO): Option[Int] = {
+    val resultOpt = eo.values.find(value => { value._1.equals(eo.entity.pkAttributeName)})
+    resultOpt match {
+      case Some((key, eoValue)) =>
+        eoValue match {
+          case IntValue(pk) =>  pk
+          case _ => None
+        }
       case _ => None
     }
   }
@@ -174,62 +211,55 @@ object EOFetchSpecification {
 }
 
 object EOQualifier {
-  val EOAndQualifier = "EOAndQualifier"
-  val EOOrQualifier = "EOOrQualifier"
-  val EOKeyValueQualifier = "EOKeyValueQualifier"
-  val EONotQualifier = "EONotQualifier"
-
 
   def filteredEOsWithQualifier(eos : List[EO], qualifier: EOQualifier) = {
      eos.filter(eo => evaluateWithEO(eo,qualifier))
   }
 
   def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
-    qualifier.eoqualifierType match {
-      case EOAndQualifier =>
-        val qualifiers = qualifier.andQualifiers
+    qualifier match {
+      case EOAndQualifier(qualifiers) =>
         val headQ = qualifiers.head
         val remaining = qualifiers.tail
         val headQValue = evaluateWithEO(eo,headQ)
         if (!headQValue) {
           false
         } else {
-          if (remaining.isEmpty) true else evaluateWithEO(eo, EOQualifier(EOAndQualifier,andQualifiers = remaining))
+          if (remaining.isEmpty) true else evaluateWithEO(eo, EOAndQualifier(remaining))
         }
-      case EOOrQualifier =>
-        val qualifiers = qualifier.andQualifiers
+      case EOOrQualifier(qualifiers) =>
         val headQ = qualifiers.head
         val remaining = qualifiers.tail
         if (evaluateWithEO(eo,headQ)) {
           true
         } else {
-          if (remaining.isEmpty) false else evaluateWithEO(eo, EOQualifier(EOOrQualifier,orQualifiers = remaining))
+          if (remaining.isEmpty) false else evaluateWithEO(eo, EOOrQualifier(remaining))
         }
-      case EOKeyValueQualifier =>
-        val keyValueQualifier = qualifier.keyValueQualifier.get
-        val eoValue = EOValueUtils.valueForKey(eo,keyValueQualifier.key)
+      case EOKeyValueQualifier(key,selector,value) =>
+        val eoValue = EOValue.valueForKey(eo,key)
 
         // TODO check the value
-        eoValue.equals(keyValueQualifier.value)
-      case EONotQualifier =>
-        !evaluateWithEO(eo,qualifier.notQualifier.get)
+        eoValue.equals(value)
+      case EONotQualifier(qualifier) =>
+        !evaluateWithEO(eo,qualifier)
     }
   }
 }
 
-case class EOQualifier(eoqualifierType: String, andQualifiers : List[EOQualifier] = List(),
-                       orQualifiers: List[EOQualifier] = List(),
-                       keyValueQualifier: Option[EOKeyValueQualifier] = None,
-                       notQualifier: Option[EOQualifier] = None
-                      )
-case class EOKeyValueQualifier(key: String, selector : String, value: EOValue)
+
+sealed trait EOQualifier
+
+case class EOAndQualifier(qualifiers : List[EOQualifier]) extends EOQualifier
+case class EOOrQualifier(qualifiers : List[EOQualifier]) extends EOQualifier
+case class EOKeyValueQualifier(key: String, selector : String, value: EOValue) extends EOQualifier
+case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
+
 case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
 case class EORelationship(name: String, destinationEntityName: String)
 
-case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
 //case class EORef(entityName: String, id: Int)
 
 case class Menus(menus: List[MainMenu], showDebugButton: Boolean)

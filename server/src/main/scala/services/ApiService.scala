@@ -395,10 +395,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future(Seq())
   }
 
-  def search(entityName: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
-    Logger.debug("Search for entity: " + entityName + " queryValues " + queryValues)
+  def search(fs: EOFetchSpecification): Future[Seq[EO]] = {
+    Logger.debug("Search for entity: " + fs.entityName + " fs " + fs)
     //if (usesD2SPAServer) {
-      searchOnD2SPAServer(entityName, queryValues)
+      searchOnD2SPAServer(fs)
     //} else {
       // to be restored
       // searchOnOnlineCountryWs(qualifiers)
@@ -407,21 +407,32 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   // TBD Sorting parameter
   // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
-  def qualifiersUrlPart(queryValues: List[QueryValue]) : String = {
-    val qualifiersStrings = queryValues.map(qualifierUrlPart(_))
+  def qualifiersUrlPart(fs: EOQualifier) : String = {
+    val qualifiersStrings = fs.andQualifiers.map(qualifierUrlPart(_))
     return qualifiersStrings.mkString(" and ")
   }
 
-  def qualifierUrlPart(queryValue: QueryValue) : String = {
-    return "qualifier=" + queryValue.key + " like '*" + queryValue.value + "*'"
+  def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
+    val value = qualifier.value
+    return value.typeV match {
+      case ValueType.stringV => "qualifier=" + qualifier.key + " like '*" + value.stringV + "*'"
+      case ValueType.intV  => "" // TODO
+      case ValueType.eoV => "" // TODO
+      case ValueType.eosV => "" // TODO
+    }
   }
 
 
 
-  def searchOnD2SPAServer(entityName: String, queryValues: List[QueryValue]): Future[Seq[EO]] = {
+  def searchOnD2SPAServer(fs: EOFetchSpecification): Future[Seq[EO]] = {
+    val entityName = fs.entityName
     val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
+    val qualifierOpt = fs.qualifier
 
-    val qualifierSuffix = if (queryValues == null || queryValues.isEmpty) "" else "?" + qualifiersUrlPart(queryValues)
+    val qualifierSuffix = qualifierOpt match {
+      case Some(q) => "?" + qualifiersUrlPart(q)
+      case _ => ""
+    }
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     Logger.debug("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)

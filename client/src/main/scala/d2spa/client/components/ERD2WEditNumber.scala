@@ -34,12 +34,12 @@ object ERD2WEditNumber {
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
-          val value = EOValueUtils.stringValueForKey(eo, propertyName)
+          val value = EOValue.stringValueForKey(eo, propertyName)
           <.div(
             <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext,
-                  EOValue(typeV = ValueType.intV, intV = Some(e.target.value.toInt))))
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext,IntValue(Some(e.target.value.toInt)))
+                )
               })
           )
         case None => <.div("")

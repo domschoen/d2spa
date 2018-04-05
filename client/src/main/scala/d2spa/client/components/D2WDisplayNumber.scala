@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client.D2WContext
-import d2spa.shared.{EO, EOValueUtils}
+import d2spa.shared.{EO, EOValue}
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
@@ -29,7 +29,7 @@ object D2WDisplayNumber {
       if (eo.values.contains(propertyName)) {
 
         val eoValue = eo.values(propertyName)
-        val value = EOValueUtils.juiceString(eoValue)
+        val value = EOValue.juiceString(eoValue)
         <.div(
           <.span(^.id := "description", value)
         )

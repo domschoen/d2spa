@@ -3,14 +3,13 @@ package d2spa.client.components
 
 import d2spa.client.EOCacheUtils
 import d2spa.client.D2WContext
-import d2spa.shared.EOValueUtils
+import d2spa.shared.{StringValue}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 
@@ -39,11 +38,11 @@ object ERD2WEditString  {
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, p.d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
-          val value = EOValueUtils.stringValueForKey(eo,propertyName)
+          val value = EOValue.stringValueForKey(eo,propertyName)
           <.div(
             <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue(stringV = Some(e.target.value))))} )
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, StringValue(Some(e.target.value))))} )
           )
         case None => <.div("No eo out of cache")
       }

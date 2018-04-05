@@ -30,7 +30,7 @@ object AfterEffectRouter {
     val taskName = d2WContext.task.get
     d2WContext.eo match {
       case Some(eo) =>
-        val pkOpt = EOValueUtils.pk(eo)
+        val pkOpt = EOValue.pk(eo)
         pkOpt match {
           case Some(pk) =>
             val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)

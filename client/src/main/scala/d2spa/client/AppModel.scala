@@ -137,9 +137,9 @@ object QueryValue {
 
   def qualifierFromQueryValues(queryValues: List[QueryValue]) : Option[EOQualifier] = {
     val qualifiers = queryValues.map(qv => {
-      EOQualifier(eoqualifierType = EOQualifier.EOKeyValueQualifier, keyValueQualifier = Some(EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),EOValue(stringV = Some(qv.value)))))
+      EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),StringValue(Some(qv.value)))
     })
-    if (qualifiers.isEmpty) None else Some(EOQualifier(eoqualifierType = EOQualifier.EOAndQualifier, andQualifiers = qualifiers))
+    if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
   }
 }
 
@@ -468,7 +468,7 @@ object EOCacheUtils {
         EOCacheUtils.objectForEntityNamedAndPk(memCache,entityName,memID)
       case None =>
         val dbCache = cache.cache.eos
-        val pkOpt = EOValueUtils.pk(eo)
+        val pkOpt = EOValue.pk(eo)
         pkOpt match {
           case Some(pk) =>
             EOCacheUtils.objectForEntityNamedAndPk(dbCache,entityName,pk)

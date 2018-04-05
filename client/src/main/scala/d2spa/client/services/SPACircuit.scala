@@ -282,18 +282,20 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                   // completeEO ends up with a MegaContent eo update
                   effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
                 case DrySubstrate(Some(eoakp), _, _) =>
-                  val eovalueOpt = EOValueUtils.valueForKey(eoakp.eo, eoakp.keyPath)
+                  val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
                   eovalueOpt match {
                     case Some(eovalue) =>
-                      val eoRefs = eovalue.eosV
-                      effectOnly(Effect(AjaxClient[Api].hydrateEOs(eoRefs, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
-
+                      eovalue match {
+                        case ObjectsValue(eos) =>
+                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(eos, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
+                        case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
+                      }
                     case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
                   log.debug("Hydration with fs " + fs)
 
-                  effectOnly(Effect(AjaxClient[Api].search(fs.entityName, List.empty[QueryValue]).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
+                  effectOnly(Effect(AjaxClient[Api].search(fs).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
 
                 case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
               }
@@ -341,7 +343,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   //EOValueUtils.pk(eo)
-  def newUpdatedCache(idExtractor: EO => Option[Int], cache: Map[String, Map[Int, EO]], eos: Seq[EO]) = {
+  def newUpdatedCache(idExtractor: EO => Option[Int], cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int,EO]] = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
@@ -377,7 +379,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
             // existing -> to be updated
             // Complete EOs !
             val existingEO = entityMap(id)
-            (id, EOValueUtils.completeEoWithEo(existingEO, refreshedEO))
+            (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
           }
         }).toMap
         val newEntityMap = entityMap ++ newAndUpdateMap
@@ -389,7 +391,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
   def updatedOutOfDBCacheWithEOs(eos: Seq[EO]): EOCache = {
     val insertedEOs = value.insertedEOs
-    val outOfDBEOs = updatedModelForEntityNamed(eo => EOValueUtils.pk(eo), value.eos, eos)
+    val outOfDBEOs = updatedModelForEntityNamed(eo => EOValue.pk(eo), value.eos, eos)
     EOCache(outOfDBEOs, insertedEOs)
   }
 
@@ -411,7 +413,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   def addEOToDBCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
-    addEOToCache(eo, e => EOValueUtils.pk(e), eos)
+    addEOToCache(eo, e => EOValue.pk(e), eos)
   }
   def addEOToMemCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
     addEOToCache(eo, e => e.memID, eos)
@@ -422,7 +424,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   def removeEOFromDBCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
-    removeEOFromCache(eo, e => EOValueUtils.pk(e), eos)
+    removeEOFromCache(eo, e => EOValue.pk(e), eos)
   }
 
   def removeEOFromMemCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
@@ -540,7 +542,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case DeletedEO(deletedEO) =>
       log.debug("Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
-      val eoPk = EOValueUtils.pk(deletedEO).get
+      val eoPk = EOValue.pk(deletedEO).get
 
       val entityMap = value.eos(entityName)
       val newEntityMap = entityMap - eoPk
@@ -553,7 +555,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
       val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
       val entityName = eoOnError.entity.name
-      val eoPk = EOValueUtils.pk(eoWithDisplayableError).get
+      val eoPk = EOValue.pk(eoWithDisplayableError).get
       val entityMap = value.eos(entityName)
       val newEntityMap = entityMap + (eoPk -> eoWithDisplayableError)
       val newValue = value.eos + (entityName -> newEntityMap)
@@ -581,23 +583,23 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       log.debug("NewEOWithEOModel: " + d2wContext)
       val entityName = d2wContext.entityName.get
       // Create the EO and set it in the cache
-      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
+      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
 
-      val eo = EOValueUtils.memEOWith(eomodel, entityName, newEO.memID)
+      val eo = EOValue.memEOWith(eomodel, entityName, newEO.memID)
       val newD2WContext = d2wContext.copy(eo = Some(eo))
       updated(updatedMemCache(newValue),
               Effect.action(FireActions(newD2WContext,actions)))
 
     case NewEOWithEOModelForEdit(eomodel, entityName) =>
       log.debug("NewEOWithEOModelForEdit " + entityName)
-      val (newValue, newEO) = EOValueUtils.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
+      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)
-      val eo = EOValueUtils.memEOWith(eomodel, entityName, newEO.memID)
+      val eo = EOValue.memEOWith(eomodel, entityName, newEO.memID)
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.edit), eo = Some(eo))
 
@@ -683,7 +685,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.debug("Search: for entity " + entityName + " query with qualifier " + qualifierOpt)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
-      // Convert qualifierFromQueryValues
+      val fs = EOFetchSpecification(entityName,qualifierOpt)
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val  stack = stackD2WContext(d2wContext)
@@ -691,7 +693,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].search(entityName, qualifierOpt).call().map(SearchResult(entityName, _)))
+        Effect(AjaxClient[Api].search(fs).call().map(SearchResult(entityName, _)))
       )
 
   }

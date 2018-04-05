@@ -30,7 +30,7 @@ object Settings {
     val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
-    val booPickle = "1.2.6"
+    val booPickle = "1.3.0"
     val diode = "1.1.2"
     val uTest = "0.4.7"
 

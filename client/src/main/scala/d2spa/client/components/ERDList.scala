@@ -47,8 +47,12 @@ object ERDList {
           val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
           val destinationEntityName = destinationEntity.name
 
-          val eoValue = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
-          val size = if (eoValue.isDefined) eoValue.get.eosV.size else 0
+          val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+
+          val size = eoValueOpt match {
+            case Some(ObjectsValue(eos)) => eos.size
+            case _ => 0
+          }
           //val size = 1
           val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo,propertyName)))))
           <.div(NVListComponent(p.router,embeddedListD2WContext,true, p.proxy))

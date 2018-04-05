@@ -97,7 +97,7 @@ object ERD2WEditToOneRelationship   {
       val idAsInt = id.toInt
       val pkAttributeName = entity.pkAttributeName
       val optEO = eos.find(eo => {
-        val optPk = EOValueUtils.pk(eo)
+        val optPk = EOValue.pk(eo)
         optPk.isDefined && optPk.get.equals(idAsInt)
       })
           optEO
@@ -164,25 +164,25 @@ object ERD2WEditToOneRelationship   {
                     destinationEOs match {
                       case Some(eos) => {
                         log.debug("eoRefs " + eos)
-                        val destinationEO = EOValueUtils.valueForKey(eo, propertyName)
+                        val destinationEO = EOValue.valueForKey(eo, propertyName)
                         val defaultValue = destinationEO match {
-                          case Some(EOValue(_, _, _, eoV, _)) => eoV match {
-                            case Some(eo) => EOValueUtils.pk(eo).get.toString
+                          case Some(ObjectValue(eoV)) => eoV match {
+                            case Some(eo) => EOValue.pk(eo).get.toString
                             case _ => "None"
                           }
                           case _ => "None"
                         }
                         <.div(
                           <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue(typeV = ValueType.eoV, eoV = eoWith(eos, destinationEntity, e.currentTarget.value))))
+                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, ObjectValue( eoWith(eos, destinationEntity, e.currentTarget.value))))
                           },
                           {
                             val tupleOpts = eos map (x => {
 
-                              val id = EOValueUtils.pk(x)
+                              val id = EOValue.pk(x)
                               log.debug("id " + id + " for eo: " + x)
                               if (id.isDefined) {
-                                val displayName = EOValueUtils.stringValueForKey(x, keyWhenRelationship)
+                                val displayName = EOValue.stringValueForKey(x, keyWhenRelationship)
                                 Some((id.get.toString, displayName))
                               } else None
                             })

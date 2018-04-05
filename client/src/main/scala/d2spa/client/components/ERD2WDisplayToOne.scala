@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
-import d2spa.client._
+import d2spa.client.{D2WAction, _}
 import d2spa.client.logger.log
 import d2spa.shared._
 import diode.react.ModelProxy
@@ -76,26 +76,37 @@ object ERD2WDisplayToOne  {
 
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
       val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
-      val destinationEO = EOValueUtils.eoValueForKey(p.eo,propertyName).get
-      val destinationPk = EOValueUtils.pk(destinationEO).get
-      val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
+      val destinationEOValueOpt = EOValue.valueForKey(p.eo,propertyName)
 
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(
+
+      val fireActions: List[D2WAction] = destinationEOValueOpt match {
+        case Some(destinationEOValue) =>
+          destinationEOValue match {
+            case ObjectValue(Some(destinationEO)) =>
+              val destinationPk = EOValue.pk(destinationEO).get
+              val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
+              List[D2WAction](
+                keyWhenRelationshipFireRule,
+                Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
+                )
+              )
+            case _ => List.empty[D2WAction]
+          }
+      }
+
+      Callback.when(!fireActions.isEmpty && dataNotFetched)(p.proxy.dispatchCB(
         FireActions(
           d2wContext,
-          List[D2WAction](
-            keyWhenRelationshipFireRule,
-            Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
-          )
+          fireActions
         )
-      )))
+      ))
     }
 
     def render(p: Props) = {
       val eo = p.eo
       val propertyName = p.property.name
       val eoValue = eo.values(propertyName)
-      val value = EOValueUtils.juiceString(eoValue)
+      val value = EOValue.juiceString(eoValue)
       <.div(
         <.span(^.id := "description", value)
       )

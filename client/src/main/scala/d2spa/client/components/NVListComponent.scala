@@ -10,7 +10,6 @@ import org.scalajs.dom.ext.KeyCode
 import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
-import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
 import d2spa.client.logger.log
 import d2spa.client._
 import d2spa.shared._
@@ -123,7 +122,7 @@ object NVListComponent {
     }
 
     def editEO(eo: EO) = {
-      val pk = EOValueUtils.pk(eo)
+      val pk = EOValue.pk(eo)
       val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.edit), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
@@ -157,10 +156,13 @@ object NVListComponent {
             case DataRep(fetchSpecification: EOFetchSpecification, _) =>
               EOCacheUtils.objectsWithFetchSpecification(cache, fetchSpecification)
             case DataRep(_, eosAtKeyPath: EOsAtKeyPath) => {
-              val eovalueOpt = EOValueUtils.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
+              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
               eovalueOpt match {
                 case Some(eovalue) =>
-                  eovalue.eosV.toList
+                  eovalue match {
+                    case ObjectsValue(eos) => eos.toList
+                    case _ => List.empty[EO]
+                  }
                 case _ =>
                   List.empty[EO]
               }
@@ -225,8 +227,8 @@ object NVListComponent {
                           displayPropertyKeys toTagMod (
                             propertyKey => {
                               val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
-                              <.td(^.className := "list1",
-                                D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                              <.td(^.className := "list1","ll"
+                                //D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                               )
 
                             }

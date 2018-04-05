@@ -14,7 +14,7 @@ import CssSettings._
 
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
-import d2spa.shared.{ EOValueUtils, TaskDefine}
+import d2spa.shared.{ EOValue, TaskDefine}
 import diode.react.ModelProxy
 
 @JSExportTopLevel("SPAMain")
