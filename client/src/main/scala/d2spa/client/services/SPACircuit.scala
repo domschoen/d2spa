@@ -685,7 +685,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.debug("Search: for entity " + entityName + " query with qualifier " + qualifierOpt)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
-      val fs = EOFetchSpecification(entityName,qualifierOpt)
+      val fs = EOFetchSpecification(entityName)
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val  stack = stackD2WContext(d2wContext)

@@ -60,14 +60,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
 
 
-  var eos = Seq(
-    EO(EOEntity("Project","id",List()), Map(
-      "name" -> EOValue(stringV = Some("Brunei Darussalam")),
-      "alpha2_code" -> EOValue(stringV = Some("BN")),
-      "alpha3_code" -> EOValue(stringV = Some("BRN"))
-      ),None
-    )
-  )
 
   val safeUrl = "http://galactica.hq.k.grp:1445/cgi-bin/WebObjects/D2SPAServer.woa/ra/User?qualifier=firstname='Mike'"
 
@@ -407,18 +399,21 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   // TBD Sorting parameter
   // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
-  def qualifiersUrlPart(fs: EOQualifier) : String = {
-    val qualifiersStrings = fs.andQualifiers.map(qualifierUrlPart(_))
+  def qualifiersUrlPart(q: EOQualifier) : String = {
+    val qualifiersStrings = q match {
+      case EOAndQualifier(qualifiers) => qualifiers.map(q => qualifierUrlPart(q.asInstanceOf[EOKeyValueQualifier]))
+      case _ => List()
+    }
     return qualifiersStrings.mkString(" and ")
   }
 
   def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
     val value = qualifier.value
-    return value.typeV match {
-      case ValueType.stringV => "qualifier=" + qualifier.key + " like '*" + value.stringV + "*'"
-      case ValueType.intV  => "" // TODO
-      case ValueType.eoV => "" // TODO
-      case ValueType.eosV => "" // TODO
+    return value match {
+      case StringValue(stringV) => "qualifier=" + qualifier.key + " like '*" + stringV + "*'"
+      case IntValue(i)  => "" // TODO
+      case ObjectValue(eo) => "" // TODO
+      case ObjectsValue(eos) => "" // TODO
     }
   }
 
@@ -429,10 +424,13 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
     val qualifierOpt = fs.qualifier
 
-    val qualifierSuffix = qualifierOpt match {
-      case Some(q) => "?" + qualifiersUrlPart(q)
-      case _ => ""
-    }
+    val qualifierSuffix = ""
+
+    // TODO Restore it
+    //val qualifierSuffix = qualifierOpt match {
+    //  case Some(q) => "?" + qualifiersUrlPart(q)
+    //  case _ => ""
+    //}
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     Logger.debug("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
@@ -449,14 +447,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           //Logger.debug("value class " + value.getClass.getName)
           value match {
             case s: play.api.libs.json.JsString =>
-              valuesMap += (key -> EOValue(stringV = Some(s.value)))
+              valuesMap += (key -> StringValue(Some(s.value)))
             case n: play.api.libs.json.JsNumber =>
               val bigDecimal = n.value
               // TBD use a BigDecimal container
-              valuesMap += (key -> EOValue(typeV = ValueType.intV, intV = Some(bigDecimal.toInt)))
+              valuesMap += (key -> IntValue(Some(bigDecimal.toInt)))
             case play.api.libs.json.JsNull =>
               // TBD use a kind of Null ?
-              valuesMap += (key -> EOValue())
+              valuesMap += (key -> StringValue(None))
             case play.api.libs.json.JsObject(fields) =>
               // case class EORef(entityName: String, id: Int)
               val fieldsMap = fields.toMap
@@ -466,10 +464,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               Logger.debug("destinationEntity " + destinationEntity)
               val pkName = destinationEntity.pkAttributeName
               val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
-              val eo = EOValueUtils.dryEOWithEntity(destinationEntity,Some(pk))
-              valuesMap += (key -> EOValue(typeV = ValueType.eoV, eoV = Some(eo)))
+              val eo = EOValue.dryEOWithEntity(destinationEntity,Some(pk))
+              valuesMap += (key -> ObjectValue(Some(eo)))
             case _ =>
-              valuesMap += (key -> EOValue(stringV = Some("not supported")))
+              valuesMap += (key -> StringValue(Some("not supported")))
 
           }
         }
@@ -537,27 +535,27 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
   def woWsParameterForValue(value: EOValue): JsValue = {
-    value.typeV match {
-      case ValueType.stringV =>
-        value.stringV match {
+    value match {
+      case StringValue(stringV) =>
+        stringV match {
           case Some(stringValue) =>
             JsString(stringValue)
           case _ =>
             JsNull
         }
-      case ValueType.intV =>
-        value.intV match {
+      case IntValue(intV) =>
+        intV match {
           case Some(intValue) =>
             JsNumber(intValue)
           case _ =>
             JsNull
         }
-      case ValueType.eoV => {
-        value.eoV match {
+      case ObjectValue(eoV) => {
+        eoV match {
           case Some(eo) =>
             val entityName = eo.entity.name
             val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
-            val pk = EOValueUtils.pk(eo).get
+            val pk = EOValue.pk(eo).get
             JsObject( Seq( pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
           case _ => JsNull
         }
@@ -574,7 +572,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   // Return the EO with everything and may be a validationError
   def deleteEO(eo: EO): Future[EO] = {
-    val pk = EOValueUtils.pk(eo)
+    val pk = EOValue.pk(eo)
     pk match {
       case Some(pkValue) =>
         val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pkValue + ".json"
@@ -617,7 +615,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = eo.values filter (v => {
       Logger.debug("v._2" + v._2)
-      EOValueUtils.isDefined(v._2) })
+      EOValue.isDefined(v._2) })
 
     Logger.debug("eoDefinedValues " + eoDefinedValues)
     val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
@@ -637,7 +635,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val pkAttributeName = entity.pkAttributeName
         val pkValue = jsObj.value(pkAttributeName)
         pkValue match {
-          case JsNumber(pkNumber) => eo.copy(values = eo.values + (pkAttributeName -> EOValueUtils.intV(pkNumber.intValue())))
+          case JsNumber(pkNumber) => eo.copy(values = eo.values + (pkAttributeName -> EOValue.intV(pkNumber.intValue())))
           case _ => eo
         }
       } catch {
@@ -669,7 +667,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val toArrayString= missingKeys.map(x => s""""${x}"""").mkString("(",",",")")
     val url = d2spaServerBaseUrl + "/" + eoFault.entityName + "/" + eoFault.pk + "/propertyValues.json?missingKeys=" + toArrayString
     val entity = EOModelUtils.entityNamed(eomodel(), eoFault.entityName).get
-    val eo = EOValueUtils.dryEOWithEntity(entity,Some(eoFault.pk))
+    val eo = EOValue.dryEOWithEntity(entity,Some(eoFault.pk))
 
 
     // returns
@@ -709,14 +707,14 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-              EOValueUtils.dryEOWith(eomodel(),entityName,Some(id))
+              EOValue.dryEOWith(eomodel(),entityName,Some(id))
             })
-            EOValueUtils.eosV(eos)
+            EOValue.eosV(eos)
           } else if (value.isInstanceOf[JsString]) {
             val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
-            EOValueUtils.stringV(stringV)
+            EOValue.stringV(stringV)
           } else {
-            EOValueUtils.stringV(value.toString())
+            EOValue.stringV(value.toString())
           }
           Logger.debug("JsObj value " + value.getClass.getName + " value: " + value)
           (kvTuple._1,newValue)
@@ -740,7 +738,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def updateEO(eo: EO): Future[EO] = {
     Logger.debug("Update EO: " + eo)
-    val pk = EOValueUtils.pk(eo).get
+    val pk = EOValue.pk(eo).get
 
     val entity = eo.entity
     val url = d2spaServerBaseUrl + "/" + eo.entity.name + "/" + pk + ".json"

@@ -41,8 +41,10 @@ object EO extends MaterializePicklerFallback {
   implicit val qualifierPickler = compositePickler[EOQualifier]
   qualifierPickler.addConcreteType[EOAndQualifier].addConcreteType[EOOrQualifier].addConcreteType[EONotQualifier].addConcreteType[EOKeyValueQualifier]
 
-  implicit val bPickler = generatePickler[EOQualifier]
   def serializer(c: EOFetchSpecification) = Pickle.intoBytes(c)
+  def serializer(q: EOAndQualifier) = Pickle.intoBytes(q)
+  def serializer(q: EOOrQualifier) = Pickle.intoBytes(q)
+  def serializer(q: EONotQualifier) = Pickle.intoBytes(q)
 
 
   //qualifierPickler.join[EOQualifier]
@@ -195,14 +197,14 @@ object EOValue {
 
 }
 
-case class EOFetchSpecification (entityName: String, qualifier: Option[EOQualifier] = None, sortOrderings: List[EOSortOrdering] = List())
+case class EOFetchSpecification (entityName: String, qualifier: Option[String] = None, sortOrderings: List[EOSortOrdering] = List())
 
 object EOFetchSpecification {
   def objectsWithFetchSpecification(eos : List[EO], fetchSpecification: EOFetchSpecification): List[EO] = {
 
     // TODO sort orderings
     fetchSpecification.qualifier match {
-      case Some(qualifier) => EOQualifier.filteredEOsWithQualifier(eos,qualifier)
+      case Some(qualifier) => List()
       case _ => eos
     }
 
