@@ -386,6 +386,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def hydrateEOs(eo: Seq[EO],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
     Future(Seq())
   }
+  def search(fs: EOFetchSpecification2): Future[Seq[EO]] = Future(Seq())
 
   def search(fs: EOFetchSpecification): Future[Seq[EO]] = {
     Logger.debug("Search for entity: " + fs.entityName + " fs " + fs)
@@ -709,7 +710,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
               EOValue.dryEOWith(eomodel(),entityName,Some(id))
             })
-            EOValue.eosV(eos)
+            ObjectsValue(eos)
           } else if (value.isInstanceOf[JsString]) {
             val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
             EOValue.stringV(stringV)

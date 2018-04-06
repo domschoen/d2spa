@@ -295,7 +295,9 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                 case DrySubstrate(_ , _ , Some(fs)) =>
                   log.debug("Hydration with fs " + fs)
 
-                  effectOnly(Effect(AjaxClient[Api].search(fs).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
+                  val toto = EOFetchSpecification2(fs.entityName)
+
+                  effectOnly(Effect(AjaxClient[Api].search(toto).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
 
                 case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
               }
@@ -690,10 +692,11 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val  stack = stackD2WContext(d2wContext)
       log.debug("Register Previous " + stack)
+      val toto = EOFetchSpecification2(entityName)
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].search(fs).call().map(SearchResult(entityName, _)))
+        Effect(AjaxClient[Api].search(toto).call().map(SearchResult(entityName, _)))
       )
 
   }

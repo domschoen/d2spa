@@ -3,7 +3,7 @@ import scala.concurrent.Future
 
 trait Api {
 
-  def search(fetchSpecification: EOFetchSpecification): Future[Seq[EO]]
+  def search(fetchSpecification: EOFetchSpecification2): Future[Seq[EO]]
 
   def getMenus(): Future[Menus]
 

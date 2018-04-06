@@ -139,7 +139,9 @@ object QueryValue {
     val qualifiers = queryValues.map(qv => {
       EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),StringValue(Some(qv.value)))
     })
-    if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
+    // TODO Restore it
+    // if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
+    None
   }
 }
 
