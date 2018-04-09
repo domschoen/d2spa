@@ -1,6 +1,6 @@
 package d2spa.shared
 
-import boopickle.Default._
+import boopickle.Default.{generatePickler, _}
 import boopickle.{MaterializePicklerFallback, TransformPicklers}
 
 
@@ -28,25 +28,72 @@ object RuleKeys {
 //case class DateValue(value: java.util.Date) extends EOValue
 
 case class EO(entity: EOEntity, values: Map[String,EOValue], memID: Option[Int] = None, validationError: Option[String] = None)
-case class EO2(entity: EOEntity, values: Map[String,EOValue2], memID: Option[Int] = None, validationError: Option[String] = None)
+//case class EO2(entity: EOEntity, values: Map[String,EOValue2], memID: Option[Int] = None, validationError: Option[String] = None)
+case class EO2(entity: EOEntity, validationError: Option[String] = None)
 
 
-object EO  { //extends MaterializePicklerFallback
+import boopickle.MaterializePicklerFallback
+
+case class Element(data: Option[Seq[String]])
+case class Container(e: Seq[Element])
+
+// With EOFetchSpecification2 using a EOAndQualifier
+//object Test2 extends MaterializePicklerFallback {
+//  import boopickle.Default._
+//  implicit val qualifierPickler: Pickler[EOAndQualifier] = compositePickler[EOAndQualifier]
+//  def serializer(c: EOAndQualifier) = Pickle.intoBytes(c)
+//}
+
+
+
+object Test3 extends MaterializePicklerFallback {
   import boopickle.Default._
-
-
-  implicit val qualifierPickler = compositePickler[EOQualifier]
-
-  implicit val eoAndQualifierPicker: Pickler[EOAndQualifier] = generatePickler[EOAndQualifier]
-  implicit val epKeyValueQualifier2Picker: Pickler[EOKeyValueQualifier2] = generatePickler[EOKeyValueQualifier2]
-  qualifierPickler.addConcreteType[EOAndQualifier].addConcreteType[EOKeyValueQualifier2]
-
-
   implicit val eoValuePickler = compositePickler[EOValue2]
-  implicit val eoPicker: Pickler[EO2] = generatePickler[EO2]
 
   implicit val stringValuePickler: Pickler[StringValue2] = generatePickler[StringValue2]
   implicit val intValuePickler: Pickler[IntValue2] = generatePickler[IntValue2]
+  implicit val objectValue2Picker: Pickler[ObjectValue2] = generatePickler[ObjectValue2]
+
+
+  eoValuePickler.addConcreteType[StringValue2].addConcreteType[IntValue2].addConcreteType[ObjectValue2]
+  def serializer(c: EOValue2) = Pickle.intoBytes(c)
+}
+
+
+object Test2 extends MaterializePicklerFallback {
+  import boopickle.Default._
+  implicit val qualifierPickler = compositePickler[EOQualifier]
+
+  implicit val eoAndQualifierPicker: Pickler[EOAndQualifier] = generatePickler[EOAndQualifier]
+  implicit val eoOrQualifierPicker: Pickler[EOOrQualifier] = generatePickler[EOOrQualifier]
+  implicit val epKeyValueQualifier2Picker: Pickler[EOKeyValueQualifier2] = generatePickler[EOKeyValueQualifier2]
+
+  qualifierPickler.addConcreteType[EOAndQualifier].addConcreteType[EOOrQualifier].addConcreteType[EOKeyValueQualifier2]
+  def serializer(c: EOQualifier) = Pickle.intoBytes(c)
+}
+
+
+object Test extends MaterializePicklerFallback {
+  import boopickle.Default._
+  implicit val bPickler = generatePickler[Element]
+  def serializer(c: Container) = Pickle.intoBytes(c)
+}
+
+
+object EO  {
+  import boopickle.Default._
+
+
+  //implicit val qualifierPickler = compositePickler[EOQualifier]
+
+  //implicit val eoAndQualifierPicker: Pickler[EOAndQualifier] = generatePickler[EOAndQualifier]
+
+
+  //implicit val eoValuePickler = compositePickler[EOValue2]
+  //implicit val eoPicker: Pickler[EO2] = generatePickler[EO2]
+
+  //implicit val stringValuePickler: Pickler[StringValue2] = generatePickler[StringValue2]
+  //implicit val intValuePickler: Pickler[IntValue2] = generatePickler[IntValue2]
   //implicit val objectValue2Picker: Pickler[ObjectValue2] = generatePickler[ObjectValue2]
 
 
@@ -56,8 +103,8 @@ object EO  { //extends MaterializePicklerFallback
 
   // case class ObjectValue2(eo: Option[EO2]) extends EOValue2
   // case class ObjectValue2(eo: EO2) extends EOValue2
-  implicit val objectV0alue2Picker: Pickler[ObjectValue2] =
-  transformPickler[ObjectValue2, (EO2)]((eoOpt)  => new ObjectValue2(eoOpt))((ov) => (ov.eo))
+////  implicit val objectV0alue2Picker: Pickler[ObjectValue2] =
+////  transformPickler[ObjectValue2, (EO2)]((eoOpt)  => new ObjectValue2(eoOpt))((ov) => (ov.eo))
 
 // case class EO2(entity: EOEntity, values: Map[String,EOValue2], memID: Option[Int] = None, validationError: Option[String] = None)
   //def serializer(eo: EO2) = Pickle.intoBytes(eo)
@@ -65,9 +112,10 @@ object EO  { //extends MaterializePicklerFallback
   //  transformPickler[EO2, (EOEntity,Map[String,EOValue2],Option[Int], Option[String])]((q)  => new EO2(q._1, q._2, q._3,q._4))((q) => (q.entity, q.values, q.memID, q.validationError))
 
 
-  eoValuePickler.addConcreteType[StringValue2].addConcreteType[IntValue2].addConcreteType[ObjectValue2]
+  //eoValuePickler.addConcreteType[StringValue2].addConcreteType[IntValue2].addConcreteType[ObjectValue2]
 
-  implicit val eoFetchSpecificationPicker: Pickler[EOFetchSpecification2] = generatePickler[EOFetchSpecification2]
+  /////implicit val eoFetchSpecificationPicker: Pickler[EOFetchSpecification2] = generatePickler[EOFetchSpecification2]
+  ///def serializer(c: EOFetchSpecification2) = Pickle.intoBytes(c)
 
   //implicit val eoKeyValueQualifierPicker: Pickler[EOKeyValueQualifier2] = generatePickler[EOKeyValueQualifier2]
 
@@ -242,15 +290,18 @@ resultOpt match {
 sealed trait EOValue2
 case class StringValue2(value: Option[String]) extends EOValue2
 case class IntValue2(value : Option[Int]) extends EOValue2
-//case class ObjectValue2(eo: Option[EO2]) extends EOValue2
-case class ObjectValue2(eo: EO2) extends EOValue2
+case class ObjectValue2(eo: Option[EO2]) extends EOValue2
+//case class ObjectValue2(eo: EO2) extends EOValue2
+//case class ObjectValue2(eo: String) extends EOValue2
 
 // TODO Restore it
 //case class ObjectsValue2(eos: Seq[String]) extends EOValue2
 
 
 case class EOFetchSpecification (entityName: String, qualifier: Option[EOQualifier] = None, sortOrderings: List[EOSortOrdering] = List())
-case class EOFetchSpecification2 (entityName: String, qualifier: EOQualifier = null, sortOrderings: List[EOSortOrdering] = List())
+case class EOFetchSpecification2 (entityName: String, qualifier: Option[EOQualifier] = None, sortOrderings: List[EOSortOrdering] = List())
+
+
 
 object EOFetchSpecification {
 def objectsWithFetchSpecification(eos : List[EO], fetchSpecification: EOFetchSpecification): List[EO] = {
@@ -273,9 +324,10 @@ def filteredEOsWithQualifier(eos : List[EO], qualifier: EOQualifier) = {
 }
 
 def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
-qualifier match {
-  case EOAndQualifier(qualifiers) =>
-    true
+  true
+//qualifier match {
+//  case EOAndQualifier(qualifiers) =>
+//    true
 
     // TODO Restore it
     /*
@@ -307,15 +359,17 @@ qualifier match {
   // TODO restore it
 /*case EONotQualifier(qualifier) =>
     !evaluateWithEO(eo,qualifier) */
-}
+//}
 }
 }
 
 
 sealed trait EOQualifier
 
-case class EOAndQualifier(qualifiers : String) extends EOQualifier
+case class EOAndQualifier(qualifiers : List[EOQualifier]) extends EOQualifier
 //case class EOOrQualifier(qualifiers : List[EOQualifier]) extends EOQualifier
+case class EOOrQualifier(qualifiers : List[EOQualifier]) extends EOQualifier
+//case class EOKeyValueQualifier2(key: String, selector : String, value: EOValue2) extends EOQualifier
 case class EOKeyValueQualifier2(key: String, selector : String, value: EOValue2) extends EOQualifier
 case class EOKeyValueQualifier(key: String, selector : String, value: EOValue) // extends EOQualifier
 //case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
