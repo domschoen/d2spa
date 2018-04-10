@@ -75,7 +75,7 @@ object ERD2WEditToOneRelationship   {
             //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
             //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
 
-            Hydration(DrySubstrate(fetchSpecification = Some(EOFetchSpecification(destinationEntity.name))),WateringScope(Some(keyWhenRelationshipRuleFault)))
+            Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),WateringScope(Some(keyWhenRelationshipRuleFault)))
           )
         )
       ))
@@ -166,15 +166,12 @@ object ERD2WEditToOneRelationship   {
                         log.debug("eoRefs " + eos)
                         val destinationEO = EOValue.valueForKey(eo, propertyName)
                         val defaultValue = destinationEO match {
-                          case Some(ObjectValue(eoV)) => eoV match {
-                            case Some(eo) => EOValue.pk(eo).get.toString
-                            case _ => "None"
-                          }
+                          case Some(ObjectValue(isSome, eoV)) => if (isSome) EOValue.pk(eoV).get.toString else "None"
                           case _ => "None"
                         }
                         <.div(
                           <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, ObjectValue( eoWith(eos, destinationEntity, e.currentTarget.value))))
+                            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                           },
                           {
                             val tupleOpts = eos map (x => {

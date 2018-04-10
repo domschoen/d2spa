@@ -50,7 +50,7 @@ object ERDList {
           val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
 
           val size = eoValueOpt match {
-            case Some(ObjectsValue(eos)) => eos.size
+            // TO Restire case Some(ObjectsValue(eos)) => eos.size
             case _ => 0
           }
           //val size = 1

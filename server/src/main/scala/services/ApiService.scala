@@ -386,7 +386,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def hydrateEOs(eo: Seq[EO],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
     Future(Seq())
   }
-  def search(fs: EOFetchSpecification2): Future[Seq[EO]] = Future(Seq())
 
   def search(fs: EOFetchSpecification): Future[Seq[EO]] = {
     Logger.debug("Search for entity: " + fs.entityName + " fs " + fs)
@@ -413,8 +412,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     return value match {
       case StringValue(stringV) => "qualifier=" + qualifier.key + " like '*" + stringV + "*'"
       case IntValue(i)  => "" // TODO
-      case ObjectValue(eo) => "" // TODO
-      case ObjectsValue(eos) => "" // TODO
+      case ObjectValue(isSome, eo) => "" // TODO
+      // To Restore case ObjectsValue(eos) => "" // TODO
     }
   }
 
@@ -423,7 +422,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def searchOnD2SPAServer(fs: EOFetchSpecification): Future[Seq[EO]] = {
     val entityName = fs.entityName
     val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
-    val qualifierOpt = fs.qualifier
+    val qualifierOpt = fs match {
+      case fa: EOFetchAll =>  None
+      case fq: EOQualifiedFetch => Some(fq.qualifier)
+    }
 
     val qualifierSuffix = ""
 
@@ -466,13 +468,16 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val pkName = destinationEntity.pkAttributeName
               val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
               val eo = EOValue.dryEOWithEntity(destinationEntity,Some(pk))
-              valuesMap += (key -> ObjectValue(Some(eo)))
+              valuesMap += (key -> ObjectValue(eo = eo))
             case _ =>
               valuesMap += (key -> StringValue(Some("not supported")))
 
           }
         }
-        eos ::= EO(entity,valuesMap,None)
+        val eo = EO(entity,valuesMap,0)
+        val pk = EOValue.pk(eo).get
+        val updatedEO = eo.copy(pk = pk)
+        eos ::= updatedEO
       }
       Logger.debug("Search: eos created " + eos)
 
@@ -551,14 +556,15 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           case _ =>
             JsNull
         }
-      case ObjectValue(eoV) => {
-        eoV match {
-          case Some(eo) =>
-            val entityName = eo.entity.name
-            val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
-            val pk = EOValue.pk(eo).get
-            JsObject( Seq( pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
-          case _ => JsNull
+      case ObjectValue(isSome, eo) => {
+        if (isSome) {
+
+          val entityName = eo.entity.name
+          val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
+          val pk = EOValue.pk(eo).get
+          JsObject(Seq(pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
+        } else {
+          JsNull
         }
       }
       case _ => JsString("")
@@ -710,7 +716,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
               EOValue.dryEOWith(eomodel(),entityName,Some(id))
             })
-            ObjectsValue(eos)
+            // to Restore ObjectsValue(eos)
+            StringValue(Some("toto"))
           } else if (value.isInstanceOf[JsString]) {
             val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
             EOValue.stringV(stringV)

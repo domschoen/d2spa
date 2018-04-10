@@ -82,14 +82,18 @@ object ERD2WDisplayToOne  {
       val fireActions: List[D2WAction] = destinationEOValueOpt match {
         case Some(destinationEOValue) =>
           destinationEOValue match {
-            case ObjectValue(Some(destinationEO)) =>
-              val destinationPk = EOValue.pk(destinationEO).get
-              val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
-              List[D2WAction](
-                keyWhenRelationshipFireRule,
-                Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
+            case ObjectValue(isSome,destinationEO) =>
+              if (isSome) {
+                val destinationPk = EOValue.pk(destinationEO).get
+                val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
+                List[D2WAction](
+                  keyWhenRelationshipFireRule,
+                  Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
+                  )
                 )
-              )
+              } else {
+                List.empty[D2WAction]
+              }
             case _ => List.empty[D2WAction]
           }
       }

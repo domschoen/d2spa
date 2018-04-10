@@ -139,9 +139,7 @@ object QueryValue {
     val qualifiers = queryValues.map(qv => {
       EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),StringValue(Some(qv.value)))
     })
-    // TODO Restore it
-    // if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
-    None
+    if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
   }
 }
 
@@ -461,21 +459,15 @@ object EOCacheUtils {
   }
 
   def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: EO): Option[EO] = {
-    eo.memID match {
-      case Some(memID) =>
-        val memCache = cache.cache.insertedEOs
-        log.debug("Out of cache " + memID)
-        log.debug("Cache " + memCache)
-        log.debug("e name " + entityName)
-        EOCacheUtils.objectForEntityNamedAndPk(memCache,entityName,memID)
-      case None =>
-        val dbCache = cache.cache.eos
-        val pkOpt = EOValue.pk(eo)
-        pkOpt match {
-          case Some(pk) =>
-            EOCacheUtils.objectForEntityNamedAndPk(dbCache,entityName,pk)
-          case None => None
-        }
+    if (eo.pk < 0) {
+      val memCache = cache.cache.insertedEOs
+      log.debug("Out of cache " + eo.pk)
+      log.debug("Cache " + memCache)
+      log.debug("e name " + entityName)
+      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, -eo.pk)
+    } else {
+      val dbCache = cache.cache.eos
+      EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, eo.pk)
     }
   }
 }

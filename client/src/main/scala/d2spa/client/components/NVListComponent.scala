@@ -160,7 +160,7 @@ object NVListComponent {
               eovalueOpt match {
                 case Some(eovalue) =>
                   eovalue match {
-                    case ObjectsValue(eos) => eos.toList
+                    // To Restore case ObjectsValue(eos) => eos.toList
                     case _ => List.empty[EO]
                   }
                 case _ =>

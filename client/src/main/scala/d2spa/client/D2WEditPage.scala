@@ -71,25 +71,18 @@ object D2WEditPage {
       val eoOpt = p.d2wContext.eo
       val actionList = eoOpt match {
         case Some(eo) =>
-          eo.memID match {
-            case Some(memID) =>
-              List(
-                fireDisplayPropertyKeys
-              )
-            case _ =>
-              val pkOpt = EOValue.pk(eo)
-              pkOpt match {
-                case Some(pk) =>
-                  val eoFault = EOFault(entityName,pk)
-                  List(
-                    fireDisplayPropertyKeys,
-                    // in order to have an EO completed with all attributes for the task,
-                    // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-                    Hydration(DrySubstrate(eo = Some(eoFault)),WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-                  )
-                case _ => noneFireActions
-
-              }
+          if (eo.pk < 0) {
+            List(
+              fireDisplayPropertyKeys
+            )
+          } else {
+            val eoFault = EOFault(entityName, eo.pk)
+            List(
+              fireDisplayPropertyKeys,
+              // in order to have an EO completed with all attributes for the task,
+              // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+            )
           }
         case None => noneFireActions
       }
