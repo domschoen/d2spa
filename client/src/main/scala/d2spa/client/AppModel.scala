@@ -429,11 +429,11 @@ object EOCacheUtils {
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fetchSpecification: EOFetchSpecification) : Option[List[EO]] = {
-    val entityNameEOs = objectsForEntityNamed(eos,fetchSpecification.entityName)
+  def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
+    val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
     entityNameEOs match {
       case Some(eos) =>
-        Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fetchSpecification))
+        Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fs))
       case _ => None
     }
   }

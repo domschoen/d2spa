@@ -243,12 +243,10 @@ object EOValue {
 
 
 
-sealed trait EOFetchSpecification {
-  def entityName: String
-}
+sealed trait EOFetchSpecification
 
-case class EOFetchAll(override val entityName: String, sortOrderings: List[EOSortOrdering] = List()) extends EOFetchSpecification
-case class EOQualifiedFetch(override val entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering] = List()) extends EOFetchSpecification
+case class EOFetchAll(entityName: String, sortOrderings: List[EOSortOrdering] = List()) extends EOFetchSpecification
+case class EOQualifiedFetch(entityName: String, qualifier: EOQualifier, sortOrderings: List[EOSortOrdering] = List()) extends EOFetchSpecification
 
 
 object EOFetchSpecification {
@@ -258,6 +256,13 @@ object EOFetchSpecification {
     fs match {
       case fa: EOFetchAll => eos
       case fq: EOQualifiedFetch => EOQualifier.filteredEOsWithQualifier(eos, fq.qualifier)
+    }
+  }
+
+  def entityName(fs: EOFetchSpecification): String = {
+    fs match {
+      case fa: EOFetchAll => fa.entityName
+      case fq: EOQualifiedFetch => fq.entityName
     }
 
   }

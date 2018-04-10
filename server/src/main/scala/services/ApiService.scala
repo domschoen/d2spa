@@ -387,15 +387,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     Future(Seq())
   }
 
-  def search(fs: EOFetchSpecification): Future[Seq[EO]] = {
-    Logger.debug("Search for entity: " + fs.entityName + " fs " + fs)
-    //if (usesD2SPAServer) {
-      searchOnD2SPAServer(fs)
-    //} else {
-      // to be restored
-      // searchOnOnlineCountryWs(qualifiers)
-    //}
+  def searchAll(fs: EOFetchAll): Future[Seq[EO]] = {
+    val entityName = EOFetchSpecification.entityName(fs)
+
+    searchOnD2SPAServer(entityName,None)
   }
+  def search(fs: EOQualifiedFetch): Future[Seq[EO]] = {
+    val entityName = EOFetchSpecification.entityName(fs)
+
+    searchOnD2SPAServer(entityName,Some(fs.qualifier))
+  }
+
+
 
   // TBD Sorting parameter
   // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
@@ -419,14 +422,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
 
-  def searchOnD2SPAServer(fs: EOFetchSpecification): Future[Seq[EO]] = {
-    Logger.debug("Search with fs:" + fs)
-    val entityName = fs.entityName
+  def searchOnD2SPAServer(entityName: String, qualifierOpt: Option[EOQualifier]): Future[Seq[EO]] = {
+    Logger.debug("Search with fs:" + entityName)
     val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
-    val qualifierOpt = fs match {
-      case fa: EOFetchAll =>  None
-      case fq: EOQualifiedFetch => Some(fq.qualifier)
-    }
+
 
     val qualifierSuffix = qualifierOpt match {
       case Some(q) => "?" + qualifiersUrlPart(q)

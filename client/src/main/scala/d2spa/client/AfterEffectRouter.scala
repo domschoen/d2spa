@@ -30,20 +30,16 @@ object AfterEffectRouter {
     val taskName = d2WContext.task.get
     d2WContext.eo match {
       case Some(eo) =>
-        val pkOpt = EOValue.pk(eo)
-        pkOpt match {
-          case Some(pk) =>
-            val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)
-            setRouterToPage(page)
-          case _ => {
-            setRouterToPage(QueryPage(entityName))
-          }
-        }
-      case _ => {
+        val pk = eo.pk
+        if (pk < 0) {
           val page = NewEOPage(entityName)
           log.debug("Set Router to page " + page)
           setRouterToPage(page)
-      }
+        } else {
+          val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)
+          setRouterToPage(page)
+        }
+
       case _ => {
         setRouterToPage(QueryPage(entityName))
       }

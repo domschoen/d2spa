@@ -294,8 +294,11 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                   }
                 case DrySubstrate(_ , _ , Some(fs)) =>
                   log.debug("Hydration with fs " + fs)
+                  fs match {
+                    case fa: EOFetchAll => effectOnly(Effect(AjaxClient[Api].searchAll(fa).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
+                    case fq: EOQualifiedFetch => effectOnly(Effect(AjaxClient[Api].search(fq).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
+                  }
 
-                  effectOnly(Effect(AjaxClient[Api].search(fs).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
 
                 case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
               }
@@ -686,7 +689,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].search(fs).call().map(SearchResult(entityName, _)))
+        Effect(AjaxClient[Api].searchAll(fs).call().map(SearchResult(entityName, _)))
       )
 
   }

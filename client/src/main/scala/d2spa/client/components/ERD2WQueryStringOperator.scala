@@ -26,19 +26,25 @@ object ERD2WQueryStringOperator  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
-      val entityName = d2wContext.entityName.get
-      val propertyName = d2wContext.propertyKey.get
+      val d2wContextOpt = p.proxy.value.previousPage
+      d2wContextOpt match {
+        case Some(d2wContext) =>
+          val propertyD2WContext = p.d2wContext
+          val entityName = propertyD2WContext.entityName.get
+          val propertyName = propertyD2WContext.propertyKey.get
 
-      val queryValues = d2wContext.queryValues
-      log.debug("ERD2WQueryStringOperator " + propertyName)
-      val queryValue = queryValues.find(r => {r.key.equals(propertyName)})
-      val value = if (queryValue.isDefined) queryValue.get.value else ""
-      <.div(
-        <.input(^.id := "description", ^.value := value,
-          ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,
-            QueryValue(propertyName,e.target.value, QueryOperator.Match)))} )
-      )
+          val queryValues = d2wContext.queryValues
+          log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + queryValues)
+          val queryValue = queryValues.find(r => {r.key.equals(propertyName)})
+          val value = if (queryValue.isDefined) queryValue.get.value else ""
+          <.div(
+            <.input(^.id := "description", ^.value := value,
+              ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,
+                QueryValue(propertyName,e.target.value, QueryOperator.Match)))} )
+          )
+        case _ =>
+          <.div("no context")
+      }
     }
   }
 
