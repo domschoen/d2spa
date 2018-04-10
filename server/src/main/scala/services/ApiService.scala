@@ -420,6 +420,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
   def searchOnD2SPAServer(fs: EOFetchSpecification): Future[Seq[EO]] = {
+    Logger.debug("Search with fs:" + fs)
     val entityName = fs.entityName
     val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
     val qualifierOpt = fs match {
@@ -427,13 +428,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       case fq: EOQualifiedFetch => Some(fq.qualifier)
     }
 
-    val qualifierSuffix = ""
-
-    // TODO Restore it
-    //val qualifierSuffix = qualifierOpt match {
-    //  case Some(q) => "?" + qualifiersUrlPart(q)
-    //  case _ => ""
-    //}
+    val qualifierSuffix = qualifierOpt match {
+      case Some(q) => "?" + qualifiersUrlPart(q)
+      case _ => ""
+    }
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     Logger.debug("Search URL:" + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
