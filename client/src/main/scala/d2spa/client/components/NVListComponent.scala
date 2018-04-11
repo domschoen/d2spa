@@ -136,19 +136,25 @@ object NVListComponent {
 
     def render(p: Props) = {
       log.debug("NVListComponent render ")
-      val d2wContext = p.d2wContext
+      val staleD2WContext = p.d2wContext
 
-      val entityName = d2wContext.entityName.get
+      val entityName = staleD2WContext.entityName.get
       log.debug("NVListComponent render for entity: " + entityName)
 
 
       val ruleResultsModel = p.proxy.value.ruleResults
 
-      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayPropertyKeys)
       log.debug("NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
-      val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+      val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayNameForEntity)
 
-      val dataRepOpt = d2wContext.dataRep
+      val d2wContextOpt = p.proxy.value.previousPage
+      val dataRepOpt = d2wContextOpt match {
+        case Some(d2wContext) => d2wContext.dataRep
+        case _ => None
+      }
+
+      log.debug("dataRepOpt " + dataRepOpt)
       val eos: List[EO] = dataRepOpt match {
         case Some(dataRep) => {
           val cache = p.proxy.value.cache

@@ -684,7 +684,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
       val fs = EOFetchAll(entityName)
 
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       val  stack = stackD2WContext(d2wContext)
       log.debug("Register Previous " + stack)
       updated(
