@@ -235,9 +235,9 @@ object D2WEditPage {
                   }
                 case None => <.div("Object not found in cache")
               }
-            case _ => <.div("no context")
+            case _ => <.div("Object Ref not found")
           }
-        case _ => <.div("Object Ref not found")
+        case _ => <.div("no context")
 
       }
     }

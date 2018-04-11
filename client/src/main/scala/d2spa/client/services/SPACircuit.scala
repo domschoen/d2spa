@@ -428,7 +428,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   def removeEOFromMemCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
-    removeEOFromCache(eo, e => -e.pk, eos)
+    removeEOFromCache(eo, e => e.pk, eos)
   }
 
   def removeEOFromCache(eo: EO, idExtractor: EO => Int, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
@@ -449,8 +449,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case SavedEO(fromTask, eo) =>
       log.debug("SavedEO " + eo)
       val insertedEOs = removeEOFromMemCache(eo,value.insertedEOs)
-      val eos = addEOToDBCache(eo,value.eos)
-      val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(eo))
+      val updatedEO = eo.copy(pk = -eo.pk)
+      val eos = addEOToDBCache(updatedEO,value.eos)
+      val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
       updated(
         EOCache(eos,insertedEOs),
         Effect.action(RegisterPreviousPage(d2WContext))
