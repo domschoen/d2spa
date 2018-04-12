@@ -622,6 +622,11 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
   override def handle = {
 
+    case  InspectEO (fromTask, eo) =>
+      val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(eo))
+      effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
+
+
     case  InitMetaDataForList (entityName) =>
       log.debug("InitMetaData for List page " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))

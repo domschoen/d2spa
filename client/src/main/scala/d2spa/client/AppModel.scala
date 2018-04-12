@@ -103,6 +103,8 @@ case class SavedEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
+case class InspectEO(fromTask: String, eo: EO) extends Action
+
 case class SaveError(eo: EO) extends Action
 object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action

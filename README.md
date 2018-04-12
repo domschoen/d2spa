@@ -87,6 +87,7 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
   - Why to-many relationship Customer.projects is not part of exported data ?
   - List page > Inspect 1 element > Click Return button should go back to List page
   - Change D2WContext to FullFledgeD2WContext for FireRule
+  - in Query page, clear a criteria should remove the query value
   
 
 ### Nice to have

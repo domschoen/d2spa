@@ -118,7 +118,7 @@ object NVListComponent {
 
     def inspectEO(eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(SavedEO("list", eo)))
+        $.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo)))
     }
 
     def editEO(eo: EO) = {
@@ -237,6 +237,7 @@ object NVListComponent {
                                 propertyKey => {
                                   val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
                                   <.td(^.className := "list1",
+                                    //"toto"
                                     D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                                   )
 
