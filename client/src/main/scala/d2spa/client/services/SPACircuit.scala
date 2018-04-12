@@ -150,7 +150,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
   }
   // handle actions
   override def handle = {
-    case SetPageForTaskAndEntity(d2wContext) =>
+
+    /*case SetPageForTaskAndEntity(d2wContext) =>
       log.debug("SetPageForTaskAndEntity, d2wContext " + d2wContext)
       val entityName = d2wContext.entityName.get
       val metaDataPresent = RuleUtils.metaDataFetched(value,d2wContext)
@@ -168,7 +169,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
     case SetMetaDataForMenu(d2wContext, entityMetaData) => {
       val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
       updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
-    }
+    }*/
 
 
     case SetMetaDataWithActions(d2wContext, actions, entityMetaData) =>
@@ -178,7 +179,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
     case SetMetaData(d2wContext, entityMetaData) =>
       log.debug("SetMetaData " + entityMetaData)
       val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
-      updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
+      updated(updatedRuleResults)
 
 
     case FireActions(d2wContext: D2WContext, actions: List[D2WAction]) =>
@@ -620,15 +621,13 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
   }
 
   override def handle = {
+
     case  InitMetaDataForList (entityName) =>
       log.debug("InitMetaData for List page " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      updated(
-        // change context to inspect
-        Some(d2wContext),
-        Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
+      effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
 
     case InitMetaData(entityName) =>
       log.debug("InitMetaData for Query page " + entityName)
@@ -668,29 +667,41 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.debug("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
       val d2wContext = value.get
       val currentQueryValues = d2wContext.queryValues
-      val newQueryValues = queryValue :: currentQueryValues
+      val newQueryValues = currentQueryValues + (queryValue.key -> queryValue)
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
 
     case Search(entityName) =>
-      val qualifierOpt = value match {
+      log.debug("SPACircuit | Search(" + entityName + ") | value: " + value)
+      val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
-          QueryValue.qualifierFromQueryValues(d2wContext.queryValues)
-        case _ => None  // shouldn't come here because the query page initialized it
-      }
-      log.debug("Search: for entity " + entityName + " query with qualifier " + qualifierOpt)
-      // Call the server to get the result +  then execute action Search Result (see above datahandler)
+          val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)
+          log.debug("SPACircuit | Search(" + entityName + ") | qualifierOpt: " + qualifierOpt)
 
-      val fs = EOFetchAll(entityName)
+          qualifierOpt match {
+              // TODO manage sort ordering
+            case Some(qualifier) => EOQualifiedFetch(entityName,qualifier,List())
+            case _ =>   EOFetchAll(entityName)
+          }
+        case _ => EOFetchAll(entityName)  // shouldn't come here because the query page initialized it
+      }
+      log.debug("Search: for entity " + entityName + " query with fs " + fs)
+      // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       val  stack = stackD2WContext(d2wContext)
       log.debug("Register Previous " + stack)
+
+      val effect = fs match {
+        case fa: EOFetchAll => Effect(AjaxClient[Api].searchAll(fa).call().map(SearchResult(entityName, _)))
+        case fq: EOQualifiedFetch => Effect(AjaxClient[Api].search(fq).call().map(SearchResult(entityName, _)))
+      }
+
       updated(
         // change context to inspect
         Some(stack),
-        Effect(AjaxClient[Api].searchAll(fs).call().map(SearchResult(entityName, _)))
+        effect
       )
 
   }

@@ -57,7 +57,7 @@ object NVListComponent {
       // TBD should we use D2WContext or full fledged ?
       val displayPKeysContext = D2WContext(
         Some(destinationEntity.name),
-        Some(d2spa.shared.TaskDefine.list) , None,  None, List(), None, None,
+        Some(d2spa.shared.TaskDefine.list) , None,  None, Map(), None, None,
         Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
       log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
       val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
@@ -149,107 +149,113 @@ object NVListComponent {
       val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayNameForEntity)
 
       val d2wContextOpt = p.proxy.value.previousPage
-      val dataRepOpt = d2wContextOpt match {
-        case Some(d2wContext) => d2wContext.dataRep
-        case _ => None
-      }
+      log.debug("NVListComponent render |  proxy d2wContext: " + d2wContextOpt)
 
-      log.debug("dataRepOpt " + dataRepOpt)
-      val eos: List[EO] = dataRepOpt match {
-        case Some(dataRep) => {
-          val cache = p.proxy.value.cache
-          dataRep match {
-            case DataRep(fetchSpecification: EOFetchSpecification, _) =>
-              EOCacheUtils.objectsWithFetchSpecification(cache, fetchSpecification)
-            case DataRep(_, eosAtKeyPath: EOsAtKeyPath) => {
-              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
-              eovalueOpt match {
-                case Some(eovalue) =>
-                  eovalue match {
-                    // To Restore case ObjectsValue(eos) => eos.toList
-                    case _ => List.empty[EO]
+      d2wContextOpt match {
+        case Some(d2wContext) =>
+          val dataRepOpt = d2wContext.dataRep
+
+          log.debug("dataRepOpt " + dataRepOpt)
+          val eos: List[EO] = dataRepOpt match {
+            case Some(dataRep) => {
+              val cache = p.proxy.value.cache
+              dataRep match {
+                case DataRep(Some(fs), _) =>
+                  log.debug("NVListCompoennt look for objects in cache with fs " + fs)
+                  EOCacheUtils.objectsWithFetchSpecification(cache, fs)
+
+                case DataRep(_, Some(eosAtKeyPath)) => {
+                  val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
+                  eovalueOpt match {
+                    case Some(eovalue) =>
+                      eovalue match {
+                        // To Restore case ObjectsValue(eos) => eos.toList
+                        case _ => List.empty[EO]
+                      }
+                    case _ =>
+                      List.empty[EO]
                   }
-                case _ =>
-                  List.empty[EO]
+                }
+                case _ => List.empty[EO]
               }
             }
             case _ => List.empty[EO]
           }
-        }
-        case _ => List.empty[EO]
-      }
-      val countText = eos.size + " " + (if (entityDisplayNameOpt.isDefined) entityDisplayNameOpt.get else "")
+          val countText = eos.size + " " + (if (entityDisplayNameOpt.isDefined) entityDisplayNameOpt.get else "")
 
-      <.div(
-        {
-          val eoOnError = eos.find(x => (x.validationError.isDefined))
-          if (eoOnError.isDefined) {
-            val validationError = eoOnError.get.validationError.get
-            <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
-          } else <.div()
-        },
-        {
-          <.table(^.className := "listPage",
-            <.tbody(
-              <.tr(^.className := "listHeader",
-                <.td(^.className := "listHeaderEntityName",
-                  <.span(^.className := "attribute", countText)
-                ),
-                if (p.isEmbedded) <.td() else <.td(^.className := "listHeaderReturnButton", <.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))))
-              )
-            ),
-            <.tbody(
-              <.tr(
-                <.td(
-                  <.table(^.className := "listRepetition",
-                    <.tbody(
-                      <.tr(^.className := "listRepetitionColumnHeader",
-                        <.td(), {
-                          displayPropertyKeys toTagMod (propertyKey =>
-                            <.td(^.className := "listRepetitionColumnHeader", {
-                              val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
-                              val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
-                              val displayString = displayNameFound match {
-                                case Some(stringValue) => {
-                                  //case Some(stringValue) => {
-                                  stringValue
-                                }
-                                case _ => propertyKey
-                              }
-                              <.span(^.className := "listRepetitionColumnHeader", displayString)
-                            })
-                            )
-                        }
-                      )
+          <.div(
+            {
+              val eoOnError = eos.find(x => (x.validationError.isDefined))
+              if (eoOnError.isDefined) {
+                val validationError = eoOnError.get.validationError.get
+                <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
+              } else <.div()
+            },
+            {
+              <.table(^.className := "listPage",
+                <.tbody(
+                  <.tr(^.className := "listHeader",
+                    <.td(^.className := "listHeaderEntityName",
+                      <.span(^.className := "attribute", countText)
                     ),
-                    <.tbody(
-                      eos toTagMod (eo =>
-                        <.tr(
-                          <.td(
-                            <.img(^.className := "IconButton", ^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
-                            <.img(^.className := "IconButton", ^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
-                            <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
-                          ),
-                          displayPropertyKeys toTagMod (
-                            propertyKey => {
-                              val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
-                              <.td(^.className := "list1","ll"
-                                //D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
-                              )
-
+                    if (p.isEmbedded) <.td() else <.td(^.className := "listHeaderReturnButton", <.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))))
+                  )
+                ),
+                <.tbody(
+                  <.tr(
+                    <.td(
+                      <.table(^.className := "listRepetition",
+                        <.tbody(
+                          <.tr(^.className := "listRepetitionColumnHeader",
+                            <.td(), {
+                              displayPropertyKeys toTagMod (propertyKey =>
+                                <.td(^.className := "listRepetitionColumnHeader", {
+                                  val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                  val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
+                                  val displayString = displayNameFound match {
+                                    case Some(stringValue) => {
+                                      //case Some(stringValue) => {
+                                      stringValue
+                                    }
+                                    case _ => propertyKey
+                                  }
+                                  <.span(^.className := "listRepetitionColumnHeader", displayString)
+                                })
+                                )
                             }
-                            ),
-                          if (p.isEmbedded) <.td() else <.td(<.img(^.className := "IconButton", ^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
+                          )
+                        ),
+                        <.tbody(
+                          eos toTagMod (eo =>
+                            <.tr(
+                              <.td(
+                                <.img(^.className := "IconButton", ^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
+                                <.img(^.className := "IconButton", ^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
+                                <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
+                              ),
+                              displayPropertyKeys toTagMod (
+                                propertyKey => {
+                                  val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                  <.td(^.className := "list1",
+                                    D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                                  )
+
+                                }
+                                ),
+                              if (p.isEmbedded) <.td() else <.td(<.img(^.className := "IconButton", ^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
+                            )
+                            )
                         )
                       )
                     )
                   )
                 )
               )
-            )
+            }
           )
-        }
-      )
+        case _ => <.div("No context")
+      }
+
     }
   }
 

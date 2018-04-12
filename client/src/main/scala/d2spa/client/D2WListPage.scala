@@ -32,6 +32,7 @@ object D2WListPage {
     }
 
     def render(p: Props) = {
+      log.debug("D2WListPage render " + p.proxy.value)
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       <.div(

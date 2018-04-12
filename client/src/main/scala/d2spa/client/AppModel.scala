@@ -64,11 +64,11 @@ case class FetchedObjectsForEntity(eos: Seq[EO], d2wContext: D2WContext, actions
 
 case class InitMetaData(entityName: String) extends Action
 case class InitMetaDataForList(entityName: String) extends Action
-case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
+//case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
-case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
+//case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOWithEOModelForEdit(eomodel: EOModel, entityName: String) extends Action
@@ -130,13 +130,15 @@ case class QueryValue(key: String,value: String, operator: String)
 
 object QueryValue {
   val operatorByQueryOperator = Map(
-    NSSelector.QualifierOperatorLessThanOrEqualTo -> QueryOperator.Max,
-    NSSelector.QualifierOperatorGreaterThanOrEqualTo -> QueryOperator.Min,
-    NSSelector.QualifierOperatorEqual -> QueryOperator.Match
+    QueryOperator.Max -> NSSelector.QualifierOperatorLessThanOrEqualTo,
+    QueryOperator.Min -> NSSelector.QualifierOperatorGreaterThanOrEqualTo,
+    QueryOperator.Match -> NSSelector.QualifierOperatorEqual
   )
 
   def qualifierFromQueryValues(queryValues: List[QueryValue]) : Option[EOQualifier] = {
     val qualifiers = queryValues.map(qv => {
+      log.debug("QueryValue " + qv)
+      log.debug("QueryValue operatorByQueryOperator(qv.operator): " + operatorByQueryOperator(qv.operator))
       EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),StringValue(Some(qv.value)))
     })
     if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
@@ -153,7 +155,7 @@ case class D2WContext(entityName: Option[String],
                       previousTask: Option[D2WContext] = None,
                       //pageCounter: Int = 0,
                       eo: Option[EO] = None,
-                      queryValues: List[QueryValue] = List(),
+                      queryValues: Map[String, QueryValue] = Map(),
                       dataRep: Option[DataRep] = None,
                       propertyKey:  Option[String] = None,
                       pageConfiguration: Option[Either[RuleFault,String]] = None)
@@ -344,6 +346,14 @@ object RuleUtils {
 }
 
 object D2WContextUtils {
+
+
+  def queryValueForKey(d2wContext: D2WContext, key: String) = {
+    val queryValues = d2wContext.queryValues
+    if (queryValues.contains(key)) queryValues(key).value else ""
+  }
+
+
   def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
     d2wContext.entityName,
     d2wContext.task,
@@ -355,7 +365,7 @@ object D2WContextUtils {
     d2wContext.task,
     None,
     None,
-    List(),
+    Map(),
     None,
     d2wContext.propertyKey,
     if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
@@ -431,6 +441,7 @@ object EOCacheUtils {
 
   def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
+    log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
       case Some(eos) =>
         Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fs))
@@ -445,6 +456,7 @@ object EOCacheUtils {
   def objectsWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
     val eosOpt = objectsWithFetchSpecification(cache.eos,fetchSpecification)
     val insertedEOsOpt = objectsWithFetchSpecification(cache.insertedEOs,fetchSpecification)
+
     eosOpt match {
       case Some(eos) =>
         insertedEOsOpt match {

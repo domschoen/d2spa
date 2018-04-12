@@ -49,9 +49,7 @@ object ERDEditRelationship  {
 
       val queryKey = p.property.name + "." + keyWhenRelationship
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
-      val queryValues = p.d2wContext.queryValues
-      val queryValue = queryValues.find(r => {r.key.equals(queryKey)})
-      val value = if (queryValue.isDefined) queryValue.get.value else ""
+      val value = D2WContextUtils.queryValueForKey(d2wContext, propertyName)
       <.div(
         <.span(pretext),
         <.input(^.id := "toOneTextField", ^.value := value,

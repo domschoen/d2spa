@@ -106,6 +106,7 @@ case class StringValue(value: Option[String]) extends EOValue
 case class IntValue(value : Option[Int]) extends EOValue
 case class ObjectValue(isSome: Boolean = true, eo: EO = null) extends EOValue
 case class ObjectsValue(eos: Seq[Int]) extends EOValue
+//case object NoneValue extends EOValue
 
 
 object EOValue {
@@ -255,7 +256,9 @@ object EOFetchSpecification {
     // TODO sort orderings
     fs match {
       case fa: EOFetchAll => eos
-      case fq: EOQualifiedFetch => EOQualifier.filteredEOsWithQualifier(eos, fq.qualifier)
+      case fq: EOQualifiedFetch =>
+        println("filter with Qualifier " + fq.qualifier)
+        EOQualifier.filteredEOsWithQualifier(eos, fq.qualifier)
     }
   }
 
@@ -276,6 +279,7 @@ object EOQualifier {
   }
 
   def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
+    println("evaluateWithEO " + eo + " q " + qualifier)
     qualifier match {
       case EOAndQualifier(qualifiers) =>
         val headQ = qualifiers.head
@@ -296,10 +300,18 @@ object EOQualifier {
           if (remaining.isEmpty) false else evaluateWithEO(eo, EOOrQualifier(remaining))
         }
       case EOKeyValueQualifier(key, selector, value) =>
-        val eoValue = EOValue.valueForKey(eo, key)
+        val eoValueOpt = EOValue.valueForKey(eo, key)
 
-        // TODO check the value
-        eoValue.equals(value)
+        eoValueOpt match {
+          case Some(eoValue) =>
+            println("Compare " + eoValue + " with " + value)
+            // TODO check the value
+            eoValue.equals(value)
+          case None =>
+            println("Error: try to compare no fetched or non existing value for key " + key + " for entity " + eo.entity.name)
+            false
+        }
+
 
       case EONotQualifier(qualifier) =>
         !evaluateWithEO(eo, qualifier)

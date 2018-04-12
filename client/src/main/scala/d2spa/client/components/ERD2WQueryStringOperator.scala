@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, D2WContext, QueryValue}
+import d2spa.client.{AppModel, D2WContext, D2WContextUtils, QueryValue}
 import d2spa.client.logger.log
 import diode.react.ModelProxy
 import diode.Action
@@ -33,10 +33,8 @@ object ERD2WQueryStringOperator  {
           val entityName = propertyD2WContext.entityName.get
           val propertyName = propertyD2WContext.propertyKey.get
 
-          val queryValues = d2wContext.queryValues
-          log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + queryValues)
-          val queryValue = queryValues.find(r => {r.key.equals(propertyName)})
-          val value = if (queryValue.isDefined) queryValue.get.value else ""
+          log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
+          val value = D2WContextUtils.queryValueForKey(d2wContext, propertyName)
           <.div(
             <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,

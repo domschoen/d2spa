@@ -413,7 +413,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
     val value = qualifier.value
     return value match {
-      case StringValue(stringV) => "qualifier=" + qualifier.key + " like '*" + stringV + "*'"
+      case StringValue(stringV) => "qualifier=" + qualifier.key + " like '*" + stringV.get + "*'"
       case IntValue(i)  => "" // TODO
       case ObjectValue(isSome, eo) => "" // TODO
       // To Restore case ObjectsValue(eos) => "" // TODO
