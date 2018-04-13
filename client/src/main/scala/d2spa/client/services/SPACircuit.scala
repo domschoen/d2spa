@@ -453,10 +453,14 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // EO goes from inserted EO to db eos
     case SavedEO(fromTask, eo) =>
       log.debug("CacheHandler | SavedEO " + eo)
-      val insertedEOs = removeEOFromMemCache(eo, value.insertedEOs)
-      val updatedEO = eo.copy(pk = -eo.pk)
+      val insertedEOs = if (EOValue.isNew(eo)) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
+      log.debug("CacheHandler | SavedEO | removed if new  " + EOValue.isNew(eo))
+      val updatedEO = if (EOValue.isNew(eo)) eo.copy(pk = -eo.pk) else eo
+      log.debug("CacheHandler | SavedEO | register eo  " + updatedEO)
+
       val eos = addEOToDBCache(updatedEO, value.eos)
       val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
+      log.debug("CacheHandler | SavedEO update cache, call action Register with context " + d2WContext)
       updated(
         EOCache(eos, insertedEOs),
         Effect.action(RegisterPreviousPage(d2WContext))
@@ -468,9 +472,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       effectOnly(Effect(AjaxClient[Api].updateEO(eo).call().map(savingEO => {
         val onError = savingEO.validationError.isDefined
         if (onError) {
-          SavedEO("edit", savingEO)
-        } else {
           UpdateEOInCache(savingEO)
+        } else {
+          SavedEO("edit", savingEO)
         }
       })))
 
@@ -484,6 +488,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
            effectOnly(Effect(AjaxClient[Api].newEO(entityName, eo).call().map(newEO => {
              val onError = newEO.validationError.isDefined
              if (onError) {
+
+               // TODO implement it
                EditEO("edit", newEO)
 
              } else {
