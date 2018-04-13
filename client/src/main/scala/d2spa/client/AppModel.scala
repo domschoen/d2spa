@@ -481,6 +481,7 @@ object EOCacheUtils {
       EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, -eo.pk)
     } else {
       val dbCache = cache.cache.eos
+      log.debug("DB Cache " + dbCache)
       EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, eo.pk)
     }
   }

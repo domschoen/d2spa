@@ -33,6 +33,7 @@ object D2WEditPage {
       val nTask = nextProps.d2wContext.task
       val taskChanged = !cTask.equals(nTask)
 
+      // may not be up to date ? (we should take the eo from the proxy)
       val cPk = currentProps.d2wContext.eo
       val nPk = nextProps.d2wContext.eo
       val pkChanged = !nPk.equals(nPk)
@@ -47,19 +48,18 @@ object D2WEditPage {
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      val staleD2WContext = p.d2wContext
 
-      val entityName = d2wContext.entityName.get
+      val entityName = staleD2WContext.entityName.get
       log.debug("D2WEditPage: will Mount " + entityName)
       val taskName = p.d2wContext.task.get
 
-      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,d2wContext)
+      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,staleD2WContext)
 
       log.debug("D2WEditPage: willMount entityMetaDataNotFetched " + entityMetaDataNotFetched)
       //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
+      val fireDisplayPropertyKeys = FireRule(staleD2WContext, RuleKeys.displayPropertyKeys)
 
-      log.debug("D2WEditPage: willMount eo " + p.d2wContext.eo)
 
       lazy val noneFireActions = List(
         fireDisplayPropertyKeys,
@@ -67,32 +67,38 @@ object D2WEditPage {
         // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
         CreateMemID(entityName)
       )
+      val d2wContextOpt = p.proxy.value.previousPage
+      val actionList = d2wContextOpt match {
+        case Some(d2wContext) =>
+          log.debug("D2WEditPage: willMount eo " + d2wContext.eo)
 
-      val eoOpt = p.d2wContext.eo
-      val actionList = eoOpt match {
-        case Some(eo) =>
-          if (eo.pk < 0) {
-            List(
-              fireDisplayPropertyKeys
-            )
-          } else {
-            val eoFault = EOFault(entityName, eo.pk)
-            List(
-              fireDisplayPropertyKeys,
-              // in order to have an EO completed with all attributes for the task,
-              // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
-            )
+          val eoOpt = d2wContext.eo
+           eoOpt match {
+            case Some(eo) =>
+              if (eo.pk < 0) {
+                List(
+                  fireDisplayPropertyKeys
+                )
+              } else {
+                val eoFault = EOFault(entityName, eo.pk)
+                List(
+                  fireDisplayPropertyKeys,
+                  // in order to have an EO completed with all attributes for the task,
+                  // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                  Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+                )
+              }
+            case None => noneFireActions
           }
-        case None => noneFireActions
+        case None => List()
       }
-      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(p.d2wContext) :: actionList else actionList
+      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(staleD2WContext) :: actionList else actionList
       log.debug("D2WEditPage: willMount actionList " + actionList2)
       val callIt = !actionList2.isEmpty
 
       Callback.when(callIt)(p.proxy.dispatchCB(
         FireActions(
-          d2wContext,
+          staleD2WContext,
           actionList2
         )
       ))

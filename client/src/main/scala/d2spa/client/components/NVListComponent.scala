@@ -162,6 +162,7 @@ object NVListComponent {
               dataRep match {
                 case DataRep(Some(fs), _) =>
                   log.debug("NVListCompoennt look for objects in cache with fs " + fs)
+                  log.debug("NVListCompoennt look for objects in cache " + cache)
                   EOCacheUtils.objectsWithFetchSpecification(cache, fs)
 
                 case DataRep(_, Some(eosAtKeyPath)) => {

@@ -391,9 +391,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   def updatedOutOfDBCacheWithEOs(eos: Seq[EO]): EOCache = {
+    log.debug("Cache before update " + value)
     val insertedEOs = value.insertedEOs
     val outOfDBEOs = updatedModelForEntityNamed(eo => eo.pk, value.eos, eos)
-    EOCache(outOfDBEOs, insertedEOs)
+    val newCache = EOCache(outOfDBEOs, insertedEOs)
+    log.debug("New cache " + newCache)
+    newCache
   }
 
 
@@ -448,7 +451,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     // EO goes from inserted EO to db eos
     case SavedEO(fromTask, eo) =>
-      log.debug("SavedEO " + eo)
+      log.debug("CacheHandler | SavedEO " + eo)
       val insertedEOs = removeEOFromMemCache(eo,value.insertedEOs)
       val updatedEO = eo.copy(pk = -eo.pk)
       val eos = addEOToDBCache(updatedEO,value.eos)
@@ -459,7 +462,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
     case Save(selectedEntityName, eo) =>
-      log.debug("SAVE " + eo)
+      log.debug("CacheHandler | SAVE " + eo)
       // Update the DB and dispatch the result withing UpdatedEO action
       effectOnly(Effect(AjaxClient[Api].updateEO(eo).call().map(savingEO => {
         val onError = savingEO.validationError.isDefined
@@ -478,7 +481,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // 3) SavedEO (EOCache)
     // 4) InstallInspectPage (MenuHandler)
       case SaveNewEO(entityName, eo) =>
-         log.debug("SAVE new eo " + eo)
+         log.debug("CacheHandler | SAVE new eo " + eo)
            // Update the DB and dispatch the result withing UpdatedEO action
            effectOnly(Effect(AjaxClient[Api].newEO(entityName, eo).call().map(newEO => {
              val onError = newEO.validationError.isDefined
@@ -494,21 +497,21 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
     case UpdateEOInCache(eo) =>
-      log.debug("UpdateEOInCache " + eo)
+      log.debug("CacheHandler | UpdateEOInCache " + eo)
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo))
       )
 
     case UpdateRefreshEOInCache(eo, property, actions) =>
-      log.debug("Refreshed EO " + eo)
+      log.debug("CacheHandler | Refreshed EO " + eo)
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo)),
         Effect.action(FireActions(property,actions))
       )
 
     case FetchedObjectsForEntity(eoses, d2wContext, actions) =>
-      log.debug("FetchedObjectsForEntity d2wContext " + d2wContext)
-      log.debug("FetchedObjectsForEntity eoses " + eoses)
+      log.debug("CacheHandler | FetchedObjectsForEntity d2wContext " + d2wContext)
+      log.debug("CacheHandler | FetchedObjectsForEntity eoses " + eoses)
 
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
@@ -516,12 +519,14 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
     case SearchResult(entityName, eoses) =>
-      log.debug("length " + eoses.length)
+      log.debug("CacheHandler | SearchResult length " + eoses.length)
       updated(
         updatedOutOfDBCacheWithEOs(eoses),
         Effect(AfterEffectRouter.setListPageForEntity(entityName))
       )
     case DeleteEOFromList(fromTask, eo) =>
+      log.debug("CacheHandler | DeleteEOFromList " + eo)
+
       /*val eos = value.get
       val newEos = eos.filterNot(o => {o.id.equals(eo.id)})
       updated(Ready(newEos))*/
@@ -538,7 +543,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         }
       })))
     case DeletedEO(deletedEO) =>
-      log.debug("Deleted EO " + deletedEO)
+      log.debug("CacheHandler | Deleted EO " + deletedEO)
       val entityName = deletedEO.entity.name
       val eoPk = EOValue.pk(deletedEO).get
 
@@ -550,6 +555,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     // set error on eo
     case UpdateEOsForEOOnError(eoOnError) =>
+      log.debug("CacheHandler | UpdateEOsForEOOnError " + eoOnError)
       val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
       val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
       val entityName = eoOnError.entity.name
@@ -564,7 +570,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
 
-      log.debug("Update EO Property: for entity " + entityName + " property: " + propertyName + " " + newEOValue)
+      log.debug("CacheHandler | Update EO Property: for entity " + entityName + " property: " + propertyName + " " + newEOValue)
       //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
@@ -578,7 +584,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       }
 
     case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>
-      log.debug("NewEOWithEOModel: " + d2wContext)
+      log.debug("CacheHandler | NewEOWithEOModel: " + d2wContext)
       val entityName = d2wContext.entityName.get
       // Create the EO and set it in the cache
       val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
@@ -592,7 +598,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
               Effect.action(FireActions(newD2WContext,actions)))
 
     case NewEOWithEOModelForEdit(eomodel, entityName) =>
-      log.debug("NewEOWithEOModelForEdit " + entityName)
+      log.debug("CacheHandler | NewEOWithEOModelForEdit " + entityName)
       val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
 
       log.debug("newValue " + newValue)
