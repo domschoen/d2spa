@@ -32,34 +32,54 @@ object ERDList {
   // Possible workflow
   // ERDList ask for full fledge EO at the end of the relationship, with all field needed by displayPropertyKeys
   // ERDList convert EORef into EOs
-  class Backend($ : BackendScope[Props, Unit]) {
+  class Backend($: BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
-      val entityName = d2wContext.entityName.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, p.d2wContext.eo.get)
+      val staleD2WContext = p.d2wContext
+      val entityName = staleD2WContext.entityName.get
 
-      eoOpt match {
-        case Some(eo) =>
-          val propertyName = d2wContext.propertyKey.get
-          val eomodel = p.proxy.value.eomodel.get
-          val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-          val destinationEntityName = destinationEntity.name
+      val d2wContextOpt = p.proxy.value.previousPage
+      log.debug("ERDList render d2wContextOpt " + d2wContextOpt)
 
-          val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+      d2wContextOpt match {
+        case Some(d2wContext) =>
 
-          val size = eoValueOpt match {
-            // TO Restire case Some(ObjectsValue(eos)) => eos.size
-            case _ => 0
+
+
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
+
+          eoOpt match {
+            case Some(eo) =>
+              val propertyName = staleD2WContext.propertyKey.get
+              val eomodel = p.proxy.value.eomodel.get
+              val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+              val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+              val destinationEntityName = destinationEntity.name
+
+              //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+
+              //val size = eoValueOpt match {
+              //  case Some(ObjectsValue(eos)) => eos.size
+              //  case _ => 0
+              //}
+              //val size = 1
+
+
+              // D2WContext with
+              // - Entity (destinationEntity)
+              // - task = list
+              // - DataRep
+              // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
+              val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName)))))
+              log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
+              <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
+
+            //<.div(size + " " + destinationEntityName + " " + propertyName)
+            case None => <.div("")
           }
-          //val size = 1
-          val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo,propertyName)))))
-          <.div(NVListComponent(p.router,embeddedListD2WContext,true, p.proxy))
-
-          //<.div(size + " " + destinationEntityName + " " + propertyName)
-        case None => <.div("")
+        case None => <.div("no context")
       }
+
     }
   }
 

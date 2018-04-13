@@ -22,47 +22,52 @@ object NVListComponent {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
-    def mounted(p: Props) = {
+
+    // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
+    // To cope with this problem, we check if there is any change to the props and then call the willMount
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      val cEntityName = currentProps.d2wContext.entityName
+      val nEntityName = nextProps.d2wContext.entityName
+      val entityChanged = !cEntityName.equals(nEntityName)
+
+      val cDataRep = currentProps.d2wContext.dataRep
+      val nDataRep = nextProps.d2wContext.dataRep
+      val dataRepChanged = !cDataRep.equals(nDataRep)
+
+      val anyChange = entityChanged || dataRepChanged
+
+      Callback.when(anyChange) {
+        willmounted(nextProps)
+      }
+    }
+
+    def willmounted(p: Props) = {
       //val destinationEntity = EOModelUtilsdes
-      log.debug("ERDList mounted")
+      log.debug("NVListComponent mounted")
       val eomodel = p.proxy.value.eomodel.get
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      val propertyName = d2wContext.propertyKey.get
+      //val propertyName = staleD2WContext.propertyKey.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
       val ruleResultsModel = p.proxy.value.ruleResults
 
       //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
       //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-      log.debug("ERDList mounted: entity" + entity)
-      log.debug("ERDList mounted: entity" + propertyName)
-
-      log.debug("ERDList mounted: eomodel" + eomodel)
-      val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-      log.debug("ERDList mounted: destinationEntity" + destinationEntity)
+      log.debug("NVListComponent mounted: entity" + entity)
+      log.debug("NVListComponent mounted: eomodel" + eomodel)
 
       // listConfigurationName
       // Then with D2WContext:
       // - task = 'list'
       // - entity.name = 'Project'
       // - pageConfiguration = <listConfigurationName>
-      log.debug("ERDList mounted: d2wContext" + d2wContext)
+      log.debug("NVListComponent mounted: d2wContext" + d2wContext)
 
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-      log.debug("ERDList mounted: fireListConfiguration" + fireListConfiguration)
+      log.debug("NVListComponent mounted: fireListConfiguration" + fireListConfiguration)
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
-      log.debug("ERDList mounted: fireDisplayPropertyKeys" + fireDisplayPropertyKeys)
-
-      // TBD should we use D2WContext or full fledged ?
-      val displayPKeysContext = D2WContext(
-        Some(destinationEntity.name),
-        Some(d2spa.shared.TaskDefine.list) , None,  None, Map(), None, None,
-        Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
-      log.debug("ERDList mounted: displayPKeysContext" + displayPKeysContext)
-      val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
-      log.debug("ERDList mounted: fireListDisplayPropertyKeys" + fireListDisplayPropertyKeys)
-      val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+      log.debug("NVListComponent mounted: fireDisplayPropertyKeys" + fireDisplayPropertyKeys)
 
 
       // case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
@@ -73,7 +78,20 @@ object NVListComponent {
           Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
         case Some(DataRep(_,Some(eosAtKeyPath))) =>
           d2wContext.eo match {
-            case Some(aneo) => Some(DrySubstrate(Some(EOsAtKeyPath(aneo,propertyName))))
+            case Some(aneo) => {
+              val displayPKeysContext = D2WContext(
+                Some(destinationEntity.name),
+                Some(d2spa.shared.TaskDefine.list) , None,  None, Map(), None, None,
+                Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
+              log.debug("NVListComponent mounted: displayPKeysContext" + displayPKeysContext)
+              val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
+              log.debug("NVListComponent mounted: fireListDisplayPropertyKeys" + fireListDisplayPropertyKeys)
+              val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+
+
+
+              Some(DrySubstrate(Some(EOsAtKeyPath(aneo,propertyName))))
+            }
             case _ => None
           }
         case _ => None
@@ -264,7 +282,8 @@ object NVListComponent {
 
   private val component = ScalaComponent.builder[Props]("NVListComponent")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
+    .componentDidMount(scope => scope.backend.willmounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, isEmbedded, proxy))
