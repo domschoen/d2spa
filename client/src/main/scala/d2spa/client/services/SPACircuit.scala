@@ -340,6 +340,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     if (eos.isEmpty) {
       cache
     } else {
+
       val result: Map[String, Map[Int, EO]] = newUpdatedCache(idExtractor, cache, eos)
       log.debug("storing result as :" + result)
       result
@@ -370,7 +371,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
         // Iterate on eos
         val newAndUpdateMap = refreshedPks.map(id => {
+          log.debug("Refresh " + entityName + "[" + id +"]")
           val refreshedEO = refreshedEOs(id)
+          log.debug("Refreshed " + refreshedEO)
 
           // 2 cases:
           // new
@@ -445,19 +448,17 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
 
-
-
   override def handle = {
 
     // EO goes from inserted EO to db eos
     case SavedEO(fromTask, eo) =>
       log.debug("CacheHandler | SavedEO " + eo)
-      val insertedEOs = removeEOFromMemCache(eo,value.insertedEOs)
+      val insertedEOs = removeEOFromMemCache(eo, value.insertedEOs)
       val updatedEO = eo.copy(pk = -eo.pk)
-      val eos = addEOToDBCache(updatedEO,value.eos)
+      val eos = addEOToDBCache(updatedEO, value.eos)
       val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
       updated(
-        EOCache(eos,insertedEOs),
+        EOCache(eos, insertedEOs),
         Effect.action(RegisterPreviousPage(d2WContext))
       )
 
@@ -467,14 +468,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       effectOnly(Effect(AjaxClient[Api].updateEO(eo).call().map(savingEO => {
         val onError = savingEO.validationError.isDefined
         if (onError) {
-          UpdateEOInCache(savingEO)
-
-        } else {
           SavedEO("edit", savingEO)
+        } else {
+          UpdateEOInCache(savingEO)
         }
-      }
-      ))
-      )
+      })))
 
     // 1) NewEO (MenuHandler)
     // 2) Effect: Save DB

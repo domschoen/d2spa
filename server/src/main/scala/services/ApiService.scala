@@ -701,26 +701,32 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
         val newValues = jObjValues.map ( kvTuple => {
           val value = kvTuple._2
-          // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
-          val newValue = if (value.isInstanceOf[play.api.libs.json.JsArray]) {
-            val seqJsValues = value.asInstanceOf[play.api.libs.json.JsArray].value
-            // {"id":1,"type":"Project"}
-            val eos = seqJsValues.map (x => {
-              val jsEO = x.asInstanceOf[JsObject].fields.toList.toMap
-              val entityName = jsEO("type").asInstanceOf[JsString].value
-              val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
-              // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-              EOValue.dryEOWith(eomodel(),entityName,Some(id))
-            })
-            // to Restore ObjectsValue(eos)
-            StringValue(Some("toto"))
-          } else if (value.isInstanceOf[JsString]) {
-            val stringV = value.asInstanceOf[play.api.libs.json.JsString].value
-            EOValue.stringV(stringV)
-          } else {
-            EOValue.stringV(value.toString())
+          Logger.debug("Complete EO: value : " + value)
+          // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
+          val newValue = value match {
+            case jsArray: play.api.libs.json.JsArray =>
+              val seqJsValues = jsArray.value
+              // {"id":1,"type":"Project"}
+              val eos = seqJsValues.map (x => {
+                eoWithJObj(x.asInstanceOf[JsObject])
+              })
+              val eoPks = eos.map(eo => eo.pk)
+              ObjectsValue(eoPks)
+
+            case jsObj: JsObject =>
+              ObjectValue(eo = eoWithJObj(jsObj))
+
+            case jsString: JsString =>
+              val stringV = jsString.value
+              EOValue.stringV(stringV)
+
+            case _ =>
+              val stringV = value.toString()
+              EOValue.stringV(stringV)
+
           }
+
           Logger.debug("JsObj value " + value.getClass.getName + " value: " + value)
           (kvTuple._1,newValue)
         }).toMap
@@ -736,6 +742,16 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
       }
     }
+  }
+
+
+  def eoWithJObj (jsObj: JsObject) = {
+    val jsEO = jsObj.fields.toList.toMap
+    val entityName = jsEO("type").asInstanceOf[JsString].value
+    val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
+
+    // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
+    EOValue.dryEOWith(eomodel(),entityName,Some(id))
   }
 
 // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
