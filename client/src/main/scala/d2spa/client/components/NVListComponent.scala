@@ -26,6 +26,7 @@ object NVListComponent {
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      log.debug("NVListComponent willReceiveProps | nextProps: " + nextProps)
       val cEntityName = currentProps.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.entityName
       val entityChanged = !cEntityName.equals(nEntityName)
@@ -73,57 +74,83 @@ object NVListComponent {
       // case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 
       val dataRep = d2wContext.dataRep
-      val drySubstrate: Option [DrySubstrate] = dataRep match {
-        case Some(DataRep(Some(fetchSpecification),_)) =>
-          Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
-        case Some(DataRep(_,Some(eosAtKeyPath))) =>
-          d2wContext.eo match {
-            case Some(aneo) => {
-              val displayPKeysContext = D2WContext(
-                Some(destinationEntity.name),
-                Some(d2spa.shared.TaskDefine.list) , None,  None, Map(), None, None,
-                Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration))))
-              log.debug("NVListComponent mounted: displayPKeysContext" + displayPKeysContext)
-              val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
-              log.debug("NVListComponent mounted: fireListDisplayPropertyKeys" + fireListDisplayPropertyKeys)
-              val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+
+      val fireActions: Option[List[D2WAction]] = dataRep match {
+        case Some(DataRep(Some(fetchSpecification), _)) => None
+          // TODO Restore it
+          /*val drySubstrate = DrySubstrate(fetchSpecification = Some(fetchSpecification))
+          val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+          val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+
+          Some(
+            List(
+              fireListConfiguration, // standard FieRule
+              fireListDisplayPropertyKeys, // standard FieRule
+              Hydration(
+                drySubstrate, // Hydration of objects at the end of relationship, stored in cache
+                WateringScope(
+                  Some(ruleFaultListDisplayPropertyKeys)
+                )
+              ), // populate with properties to be fired rule
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
+            )
+          )*/
+
+        case Some(DataRep(_, Some(eosAtKeyPath))) =>
+          val eo = eosAtKeyPath.eo
+          val propertyName = eosAtKeyPath.keyPath
+          val entity = eo.entity
+
+          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+
+          val displayPKeysContext = D2WContext(
+            Some(destinationEntity.name),
+            Some(d2spa.shared.TaskDefine.list), None, None, Map(), None, None,
+            Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration)))
+          )
+          log.debug("NVListComponent mounted: displayPKeysContext: " + displayPKeysContext)
+          val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
+          log.debug("NVListComponent mounted: fireListDisplayPropertyKeys: " + fireListDisplayPropertyKeys)
+          val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
 
 
-
-              Some(DrySubstrate(Some(EOsAtKeyPath(aneo,propertyName))))
-            }
-            case _ => None
-          }
+          val drySubstrate: Option[DrySubstrate] = Some(DrySubstrate(Some(EOsAtKeyPath(eo, propertyName))))
+          Some(
+            List(
+              fireListConfiguration, // standard FieRule
+              fireListDisplayPropertyKeys, // standard FieRule
+              // Hydrate has 2 parts
+              // 1) which eos
+              // 2) which propertyKeys
+              // Example:
+              // - ToOne:
+              //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
+              //   2) one property, the keyWhenRelationship (fireRule is used)
+              // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
+              //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
+              //         First solution seems better. Fetch spec is stored in the eomodel
+              //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
+              // - ERDList:
+              //   1) property eos as eorefs (entity, In qualifier)
+              //   2) displayPropertyKeys (fireRule is used)
+              // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
+              Hydration(
+                drySubstrate.get, // Hydration of objects at the end of relationship, stored in cache
+                WateringScope(
+                  Some(ruleFaultListDisplayPropertyKeys)
+                )
+              ), // populate with properties to be fired rule
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), displayPKeysContext, RuleKeys.componentName)
+            )
+          )
         case _ => None
       }
 
-      Callback.when(drySubstrate.isDefined)(p.proxy.dispatchCB(
+
+      Callback.when(fireActions.isDefined)(p.proxy.dispatchCB(
         FireActions(
           d2wContext,
-          List(
-            fireListConfiguration, // standard FieRule
-            fireListDisplayPropertyKeys, // standard FieRule
-            // Hydrate has 2 parts
-            // 1) which eos
-            // 2) which propertyKeys
-            // Example:
-            // - ToOne:
-            //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
-            //   2) one property, the keyWhenRelationship (fireRule is used)
-            // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
-            //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
-            //         First solution seems better. Fetch spec is stored in the eomodel
-            //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
-            // - ERDList:
-            //   1) property eos as eorefs (entity, In qualifier)
-            //   2) displayPropertyKeys (fireRule is used)
-            // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-            Hydration(
-              drySubstrate.get, // Hydration of objects at the end of relationship, stored in cache
-              WateringScope(Some(
-                ruleFaultListDisplayPropertyKeys))), // populate with properties to be fired rule
-            FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)),displayPKeysContext, RuleKeys.componentName)
-          )
+          fireActions.get
         )
       ))
 
