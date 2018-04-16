@@ -215,8 +215,9 @@ object EOValue {
   }
 
   def isNew(eo: EO) = {
-    val pk = EOValue.pk(eo)
-    (pk.isDefined && pk.get < 0) || pk.isEmpty
+    eo.pk < 0
+    //val pk = EOValue.pk(eo)
+    //(pk.isDefined && pk.get < 0) || pk.isEmpty
     //eo.memID.isDefined
   }
 
