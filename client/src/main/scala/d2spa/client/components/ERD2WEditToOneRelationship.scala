@@ -53,7 +53,7 @@ object ERD2WEditToOneRelationship   {
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity " + destinationEntity)
 
 
-      val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
+      val keyWhenRelationshipRuleFault = RuleFault(d2wContext, RuleKeys.keyWhenRelationship)
       //val fireDisplayPropertyKeys = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.displayPropertyKeys)
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
 

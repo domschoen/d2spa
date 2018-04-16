@@ -185,7 +185,12 @@ object EOQualifierType {
 
 
 case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
-case class RuleFault(rhs: D2WContextFullFledged, key: String)
+
+
+// A rule fault should be a FullFledged because it is a rule
+// but the goal is to be used for watering the displayPropertyKeys but this one can be available only after fetch of the configuration
+// That's a feature of D2WContext. So we use it here
+case class RuleFault(rhs: D2WContext, key: String)
 case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
 case class WateringScope(fireRule: Option[RuleFault] = None)
 //case class EORefsDefinition()
@@ -204,7 +209,7 @@ object RuleUtils {
 
   def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
     val ruleKey = ruleFault.key
-    val ruleRhs = D2WContextUtils.convertFullFledgedToD2WContext(ruleFault.rhs)
+    val ruleRhs = ruleFault.rhs
     RuleUtils.ruleResultForContextAndKey(ruleResults,ruleRhs,ruleKey)
   }
 
@@ -356,12 +361,22 @@ object D2WContextUtils {
   }
 
 
-  def convertD2WContextToFullFledged(d2wContext: D2WContext) = D2WContextFullFledged(
-    d2wContext.entityName,
-    d2wContext.task,
-    d2wContext.propertyKey,
-    if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
-  )
+  def convertD2WContextToFullFledged(d2wContext: D2WContext) = {
+    log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
+    if(d2wContext.pageConfiguration.isDefined) {
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
+
+    }
+
+    D2WContextFullFledged(
+      d2wContext.entityName,
+      d2wContext.task,
+      d2wContext.propertyKey,
+      if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
+    )
+  }
   def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
     d2wContext.entityName,
     d2wContext.task,
@@ -489,5 +504,5 @@ object EOCacheUtils {
 
 
 object FireRuleConverter {
-  def toRuleFault(fireRule: FireRule) = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(fireRule.rhs),fireRule.key)
+  def toRuleFault(fireRule: FireRule) = RuleFault(fireRule.rhs,fireRule.key)
 }

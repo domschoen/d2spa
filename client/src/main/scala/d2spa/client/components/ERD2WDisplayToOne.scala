@@ -75,7 +75,7 @@ object ERD2WDisplayToOne  {
 
 
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-      val keyWhenRelationshipRuleFault = RuleFault(D2WContextUtils.convertD2WContextToFullFledged(d2wContext), RuleKeys.keyWhenRelationship)
+      val keyWhenRelationshipRuleFault = RuleFault(d2wContext, RuleKeys.keyWhenRelationship)
       val destinationEOValueOpt = EOValue.valueForKey(p.eo,propertyName)
 
 

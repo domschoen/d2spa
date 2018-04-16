@@ -1,0 +1,144 @@
+client-jsdeps.js:18151 NVListComponent mounted: FireActions: 
+
+Some(
+    List(
+    
+--- FireAction 1 ------     
+        FireRule(
+            D2WContext(Some(Project),Some(list),None,None,Map(),Some(DataRep(None,Some(EOsAtKeyPath(EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None),projects)))),None,None)
+            ,listConfigurationName
+        ), 
+[debug] application - Request path: d2spa/shared/Api/fireRule
+[debug] application - Fire rule for key listConfigurationName and d2wContext: D2WContextFullFledged(Some(Project),Some(list),None,None)
+[debug] application - Rule response: {"listConfigurationName":"ListProject"}
+[debug] application - jsvalue "ListProject"
+[debug] application - key  listConfigurationName value ListProject
+[debug] application - Result RuleResult(D2WContextFullFledged(Some(Project),Some(list),None,None),listConfigurationName,RuleValue(Some(ListProject),List()))
+
+
+        
+        
+--- FireAction 2 ------     
+        
+        FireRule(
+            D2WContext(
+                Some(Project),Some(list),None,None,Map(),None,None,
+                
+                // pageConfiguration is a fault (a value from execution of a previous rule)
+                Some(
+                    Left(
+                        RuleFault(
+                            D2WContext(Some(Project),Some(list),None,None,Map(),Some(DataRep(None,Some(EOsAtKeyPath(EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None),projects)))),None,None)
+                            ,listConfigurationName
+                        )
+                    )
+                )
+            )
+            ,displayPropertyKeys
+        ), 
+[debug] application - Request path: d2spa/shared/Api/fireRule
+[debug] application - Fire rule for key displayPropertyKeys and d2wContext: D2WContextFullFledged(Some(Customer),Some(inspect),None,None)
+[debug] application - Rule response: {"displayPropertyKeys":["acronym","address","name","projects"]}
+[debug] application - jsvalue ["acronym","address","name","projects"]
+[debug] application - Result RuleResult(D2WContextFullFledged(Some(Customer),Some(inspect),None,None),displayPropertyKeys,RuleValue(None,List(acronym, address, name, projects)))
+
+
+
+[debug] application - Request path: d2spa/shared/Api/completeEO
+[debug] application - Complete EO: EOFault(Customer,8)
+[debug] application - Complete EO: value : "8"
+[debug] application - JsObj value play.api.libs.json.JsString value: "8"
+[debug] application - Complete EO: value : "8"
+[debug] application - JsObj value play.api.libs.json.JsString value: "8"
+[debug] application - Complete EO: value : "8"
+[debug] application - JsObj value play.api.libs.json.JsString value: "8"
+[debug] application - Complete EO: value : [{"id":1,"type":"Project"}]
+[debug] application - JsObj value play.api.libs.json.JsArray value: [{"id":1,"type":"Project"}]
+[debug] application - Request path: d2spa/shared/Api/fireRule
+[debug] application - Fire rule for key listConfigurationName and d2wContext: D2WContextFullFledged(Some(Project),Some(list),None,None)
+[debug] application - Rule response: {"listConfigurationName":"ListProject"}
+[debug] application - jsvalue "ListProject"
+[debug] application - key  listConfigurationName value ListProject
+[debug] application - Result RuleResult(D2WContextFullFledged(Some(Project),Some(list),None,None),listConfigurationName,RuleValue(Some(ListProject),List()))
+        
+        
+--- FireAction 3 ------    Hydration 
+        
+        Hydration(
+            // which eos
+            DrySubstrate(
+                Some(EOsAtKeyPath(EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None),projects))
+                ,None
+                ,None
+            ),
+            
+            // which propertyKeys
+            WateringScope(
+                Some(
+                    RuleFault(
+                        D2WContext(
+                            Some(Project),Some(list),
+                            None,None,Map(),None,None,Some(
+                                Left(
+                                    RuleFault(
+                                        D2WContext(Some(Project),Some(list),None,None,Map(),Some(DataRep(None,Some(EOsAtKeyPath(EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None),projects)))),None,None)
+                                        ,listConfigurationName
+                                    )
+                                )
+                            )
+                        )
+                        ,displayPropertyKeys
+                    )
+                )
+            )
+        ),  
+        
+--- FireAction 4 ------    FireRules 
+        FireRules(
+            // Set of keys is defined by a rulefault = displayPropertyKeys for Project, List, listConfiguration (a rule fault)
+            KeysSubstrate(
+                Some(
+                    RuleFault(
+                        D2WContext(
+                            Some(Project),Some(list),None,None,Map(),None,None,
+                            Some(
+                                Left(
+                                    RuleFault(
+                                        D2WContext(
+                                            Some(Project),Some(list),None,None,Map(),
+                                            Some(
+                                                DataRep(None,
+                                                    Some(
+                                                        EOsAtKeyPath(
+                                                            EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None)
+                                                            ,projects
+                                                        )
+                                                    )
+                                                )
+                                            ),
+                                            None,
+                                            None
+                                        )
+                                        ,listConfigurationName
+                                    )
+                                )
+                            )
+                        )
+                        ,displayPropertyKeys
+                    )
+                )
+            )
+            ,D2WContext(
+                Some(Project),
+                Some(list),
+                None,
+                None,
+                Map(),
+                None,
+                None,
+                // PageConfiguration
+                Some(Left(RuleFault(D2WContext(Some(Project),Some(list),None,None,Map(),Some(DataRep(None,Some(EOsAtKeyPath(EO(EOEntity(Customer,id,List(EORelationship(projects,Project))),Map(acronym -> StringValue(Some(8)), name -> StringValue(Some(8)), id -> IntValue(Some(8)), address -> StringValue(Some(8)), projects -> ObjectsValue(Vector(1)), type -> StringValue(Some(Customer))),8,None),projects)))),None,None),listConfigurationName))))
+            ,componentName
+        )
+    )
+)

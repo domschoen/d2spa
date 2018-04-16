@@ -173,6 +173,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
 
     case SetMetaDataWithActions(d2wContext, actions, entityMetaData) =>
+      log.debug("RuleResultsHandler | SetMetaDataWithActions " + entityMetaData + " actions: " + actions)
+
       val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
       updated(updatedRuleResults,Effect.action(FireActions(d2wContext, actions)))
 
@@ -186,7 +188,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
       if (actions.isEmpty) {
         noChange
       } else {
-        log.debug("FireActions " + actions)
+        log.debug("RuleResultsHandler | FireActions " + actions.size + " actions: " + actions)
 
 
       // take first actions and call FireActions again with the rest
@@ -194,9 +196,33 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
       val remainingActions = actions.tail
       fireAction match {
         case FireRule(rhs, key) =>
-          log.debug("Fire Rule " + key + " context: " + rhs)
+          log.debug("RuleResultsHandler | FireActions | Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
-          val newRhs = D2WContextUtils.convertD2WContextToFullFledged(rhs)
+
+          val newRhs = rhs.pageConfiguration match {
+            case Some(pc) =>
+              pc match {
+                case Right(pageConf) =>
+                  D2WContextUtils.convertD2WContextToFullFledged(rhs)
+                case Left(pageConfFromRule) =>
+                  val ruleResultOpt = RuleUtils.fireRuleFault(value, pageConfFromRule)
+                  ruleResultOpt match {
+                    case Some(ruleResult) =>
+                      val pageConfiguration = ruleResult.value.stringV.get
+                      val tmpContext = rhs.copy(pageConfiguration = Some(Right(pageConfiguration)))
+                      D2WContextUtils.convertD2WContextToFullFledged(tmpContext)
+                    case None =>
+                      // Remove the page configuration is the best thing we can do ... (?)
+                      val tmpContext = rhs.copy(pageConfiguration = None)
+                      D2WContextUtils.convertD2WContextToFullFledged(tmpContext)
+                  }
+              }
+            case None => D2WContextUtils.convertD2WContextToFullFledged(rhs)
+          }
+
+          log.debug("RuleResultsHandler | FireActions | Fire Rule | convertD2WContextToFullFledged " + newRhs)
+
+
           effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
             {
               log.debug("rr " + rr)
@@ -204,15 +230,17 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
             })))
 
         case CreateMemID(entityName) =>
-          log.debug("CreateMemID: " + entityName)
+          log.debug("RuleResultsHandler | FireActions | CreateMemID: " + entityName)
           effectOnly(Effect.action(NewEOWithEntityName(d2wContext,remainingActions)))
 
         case FetchMetaData(d2wContext) =>
+          log.debug("RuleResultsHandler | FireActions | FetchMetaData: ")
           //val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
           val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
           effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataWithActions(d2wContext, remainingActions, _))))
 
         case FireRules(keysSubstrate, rhs, key) =>
+          log.debug("RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
           val ruleResultOpt = RuleUtils.fireRuleFault(value, keysSubstrate.ruleFault.get)
           val updatedActions = ruleResultOpt match {
             case Some(RuleResult(rhs, rk, value)) => {
@@ -253,6 +281,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
         // case class RuleFault(rhs: D2WContextFullFledged, key: String)
 
         case Hydration(drySubstrate,  wateringScope) =>
+          log.debug("RuleResultsHandler | FireActions | Hydration: " + drySubstrate)
           // We handle only RuleFault
           // -> we expect it
 
@@ -317,7 +346,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
     // many rules
     case SetRuleResults(ruleResults, d2wContext, actions: List[D2WAction]) =>
-      log.debug("Set Rule Results " + ruleResults + " in d2w context " + d2wContext)
+      log.debug("RuleResultsHandler | SetRuleResults " + ruleResults + " in d2w context " + d2wContext)
+      log.debug("RuleResultsHandler | SetRuleResults | actions: " + actions)
       var updatedRuleResults = value
       for (ruleResult <- ruleResults) {
         updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, ruleResult)
@@ -455,7 +485,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       log.debug("CacheHandler | SavedEO " + eo)
       val insertedEOs = if (EOValue.isNew(eo)) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
       log.debug("CacheHandler | SavedEO | removed if new  " + EOValue.isNew(eo))
-      val updatedEO = if (EOValue.isNew(eo)) eo.copy(pk = -eo.pk) else eo
+      val updatedEO = if (EOValue.isNew(eo)) {
+        val pk = EOValue.pk(eo)
+        eo.copy(pk = pk.get)
+      } else eo
       log.debug("CacheHandler | SavedEO | register eo  " + updatedEO)
 
       val eos = addEOToDBCache(updatedEO, value.eos)
@@ -483,7 +516,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // 3) SavedEO (EOCache)
     // 4) InstallInspectPage (MenuHandler)
       case SaveNewEO(entityName, eo) =>
-         log.debug("CacheHandler | SAVE new eo " + eo)
+         log.debug("CacheHandler | SaveNewEO " + eo)
            // Update the DB and dispatch the result withing UpdatedEO action
            effectOnly(Effect(AjaxClient[Api].newEO(entityName, eo).call().map(newEO => {
              val onError = newEO.validationError.isDefined
@@ -655,7 +688,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case RegisterPreviousPage(d2WContext) =>
       val  stack = stackD2WContext(d2WContext)
-      log.debug("Set Previous Page for d2wContext: " + stack)
+      log.debug("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
       updated(
             // change context to inspect
             Some(stack),

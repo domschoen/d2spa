@@ -26,6 +26,7 @@ object NVListComponent {
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      log.debug("NVListComponent willReceiveProps | currentProps: " + currentProps)
       log.debug("NVListComponent willReceiveProps | nextProps: " + nextProps)
       val cEntityName = currentProps.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.entityName
@@ -55,20 +56,20 @@ object NVListComponent {
       //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
       //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-      log.debug("NVListComponent mounted: entity" + entity)
-      log.debug("NVListComponent mounted: eomodel" + eomodel)
+      log.debug("NVListComponent mounted: entity: " + entity)
+      log.debug("NVListComponent mounted: eomodel: " + eomodel)
 
       // listConfigurationName
       // Then with D2WContext:
       // - task = 'list'
       // - entity.name = 'Project'
       // - pageConfiguration = <listConfigurationName>
-      log.debug("NVListComponent mounted: d2wContext" + d2wContext)
+      log.debug("NVListComponent mounted: d2wContext: " + d2wContext)
 
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-      log.debug("NVListComponent mounted: fireListConfiguration" + fireListConfiguration)
+      log.debug("NVListComponent mounted: fireListConfiguration: " + fireListConfiguration)
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
-      log.debug("NVListComponent mounted: fireDisplayPropertyKeys" + fireDisplayPropertyKeys)
+      log.debug("NVListComponent mounted: fireDisplayPropertyKeys: " + fireDisplayPropertyKeys)
 
 
       // case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
@@ -96,7 +97,8 @@ object NVListComponent {
             )
           )*/
 
-        case Some(DataRep(_, Some(eosAtKeyPath))) =>
+        case Some(DataRep(_, Some(eosAtKeyPath))) => {
+          log.debug("NVListComponent mounted: EOsAtKeyPath: " + eosAtKeyPath)
           val eo = eosAtKeyPath.eo
           val propertyName = eosAtKeyPath.keyPath
           val entity = eo.entity
@@ -111,11 +113,15 @@ object NVListComponent {
           log.debug("NVListComponent mounted: displayPKeysContext: " + displayPKeysContext)
           val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
           log.debug("NVListComponent mounted: fireListDisplayPropertyKeys: " + fireListDisplayPropertyKeys)
+
           val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+          log.debug("NVListComponent mounted: ruleFaultListDisplayPropertyKeys: " + ruleFaultListDisplayPropertyKeys)
 
 
-          val drySubstrate: Option[DrySubstrate] = Some(DrySubstrate(Some(EOsAtKeyPath(eo, propertyName))))
-          Some(
+          val drySubstrate: DrySubstrate = DrySubstrate(Some(EOsAtKeyPath(eo, propertyName)))
+          log.debug("NVListComponent mounted: drySubstrate: " + drySubstrate)
+
+          val fas = Some(
             List(
               fireListConfiguration, // standard FieRule
               fireListDisplayPropertyKeys, // standard FieRule
@@ -135,17 +141,22 @@ object NVListComponent {
               //   2) displayPropertyKeys (fireRule is used)
               // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
               Hydration(
-                drySubstrate.get, // Hydration of objects at the end of relationship, stored in cache
-                WateringScope(
+                drySubstrate, // Hydration of objects at the end of relationship, stored in cache
+                WateringScope(  // RuleFault
                   Some(ruleFaultListDisplayPropertyKeys)
                 )
               ), // populate with properties to be fired rule
               FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), displayPKeysContext, RuleKeys.componentName)
             )
           )
+          log.debug("NVListComponent mounted: fireActions: " + fas)
+
+          fas
+        }
         case _ => None
       }
 
+      log.debug("NVListComponent mounted: FireActions: " + fireActions)
 
       Callback.when(fireActions.isDefined)(p.proxy.dispatchCB(
         FireActions(
@@ -182,12 +193,14 @@ object NVListComponent {
     def render(p: Props) = {
       log.debug("NVListComponent render ")
       val staleD2WContext = p.d2wContext
+      log.debug("NVListComponent render staleD2WContext: " + staleD2WContext)
 
       val entityName = staleD2WContext.entityName.get
       log.debug("NVListComponent render for entity: " + entityName)
 
 
       val ruleResultsModel = p.proxy.value.ruleResults
+      log.debug("NVListComponent render ruleResultsModel: " + ruleResultsModel)
 
       val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayPropertyKeys)
       log.debug("NVListComponent render task displayPropertyKeys " + displayPropertyKeys)

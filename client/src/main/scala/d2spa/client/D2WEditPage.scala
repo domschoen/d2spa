@@ -29,6 +29,9 @@ object D2WEditPage {
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      log.debug("D2WEditPage | willReceiveProps | currentProps: " + currentProps)
+      log.debug("D2WEditPage | willReceiveProps | nextProps: " + nextProps)
+
       val cTask = currentProps.d2wContext.task
       val nTask = nextProps.d2wContext.task
       val taskChanged = !cTask.equals(nTask)
@@ -48,32 +51,33 @@ object D2WEditPage {
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
-      val staleD2WContext = p.d2wContext
 
-      val entityName = staleD2WContext.entityName.get
-      log.debug("D2WEditPage: will Mount " + entityName)
-      val taskName = p.d2wContext.task.get
-
-      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,staleD2WContext)
-
-      log.debug("D2WEditPage: willMount entityMetaDataNotFetched " + entityMetaDataNotFetched)
-      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      val fireDisplayPropertyKeys = FireRule(staleD2WContext, RuleKeys.displayPropertyKeys)
-
-
-      lazy val noneFireActions = List(
-        fireDisplayPropertyKeys,
-        // in order to have an EO completed with all attributes for the task,
-        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-        CreateMemID(entityName)
-      )
       val d2wContextOpt = p.proxy.value.previousPage
-      val actionList = d2wContextOpt match {
+      d2wContextOpt match {
         case Some(d2wContext) =>
+
+          val entityName = d2wContext.entityName.get
+          log.debug("D2WEditPage: will Mount " + entityName)
+
           log.debug("D2WEditPage: willMount eo " + d2wContext.eo)
 
+          val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults,d2wContext)
+
+          log.debug("D2WEditPage: willMount entityMetaDataNotFetched " + entityMetaDataNotFetched)
+          //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
+          val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
+
+          lazy val noneFireActions = List(
+            fireDisplayPropertyKeys,
+            // in order to have an EO completed with all attributes for the task,
+            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+            CreateMemID(entityName)
+          )
+
+
           val eoOpt = d2wContext.eo
-           eoOpt match {
+          val actionList =  eoOpt match {
             case Some(eo) =>
               if (eo.pk < 0) {
                 List(
@@ -90,18 +94,24 @@ object D2WEditPage {
               }
             case None => noneFireActions
           }
-        case None => List()
-      }
-      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(staleD2WContext) :: actionList else actionList
-      log.debug("D2WEditPage: willMount actionList " + actionList2)
-      val callIt = !actionList2.isEmpty
+          val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(d2wContext) :: actionList else actionList
+          log.debug("D2WEditPage: willMount actionList " + actionList2)
+          val callIt = !actionList2.isEmpty
 
-      Callback.when(callIt)(p.proxy.dispatchCB(
-        FireActions(
-          staleD2WContext,
-          actionList2
-        )
-      ))
+          Callback.when(callIt)(p.proxy.dispatchCB(
+            FireActions(
+              d2wContext,
+              actionList2
+            )
+          ))
+
+        case None => {
+          log.debug("D2WEditPage: will Mount | no context ")
+
+          // TODO We should do the fetch of meta est with the property d2wcontext (this is the case when we enter the app with an inspect page)
+          Callback.empty
+        }
+      }
     }
 
 
