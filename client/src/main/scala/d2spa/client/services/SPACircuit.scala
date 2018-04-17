@@ -199,26 +199,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           log.debug("RuleResultsHandler | FireActions | Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
 
-          val newRhs = rhs.pageConfiguration match {
-            case Some(pc) =>
-              pc match {
-                case Right(pageConf) =>
-                  D2WContextUtils.convertD2WContextToFullFledged(rhs)
-                case Left(pageConfFromRule) =>
-                  val ruleResultOpt = RuleUtils.fireRuleFault(value, pageConfFromRule)
-                  ruleResultOpt match {
-                    case Some(ruleResult) =>
-                      val pageConfiguration = ruleResult.value.stringV.get
-                      val tmpContext = rhs.copy(pageConfiguration = Some(Right(pageConfiguration)))
-                      D2WContextUtils.convertD2WContextToFullFledged(tmpContext)
-                    case None =>
-                      // Remove the page configuration is the best thing we can do ... (?)
-                      val tmpContext = rhs.copy(pageConfiguration = None)
-                      D2WContextUtils.convertD2WContextToFullFledged(tmpContext)
-                  }
-              }
-            case None => D2WContextUtils.convertD2WContextToFullFledged(rhs)
-          }
+          val newRhs = D2WContextUtils.convertD2WContextToFullFledgedByResolvingRuleFaults(value, rhs)
 
           log.debug("RuleResultsHandler | FireActions | Fire Rule | convertD2WContextToFullFledged " + newRhs)
 
@@ -241,6 +222,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
         case FireRules(keysSubstrate, rhs, key) =>
           log.debug("RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
+          // For the moment, a KeySubstrate can have only a RuleFault
+          // Let's resolve the fault (= firing the fault)
           val ruleResultOpt = RuleUtils.fireRuleFault(value, keysSubstrate.ruleFault.get)
           val updatedActions = ruleResultOpt match {
             case Some(RuleResult(rhs, rk, value)) => {

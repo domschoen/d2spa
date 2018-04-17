@@ -207,11 +207,59 @@ object RuleUtils {
     }
   }
 
+
+
+  /*
+    RuleFault(
+        D2WContext(
+            Some(Project),Some(list),None,None,Map(),None,None,
+            // Page Configuration
+            Some(
+                Left(
+                    RuleFault(
+                        D2WContext(
+                            Some(Project),Some(list),None,None,Map(),
+                            Some(
+                                DataRep(None,
+                                    Some(
+                                        EOsAtKeyPath(
+                                            EO(
+                                              EOEntity(
+                                                Customer,id,List(EORelationship(projects,Project))
+                                              ),
+                                              Map(
+                                                acronym -> StringValue(Some(8)),
+                                                name -> StringValue(Some(8)),
+                                                id -> IntValue(Some(8)),
+                                                address -> StringValue(Some(8)),
+                                                projects -> ObjectsValue(Vector(1)),
+                                                type -> StringValue(Some(Customer))
+                                              ),8,None)
+                                            ,projects
+                                        )
+                                    )
+                                )
+                            ),
+                            None,
+                            None
+                        )
+                        ,listConfigurationName
+                    )
+                )
+            )
+        )
+        ,displayPropertyKeys
+    )
+   */
+
   def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
     val ruleKey = ruleFault.key
-    val ruleRhs = ruleFault.rhs
+    val ruleRhs = D2WContextUtils.d2wContextByResolvingRuleFaults(ruleResults,ruleFault.rhs)
     RuleUtils.ruleResultForContextAndKey(ruleResults,ruleRhs,ruleKey)
   }
+
+
+
 
   def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
   //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
@@ -361,7 +409,7 @@ object D2WContextUtils {
   }
 
 
-  def convertD2WContextToFullFledged(d2wContext: D2WContext) = {
+  def convertD2WContextToFullFledged(d2wContext: D2WContext): D2WContextFullFledged = {
     log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
     if(d2wContext.pageConfiguration.isDefined) {
       log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
@@ -377,6 +425,38 @@ object D2WContextUtils {
       if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
     )
   }
+
+
+  def convertD2WContextToFullFledgedByResolvingRuleFaults(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext): D2WContextFullFledged = {
+    val resolvedD2WContext = d2wContextByResolvingRuleFaults(ruleResults,d2wContext)
+    D2WContextUtils.convertD2WContextToFullFledged(resolvedD2WContext)
+  }
+
+
+  def d2wContextByResolvingRuleFaults(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): D2WContext = {
+    d2wContext.pageConfiguration match {
+      case Some(pc) =>
+        pc match {
+          case Right(pageConf) =>
+            d2wContext
+          case Left(pageConfFromRule) =>
+            val ruleResultOpt = RuleUtils.fireRuleFault(ruleResults, pageConfFromRule)
+            ruleResultOpt match {
+              case Some(ruleResult) =>
+                val pageConfiguration = ruleResult.value.stringV.get
+                val tmpContext = d2wContext.copy(pageConfiguration = Some(Right(pageConfiguration)))
+                tmpContext
+              case None =>
+                // Remove the page configuration is the best thing we can do ... (?)
+                val tmpContext = d2wContext.copy(pageConfiguration = None)
+                tmpContext
+            }
+        }
+      case None => d2wContext
+    }
+
+  }
+
   def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
     d2wContext.entityName,
     d2wContext.task,
