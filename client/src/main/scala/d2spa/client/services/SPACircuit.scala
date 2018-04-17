@@ -649,19 +649,20 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
   override def handle = {
 
     case  InspectEO (fromTask, eo) =>
+      log.debug("PreviousPageHandler | InspectEO from: " + fromTask)
       val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(eo))
       effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
 
 
     case  InitMetaDataForList (entityName) =>
-      log.debug("InitMetaData for List page " + entityName)
+      log.debug("PreviousPageHandler | InitMetaDataForList for: " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
       effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
 
     case InitMetaData(entityName) =>
-      log.debug("InitMetaData for Query page " + entityName)
+      log.debug("PreviousPageHandler | InitMetaData for Query page: " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.query))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
       updated(
@@ -679,7 +680,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
           )
 
     case SetPreviousPage =>
-      log.debug("SetPreviousPage to: " + value)
+      log.debug("PreviousPageHandler | SetPreviousPage to: " + value)
       value match {
         case Some(currentPage) => {
           currentPage.previousTask match {
@@ -695,7 +696,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       }
 
     case UpdateQueryProperty(entityName, queryValue) =>
-      log.debug("UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
+      log.debug("PreviousPageHandler | UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
       val d2wContext = value.get
       val currentQueryValues = d2wContext.queryValues
       val newQueryValues = currentQueryValues + (queryValue.key -> queryValue)
@@ -704,7 +705,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
     case Search(entityName) =>
-      log.debug("SPACircuit | Search(" + entityName + ") | value: " + value)
+      log.debug("PreviousPageHandler | Search | " + entityName + " | value: " + value)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
           val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)
@@ -717,12 +718,12 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
           }
         case _ => EOFetchAll(entityName)  // shouldn't come here because the query page initialized it
       }
-      log.debug("Search: for entity " + entityName + " query with fs " + fs)
+      log.debug("PreviousPageHandler | Search | " + entityName + " query with fs " + fs)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       val  stack = stackD2WContext(d2wContext)
-      log.debug("Register Previous " + stack)
+      log.debug("PreviousPageHandler | Search | Register Previous " + stack)
 
       val effect = fs match {
         case fa: EOFetchAll => Effect(AjaxClient[Api].searchAll(fa).call().map(SearchResult(entityName, _)))
