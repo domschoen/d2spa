@@ -383,8 +383,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
-  def hydrateEOs(eo: Seq[EO],missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
-    Future(Seq())
+  def hydrateEOs(entityName: String, pks: Seq[Int], missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
+    val futures = pks.map(pk => completeEO(EOFault(entityName,pk),missingKeys))
+    val futureOfList = Future sequence futures
+    futureOfList
   }
 
   def searchAll(fs: EOFetchAll): Future[Seq[EO]] = {

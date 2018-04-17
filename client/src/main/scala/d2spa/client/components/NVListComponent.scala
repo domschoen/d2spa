@@ -193,24 +193,34 @@ object NVListComponent {
     def render(p: Props) = {
       log.debug("NVListComponent render ")
       val staleD2WContext = p.d2wContext
-      log.debug("NVListComponent render staleD2WContext: " + staleD2WContext)
+      val d2wContextOpt: Option[D2WContext] = staleD2WContext.dataRep match {
+        case Some(DataRep(_, Some(eosAtKeyPath))) => Some(staleD2WContext)
+        case _ =>
+          val d2wContextOpt = p.proxy.value.previousPage
+          d2wContextOpt match {
+            case Some(c) => Some(c)
+            case _ => None
+          }
+      }
 
-      val entityName = staleD2WContext.entityName.get
-      log.debug("NVListComponent render for entity: " + entityName)
-
-
-      val ruleResultsModel = p.proxy.value.ruleResults
-      log.debug("NVListComponent render ruleResultsModel: " + ruleResultsModel)
-
-      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayPropertyKeys)
-      log.debug("NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
-      val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayNameForEntity)
-
-      val d2wContextOpt = p.proxy.value.previousPage
       log.debug("NVListComponent render |  proxy d2wContext: " + d2wContextOpt)
 
       d2wContextOpt match {
         case Some(d2wContext) =>
+
+
+          val entityName = d2wContext.entityName.get
+          log.debug("NVListComponent render for entity: " + entityName)
+
+
+          val ruleResultsModel = p.proxy.value.ruleResults
+          log.debug("NVListComponent render ruleResultsModel: " + ruleResultsModel)
+
+          val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+          log.debug("NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
+          val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+
+
           val dataRepOpt = d2wContext.dataRep
 
           log.debug("dataRepOpt " + dataRepOpt)
@@ -224,11 +234,16 @@ object NVListComponent {
                   EOCacheUtils.objectsWithFetchSpecification(cache, fs)
 
                 case DataRep(_, Some(eosAtKeyPath)) => {
+                  log.debug("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
                   val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
                   eovalueOpt match {
                     case Some(eovalue) =>
+
+                      // ObjectsValue(Vector(1))
                       eovalue match {
-                        // To Restore case ObjectsValue(eos) => eos.toList
+                        case ObjectsValue(pks) =>
+                          log.debug("NVListComponent render pks " + pks)
+                          EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value,entityName,pks).toList
                         case _ => List.empty[EO]
                       }
                     case _ =>
@@ -240,6 +255,9 @@ object NVListComponent {
             }
             case _ => List.empty[EO]
           }
+          log.debug("NVListComponent render eos " + eos)
+
+
           val countText = eos.size + " " + (if (entityDisplayNameOpt.isDefined) entityDisplayNameOpt.get else "")
 
           <.div(

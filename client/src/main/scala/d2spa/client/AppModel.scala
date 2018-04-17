@@ -567,17 +567,26 @@ object EOCacheUtils {
 
   }
 
+
   def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: EO): Option[EO] = {
-    if (eo.pk < 0) {
+    outOfCacheEOUsingPk(cache, entityName, eo.pk)
+  }
+
+  def outOfCacheEOUsingPks(cache: MegaContent, entityName: String, pks: Seq[Int]): Seq[EO] = {
+    pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
+  }
+
+  def outOfCacheEOUsingPk(cache: MegaContent, entityName: String, pk: Int): Option[EO] = {
+    if (pk < 0) {
       val memCache = cache.cache.insertedEOs
-      log.debug("Out of cache " + eo.pk)
+      log.debug("Out of cache " + pk)
       log.debug("Cache " + memCache)
       log.debug("e name " + entityName)
-      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, -eo.pk)
+      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, -pk)
     } else {
       val dbCache = cache.cache.eos
-      log.debug("DB Cache " + dbCache)
-      EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, eo.pk)
+      log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
+      EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, pk)
     }
   }
 }

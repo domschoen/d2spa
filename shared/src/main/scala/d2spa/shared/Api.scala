@@ -15,7 +15,7 @@ trait Api {
   def updateEO(eo: EO): Future[EO]
   def deleteEO(eo: EO): Future[EO]
   def completeEO(eo: EOFault, missingKeys: Set[String]): Future[EO]
-  def hydrateEOs(eo: Seq[EO], missingKeys: Set[String]): Future[Seq[EO]]
+  def hydrateEOs(entityName: String, pks: Seq[Int], missingKeys: Set[String]): Future[Seq[EO]]
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult]
   def fetchEOModel(): Future[EOModel]
 

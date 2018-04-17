@@ -264,7 +264,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
         // case class RuleFault(rhs: D2WContextFullFledged, key: String)
 
         case Hydration(drySubstrate,  wateringScope) =>
-          log.debug("RuleResultsHandler | FireActions | Hydration: " + drySubstrate)
+          log.debug("RuleResultsHandler | FireActions | Hydration: " + drySubstrate + " wateringScope: " + wateringScope)
           // We handle only RuleFault
           // -> we expect it
 
@@ -299,8 +299,9 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                   eovalueOpt match {
                     case Some(eovalue) =>
                       eovalue match {
-                        // To Restore case ObjectsValue(eos) =>
-                        //   effectOnly(Effect(AjaxClient[Api].hydrateEOs(eos, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
+                        case ObjectsValue(pks) =>
+                          log.debug("NVListComponent render pks " + pks)
+                          effectOnly(Effect(AjaxClient[Api].hydrateEOs(rhs.entityName.get, pks, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
                         case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
                       }
                     case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
