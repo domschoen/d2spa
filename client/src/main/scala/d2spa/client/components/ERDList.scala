@@ -33,6 +33,23 @@ object ERDList {
   // ERDList ask for full fledge EO at the end of the relationship, with all field needed by displayPropertyKeys
   // ERDList convert EORef into EOs
   class Backend($: BackendScope[Props, Unit]) {
+    def mounted(p: Props) = {
+      val d2wContext = p.d2wContext
+      val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
+      log.debug("ERDList mounted: fireListConfiguration: " + fireListConfiguration)
+
+      val fireActions =
+        List(
+          fireListConfiguration // standard FieRule
+        )
+      Callback.when(!fireActions.isEmpty)(p.proxy.dispatchCB(
+        FireActions(
+          d2wContext,
+          fireActions
+        )
+      ))
+
+    }
 
     def render(p: Props) = {
       val staleD2WContext = p.d2wContext
@@ -55,6 +72,8 @@ object ERDList {
               val entity = EOModelUtils.entityNamed(eomodel, entityName).get
               val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
               val destinationEntityName = destinationEntity.name
+              val ruleResultsModel = p.proxy.value.ruleResults
+              val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
 
               //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
 
@@ -70,7 +89,12 @@ object ERDList {
               // - task = list
               // - DataRep
               // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
-              val embeddedListD2WContext = D2WContext(entityName = Some(destinationEntityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName)))))
+              val embeddedListD2WContext = D2WContext(
+                entityName = Some(destinationEntityName),
+                task = Some(TaskDefine.list),
+                dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName)))),
+                pageConfiguration = if (listConfigurationNameOpt.isDefined) Some(Right(listConfigurationNameOpt.get)) else None
+              )
               log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
               <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
 
@@ -85,7 +109,7 @@ object ERDList {
 
   private val component = ScalaComponent.builder[Props]("ERDList")
     .renderBackend[Backend]
-    //.componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))

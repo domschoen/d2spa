@@ -66,8 +66,7 @@ object NVListComponent {
       // - pageConfiguration = <listConfigurationName>
       log.debug("NVListComponent mounted: d2wContext: " + d2wContext)
 
-      val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-      log.debug("NVListComponent mounted: fireListConfiguration: " + fireListConfiguration)
+
       val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
       log.debug("NVListComponent mounted: fireDisplayPropertyKeys: " + fireDisplayPropertyKeys)
 
@@ -105,13 +104,7 @@ object NVListComponent {
 
           val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
 
-          val displayPKeysContext = D2WContext(
-            Some(destinationEntity.name),
-            Some(d2spa.shared.TaskDefine.list), None, None, Map(), None, None,
-            Some(Left(FireRuleConverter.toRuleFault(fireListConfiguration)))
-          )
-          log.debug("NVListComponent mounted: displayPKeysContext: " + displayPKeysContext)
-          val fireListDisplayPropertyKeys = FireRule(displayPKeysContext, RuleKeys.displayPropertyKeys)
+          val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
           log.debug("NVListComponent mounted: fireListDisplayPropertyKeys: " + fireListDisplayPropertyKeys)
 
           val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
@@ -123,7 +116,6 @@ object NVListComponent {
 
           val fas = Some(
             List(
-              fireListConfiguration, // standard FieRule
               fireListDisplayPropertyKeys, // standard FieRule
               // Hydrate has 2 parts
               // 1) which eos
@@ -146,7 +138,7 @@ object NVListComponent {
                   Some(ruleFaultListDisplayPropertyKeys)
                 )
               ), // populate with properties to be fired rule
-              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), displayPKeysContext, RuleKeys.componentName)
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
             )
           )
           log.debug("NVListComponent mounted: fireActions: " + fas)

@@ -196,19 +196,31 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
       val remainingActions = actions.tail
       fireAction match {
         case FireRule(rhs, key) =>
+
+
           log.debug("RuleResultsHandler | FireActions | Fire Rule " + key + " context: " + rhs)
           // convert any rhs depending on previous results
 
-          val newRhs = D2WContextUtils.convertD2WContextToFullFledgedByResolvingRuleFaults(value, rhs)
+          //val newRhs = D2WContextUtils.convertD2WContextToFullFledgedByResolvingRuleFaults(value, rhs)
+          val resolvedD2WContext = D2WContextUtils.d2wContextByResolvingRuleFaults(value,rhs)
+          val alreadyExistRuleResult = RuleUtils.ruleResultForContextAndKey(value,resolvedD2WContext,key)
+          alreadyExistRuleResult match {
+            case Some(ruleResult) =>
+              effectOnly(Effect.action(FireActions(d2wContext,remainingActions)))
+            case None =>
+              val newRhs = D2WContextUtils.convertD2WContextToFullFledged(resolvedD2WContext)
 
-          log.debug("RuleResultsHandler | FireActions | Fire Rule | convertD2WContextToFullFledged " + newRhs)
+              log.debug("RuleResultsHandler | FireActions | Fire Rule | convertD2WContextToFullFledged " + newRhs)
 
 
-          effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
-            {
-              log.debug("rr " + rr)
-              SetRuleResults(List(rr), d2wContext, remainingActions)
-            })))
+              effectOnly(Effect(AjaxClient[Api].fireRule(newRhs,key).call().map(rr =>
+              {
+                //log.debug("rr " + rr)
+                SetRuleResults(List(rr), d2wContext, remainingActions)
+              })))
+          }
+
+
 
         case CreateMemID(entityName) =>
           log.debug("RuleResultsHandler | FireActions | CreateMemID: " + entityName)
@@ -221,6 +233,9 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataWithActions(d2wContext, remainingActions, _))))
 
         case FireRules(keysSubstrate, rhs, key) =>
+          // TODO avoid double fetch
+
+
           log.debug("RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
           // For the moment, a KeySubstrate can have only a RuleFault
           // Let's resolve the fault (= firing the fault)
