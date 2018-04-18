@@ -23,10 +23,12 @@ object D2WComponentInstaller  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
+      val d2wContext = p.d2wContext
+      log.debug("D2WComponentInstaller | Render with d2wContext: " + d2wContext)
+
       val eo = p.eo
       //log.debug("Render D2WComponentInstaller " + p.proxy.value.isDebugMode)
       <.div({
-        val d2wContext = p.d2wContext
         val propertyName = d2wContext.propertyKey.get
         val ruleResults = p.proxy.value.ruleResults
 
@@ -35,14 +37,14 @@ object D2WComponentInstaller  {
           case Some(componentName) => {
             val displayedComponentName = if (p.proxy.value.isDebugMode) componentName else ""
             componentName match {
-              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "ERD2WEditString" => <.span(ERD2WEditString(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "ERDList" => <.span(ERDList(p.router, p.d2wContext, eo, p.proxy), displayedComponentName)
-              case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, p.d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, p.d2wContext, p.proxy), displayedComponentName)
+              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "ERD2WEditString" => <.span(ERD2WEditString(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "ERDList" => <.span(ERDList(p.router, d2wContext, eo, p.proxy), displayedComponentName)
+              case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, d2wContext, p.proxy), displayedComponentName)
+              case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, d2wContext, p.proxy), displayedComponentName)
               case _ => <.span("Component not found: " + componentName)
             }
           }

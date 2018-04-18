@@ -333,7 +333,7 @@ object NVListComponent {
   private val component = ScalaComponent.builder[Props]("NVListComponent")
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
-    .componentDidMount(scope => scope.backend.willmounted(scope.props))
+    //.componentDidMount(scope => scope.backend.willmounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, isEmbedded, proxy))

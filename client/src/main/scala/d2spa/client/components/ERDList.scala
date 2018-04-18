@@ -33,6 +33,16 @@ object ERDList {
   // ERDList ask for full fledge EO at the end of the relationship, with all field needed by displayPropertyKeys
   // ERDList convert EORef into EOs
   class Backend($: BackendScope[Props, Unit]) {
+
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      log.debug("ERDList willReceiveProps | currentProps: " + currentProps)
+      log.debug("ERDList willReceiveProps | nextProps: " + nextProps)
+
+      Callback.when(false) {
+        mounted(nextProps)
+      }
+    }
+
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
@@ -55,14 +65,15 @@ object ERDList {
       val staleD2WContext = p.d2wContext
       val entityName = staleD2WContext.entityName.get
 
+      log.debug("ERDList render with D2WContext: " + staleD2WContext)
+
       val d2wContextOpt = p.proxy.value.previousPage
-      log.debug("ERDList render d2wContextOpt " + d2wContextOpt)
 
       d2wContextOpt match {
         case Some(d2wContext) =>
 
 
-
+          // to get access to the latest version of the eo we use the previous page context
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
 
           eoOpt match {
@@ -73,7 +84,8 @@ object ERDList {
               val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
               val destinationEntityName = destinationEntity.name
               val ruleResultsModel = p.proxy.value.ruleResults
-              val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
+              val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.listConfigurationName)
+              log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
               //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
 
@@ -109,6 +121,7 @@ object ERDList {
 
   private val component = ScalaComponent.builder[Props]("ERDList")
     .renderBackend[Backend]
+    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
