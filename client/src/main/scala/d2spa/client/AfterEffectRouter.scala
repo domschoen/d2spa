@@ -53,6 +53,7 @@ object AfterEffectRouter {
 
 
   def setRouterToPage(page: TaskAppPage): Future[diode.NoAction.type] = {
+    log.debug("AfterEffectRouter | setRouterToPage " + page)
     // RouterCtl.set returns a Callback[Unit]
     // Callback implemented as functions that return a CallbackTo[Unit]
     Future {

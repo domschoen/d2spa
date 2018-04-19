@@ -2,31 +2,51 @@ package controllers
 
 import java.nio.ByteBuffer
 
+import akka.stream.ActorMaterializer
 import boopickle.Default._
 import com.google.inject.Inject
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.ApiService
 import d2spa.shared.Api
+import models.UserActor
 import play.api.libs.ws._
 import play.api.Logger
-
+import play.api.libs.json.JsValue
+import play.api.libs.streams.ActorFlow
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+// Add actor + web socket
+import play.api.libs.concurrent.Promise
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.Play.current
+import akka.actor._
+import scala.concurrent.Future
+import play.libs.Akka
+import play.api.mvc.WebSocket
+import play.libs.Akka
+import akka.actor.ActorSystem
+import play.api.Play.materializer
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
   override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
 }
 
-class Application @Inject() (implicit val config: Configuration, env: Environment, ws: WSClient) extends Controller {
+class Application @Inject() (implicit val config: Configuration, env: Environment, ws: WSClient, system: ActorSystem) extends Controller {
   val apiService = new ApiService(config,ws)
+  val UID = "uid"
+  var counter = 0;
+  //implicit val materializer = ActorMaterializer()
 
 
   def index = Action {
     Ok(views.html.index("D2SPA"))
   }
 
+  // called by the browser
   def autowireApi(path: String) = Action.async(parse.raw) {
     implicit request =>
       Logger.debug(s"Request path: $path")
@@ -44,6 +64,8 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
       })
   }
 
+
+  // Log
   def logging = Action(parse.anyContent) {
     implicit request =>
       request.body.asJson.foreach { msg =>
@@ -51,4 +73,24 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
       }
       Ok("")
   }
+
+
+  def ws() = WebSocket.accept[String, String] {request =>
+    println("WebSocket Received ")
+    ActorFlow.actorRef(out => MyWebSocketActor.props(out))
+  }
+
+
+  object MyWebSocketActor {
+    def props(out: ActorRef) = Props(new MyWebSocketActor(out))
+  }
+
+  class MyWebSocketActor(out: ActorRef) extends Actor {
+    def receive = {
+      case msg: String =>
+        println("WebSocket Received message: " + msg)
+        out ! ("I received your message: " + msg)
+    }
+  }
+
 }

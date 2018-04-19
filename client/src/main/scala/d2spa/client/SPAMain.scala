@@ -11,11 +11,11 @@ import d2spa.client.services.SPACircuit
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import CssSettings._
-
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
-import d2spa.shared.{ EOValue, TaskDefine}
+import d2spa.shared.{EOValue, TaskDefine}
 import diode.react.ModelProxy
+import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
 
 @JSExportTopLevel("SPAMain")
 object SPAMain extends js.JSApp {
@@ -124,11 +124,35 @@ object SPAMain extends js.JSApp {
     // create stylesheet
     GlobalStyles.addToDocument()
 
+    val websocketUrl = s"ws://${dom.document.location.host}/ws"
+
+    val chat = new WebSocket(websocketUrl)
+    chat.onopen = { (event: Event) ⇒
+      // At opening we send a message to the server
+      println("Websocket Send message to: " + websocketUrl)
+      chat.send("WS Opened")
+    }
+    chat.onerror = { (event: ErrorEvent) ⇒
+    }
+    chat.onmessage = { (event: MessageEvent) ⇒
+      println("Websocket received message: " + event.data.toString)
+    }
+    chat.onclose = { (event: Event) ⇒
+      }
+
+
     SPACircuit.dispatch(InitClient)
 
     // create the router
     val router = Router(BaseUrl.until_#, config)
     // tell React to render the router in the document body
     router().renderIntoDOM(dom.document.getElementById("root"))
+  }
+
+
+
+  def setupWebSocket() = {
+
+
   }
 }
