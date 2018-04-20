@@ -6,7 +6,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 import d2spa.client.components.GlobalStyles
 import d2spa.client.logger._
-import d2spa.client.services.SPACircuit
+import d2spa.client.services.{SPACircuit, WebSocketClient}
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -124,23 +124,7 @@ object SPAMain extends js.JSApp {
     // create stylesheet
     GlobalStyles.addToDocument()
 
-    val websocketUrl = s"ws://${dom.document.location.host}/ws"
-
-    val chat = new WebSocket(websocketUrl)
-    chat.onopen = { (event: Event) ⇒
-      // At opening we send a message to the server
-      println("Websocket Send message to: " + websocketUrl)
-      chat.send("WS Opened")
-    }
-    chat.onerror = { (event: ErrorEvent) ⇒
-    }
-    chat.onmessage = { (event: MessageEvent) ⇒
-      println("Websocket received message: " + event.data.toString)
-    }
-    chat.onclose = { (event: Event) ⇒
-      }
-
-
+    WebSocketClient.init()
     SPACircuit.dispatch(InitClient)
 
     // create the router
