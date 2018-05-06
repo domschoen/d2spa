@@ -75,7 +75,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
   }
 
 
-  def ws() = WebSocket.accept[String, String] {request =>
+  def ws() = WebSocket.accept[akka.util.ByteString, akka.util.ByteString] {request =>
     println("WebSocket Received ")
     ActorFlow.actorRef(out => MyWebSocketActor.props(out))
   }
@@ -87,9 +87,21 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
   class MyWebSocketActor(out: ActorRef) extends Actor {
     def receive = {
-      case msg: String =>
-        println("WebSocket Received message: " + msg)
-        out ! ("I received your message: " + msg)
+      case msg: akka.util.ByteString =>
+
+        val asString = (msg.map(_.toChar)).mkString
+
+        println("WebSocket Received message: " + asString)
+
+
+        //val d = Pickle.intoBytes[WebMessages.Message](result)
+
+        //val eo = EO()
+        //apiService.
+
+        //val worldFuture = Future { getLocationTrends(twitter, woeidWorld) }
+
+        //out ! ("I received your message: " + msg)
     }
   }
 

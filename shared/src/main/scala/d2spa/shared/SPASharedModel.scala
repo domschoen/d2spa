@@ -3,7 +3,6 @@ package d2spa.shared
 import boopickle.Default.{generatePickler, _}
 import boopickle.{MaterializePicklerFallback, TransformPicklers}
 
-
 object TaskDefine {
   val edit = "edit"
   val inspect = "inspect"
@@ -136,8 +135,8 @@ object EOValue {
     EO(entity, Map.empty[String, EOValue], memID)
   }*/
 
-  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int, EO]], eomodel: EOModel, entityName: String): (Map[String, Map[Int, EO]], EO) = {
-    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int, EO]], entity: EOEntity): (Map[String, Map[Int, EO]], EO) = {
+    val entityName = entity.name
     val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
     insertedEOsForEntityOpt match {
       case Some(insertedEOsForEntity) =>
@@ -153,6 +152,11 @@ object EOValue {
         val newInsertedEOs = Map(entityName -> newEntityMap)
         (newInsertedEOs, newEO)
     }
+  }
+
+  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int, EO]], eomodel: EOModel, entityName: String): (Map[String, Map[Int, EO]], EO) = {
+      val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+      createAndInsertNewObject(insertedEOs,entity)
   }
 
 

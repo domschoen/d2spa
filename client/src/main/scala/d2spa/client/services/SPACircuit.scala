@@ -95,11 +95,11 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
         Effect.action(NewEOWithEOModel(value.get, d2wContext, actions)) // from edit ?
       )
 
-    case NewEOWithEntityNameForEdit(selectedEntityName) =>
-      log.debug("NewEOWithEntityNameForEdit " + selectedEntityName)
+    /*case NewEOWithEntityNameForEdit(selectedEntityName) =>
+      log.debug("EOModelHandler | NewEOWithEntityNameForEdit " + selectedEntityName)
       effectOnly(
         Effect.action(NewEOWithEOModelForEdit(value.get, selectedEntityName)) // from edit ?
-      )
+      )*/
 
 
   }
@@ -532,6 +532,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
          )
 
 
+      // Update EO, stay on same page
+      // Examples:
+      //   - Save error -> update error in EO
+      //   - New eo from server
     case UpdateEOInCache(eo) =>
       log.debug("CacheHandler | UpdateEOInCache " + eo)
       updated(
@@ -543,6 +547,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo)),
         Effect.action(FireActions(property,actions))
+      )
+
+
+
+    case RefreshedEOs(eoses) =>
+      updated(
+        updatedOutOfDBCacheWithEOs(eoses)
       )
 
     case FetchedObjectsForEntity(eoses, d2wContext, actions) =>
@@ -633,9 +644,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(updatedMemCache(newValue),
               Effect.action(FireActions(newD2WContext,actions)))
 
-    case NewEOWithEOModelForEdit(eomodel, entityName) =>
+    case NewEOWithEOModelForEdit(entity) =>
+      val entityName = entity.name
       log.debug("CacheHandler | NewEOWithEOModelForEdit " + entityName)
-      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, eomodel, entityName)
+      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, entity)
 
       log.debug("newValue " + newValue)
       log.debug("newEO " + newEO)

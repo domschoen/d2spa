@@ -61,6 +61,7 @@ case object FetchEOModel extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 
 case class FetchedObjectsForEntity(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class RefreshedEOs(eos: Seq[EO])
 
 case class InitMetaData(entityName: String) extends Action
 case class InitMetaDataForList(entityName: String) extends Action
@@ -71,7 +72,7 @@ case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewEOWithEOModel(eomodel: EOModel, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
-case class NewEOWithEOModelForEdit(eomodel: EOModel, entityName: String) extends Action
+case class NewEOWithEOModelForEdit(entity: EOEntity) extends Action
 case class NewEOWithEntityName(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOWithEntityNameForEdit(entityName: String) extends Action
 case class NewEOCreated(eo: EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
