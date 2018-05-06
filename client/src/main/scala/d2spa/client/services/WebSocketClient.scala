@@ -4,12 +4,13 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 import d2spa.client.{SwithDebugMode, UpdateEOInCache}
+import d2spa.shared.FrontendRequest
 import org.scalajs.dom
 import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
+
 import scala.scalajs.js.typedarray.ArrayBuffer
 import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 import scala.scalajs.js.typedarray._
-
 import scala.scalajs.js.annotation.JSGlobal
 import scala.scalajs.js
 
@@ -40,24 +41,35 @@ object WebSocketClient {
     data.arrayBuffer
   }
 
-  val chat = new WebSocket(websocketUrl)
+  val ws = new WebSocket(websocketUrl)
 
-  chat.onopen = { (event: Event) ⇒
+
+
+  def send(req: d2spa.shared.FrontendRequest): Unit = {
+    import boopickle.Default._
+    val msg = Pickle.intoBytes(req)
+    ws.send(toArrayBuffer(msg))
+    dom.console.info(s"Sent request: $req")
+  }
+
+
+  ws.onopen = { (event: Event) ⇒
     // At opening we send a message to the server
     println("Websocket Send message to: " + websocketUrl)
     //val buf: ByteBuffer =       ByteBuffer.wrap("WS Opened".getBytes(StandardCharsets.UTF_8))
-    val str = "WS Opened"
+    /*val str = "WS Opened"
     val buf  = TypedArrayBuffer.wrap(utf8encoder(str))
     val arrayBuf = toArrayBuffer(buf)
 
     //val buf: ArrayBuffer = ByteBuffer.wrap("WS Opened".getBytes(StandardCharsets.UTF_8))
 
-    chat.send(arrayBuf)
+    ws.send(arrayBuf)*/
+    send(d2spa.shared.FrontendRequest("Pickled Request"))
   }
   /*ws.onerror = (e: ErrorEvent) ⇒ {
     dom.console.error(s"Couldn't create connection to server: ${JSON.stringify(e)}")
   }*/
-  chat.onmessage = { (event: MessageEvent) ⇒
+  ws.onmessage = { (event: MessageEvent) ⇒
     println("Websocket received message: " + event.data.toString)
 
 
@@ -70,11 +82,11 @@ object WebSocketClient {
 
     // RefreshedEOs
   }
-  chat.onclose = { (event: Event) ⇒
+  ws.onclose = { (event: Event) ⇒
   }
 
   def send(msg: String) = {
-    chat.send(msg)
+    ws.send(msg)
   }
 
   def init(): Unit = {

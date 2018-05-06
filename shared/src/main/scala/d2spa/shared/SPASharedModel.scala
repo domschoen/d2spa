@@ -108,6 +108,8 @@ case class ObjectsValue(eos: Seq[Int]) extends EOValue
 //case object NoneValue extends EOValue
 
 
+
+
 object EOValue {
 
 
@@ -324,6 +326,7 @@ object EOQualifier {
   }
 }
 
+case class FrontendRequest(text: String)
 
 sealed trait EOQualifier
 

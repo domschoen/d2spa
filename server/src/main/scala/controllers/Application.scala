@@ -29,6 +29,7 @@ import play.api.mvc.WebSocket
 import play.libs.Akka
 import akka.actor.ActorSystem
 import play.api.Play.materializer
+import boopickle.Default._
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
@@ -87,11 +88,14 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
   class MyWebSocketActor(out: ActorRef) extends Actor {
     def receive = {
-      case msg: akka.util.ByteString =>
+      case b: akka.util.ByteString =>
 
-        val asString = (msg.map(_.toChar)).mkString
+        ///val asString = (msg.map(_.toChar)).mkString
+        val result = Unpickle[d2spa.shared.FrontendRequest].fromBytes(b.asByteBuffer)
 
-        println("WebSocket Received message: " + asString)
+
+
+        println("WebSocket Received message: " + result)
 
 
         //val d = Pickle.intoBytes[WebMessages.Message](result)
