@@ -8,7 +8,7 @@ import com.google.inject.Inject
 import play.api.{Configuration, Environment}
 import play.api.mvc._
 import services.ApiService
-import d2spa.shared.Api
+import d2spa.shared.{Api, FrontendResponse}
 import models.UserActor
 import play.api.libs.ws._
 import play.api.Logger
@@ -98,14 +98,22 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
         println("WebSocket Received message: " + result)
 
 
-        //val d = Pickle.intoBytes[WebMessages.Message](result)
+        val d = Pickle.intoBytes(FrontendResponse("Reponse pickled"))
 
         //val eo = EO()
         //apiService.
 
         //val worldFuture = Future { getLocationTrends(twitter, woeidWorld) }
+        val byteString = akka.util.ByteString(d)
+        if (byteString.isEmpty) {
+          println("Empty ")
+        } else {
+          println("Non Empty ")
 
-        //out ! ("I received your message: " + msg)
+        }
+
+
+        out ! byteString
     }
   }
 

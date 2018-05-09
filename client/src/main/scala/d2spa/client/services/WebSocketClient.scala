@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 import d2spa.client.{SwithDebugMode, UpdateEOInCache}
-import d2spa.shared.FrontendRequest
+import d2spa.shared.{FrontendRequest, FrontendResponse}
 import org.scalajs.dom
 import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
 
@@ -40,6 +40,10 @@ object WebSocketClient {
     import scala.scalajs.js.typedarray.TypedArrayBufferOps._
     data.arrayBuffer
   }
+  private def toByteBuffer(data: Any): ByteBuffer = {
+    val ab = data.asInstanceOf[js.typedarray.ArrayBuffer]
+    js.typedarray.TypedArrayBuffer.wrap(ab)
+  }
 
   val ws = new WebSocket(websocketUrl)
 
@@ -53,7 +57,7 @@ object WebSocketClient {
   }
 
 
-  ws.onopen = { (event: Event) ⇒
+  ws.onopen = { (e: Event) ⇒
     // At opening we send a message to the server
     println("Websocket Send message to: " + websocketUrl)
     //val buf: ByteBuffer =       ByteBuffer.wrap("WS Opened".getBytes(StandardCharsets.UTF_8))
@@ -69,16 +73,21 @@ object WebSocketClient {
   /*ws.onerror = (e: ErrorEvent) ⇒ {
     dom.console.error(s"Couldn't create connection to server: ${JSON.stringify(e)}")
   }*/
-  ws.onmessage = { (event: MessageEvent) ⇒
-    println("Websocket received message: " + event.data.toString)
+  ws.onmessage = { (e: MessageEvent) ⇒
+    println("Websocket received message: ")
+
+    import boopickle.Default._
+    val bytes = toByteBuffer(e.data)
+    println("Websocket unpickle: " + bytes.asCharBuffer())
+
+    val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(bytes)
+
+    //dom.console.info(s"Received response from server: $resp")
+    println("Websocket unpickle: " + resp)
+
+    handleResponse(resp)
 
 
-
-
-    SPACircuit.dispatch(SwithDebugMode)
-
-
-    //SPACircuit.dispatch(UpdateEOInCache(eo))
 
     // RefreshedEOs
   }
@@ -95,5 +104,9 @@ object WebSocketClient {
 
   //override def read[Result: Pickler](p: ByteBuffer) = Unpickle[Result].fromBytes(p)
   //override def write[Result: Pickler](r: Result) = Pickle.intoBytes(r)
+  def handleResponse(response: FrontendResponse): Unit = {
+    //SPACircuit.dispatch(UpdateEOInCache(eo))
+    println("Response: " + response)
 
+  }
 }
