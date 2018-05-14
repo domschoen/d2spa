@@ -3,6 +3,7 @@ package controllers
 import java.nio.ByteBuffer
 
 import akka.stream.ActorMaterializer
+import akka.util.ByteString
 import boopickle.Default._
 import com.google.inject.Inject
 import play.api.{Configuration, Environment}
@@ -30,6 +31,7 @@ import play.libs.Akka
 import akka.actor.ActorSystem
 import play.api.Play.materializer
 import boopickle.Default._
+import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
@@ -86,8 +88,13 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
     def props(out: ActorRef) = Props(new MyWebSocketActor(out))
   }
 
-  class MyWebSocketActor(out: ActorRef) extends Actor {
-    def receive = {
+  class MyWebSocketActor(out: ActorRef) extends Actor with ActorPublisher[FrontendResponse]
+   {
+
+     def sendBinary(byteString: akka.util.ByteString) = {
+     }
+
+       def receive = {
       case b: akka.util.ByteString =>
 
         ///val asString = (msg.map(_.toChar)).mkString
@@ -104,7 +111,16 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
         //apiService.
 
         //val worldFuture = Future { getLocationTrends(twitter, woeidWorld) }
-        val byteString = akka.util.ByteString(d)
+        // use intermediate byte array
+        //var arr: Array[Byte] = new Array[Byte](d.remaining());
+        //d.get(arr, 0, arr.length)
+
+
+        //val byteString = ByteString.fromByteBuffer(d)
+        //val byteString = ByteString.fromArray(d.array())
+        //val byteString = ByteString.fromArray(arr)
+        val byteString = ByteString(d)
+
         if (byteString.isEmpty) {
           println("Empty ")
         } else {
@@ -114,6 +130,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
 
         out ! byteString
+        //sendBinary(byteString)
     }
   }
 

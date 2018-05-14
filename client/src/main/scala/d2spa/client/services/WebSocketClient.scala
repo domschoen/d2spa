@@ -55,6 +55,19 @@ object WebSocketClient {
     ws.send(toArrayBuffer(msg))
     dom.console.info(s"Sent request: $req")
   }
+ /* implicit def bytes2message(data: ByteBuffer): ArrayBuffer = {
+    if (data.hasTypedArray()) {
+      // get relevant part of the underlying typed array
+      data.typedArray().subarray(data.position, data.limit).buffer
+    } else {
+      // fall back to copying the data
+      val tempBuffer = ByteBuffer.allocateDirect(data.remaining)
+      val origPosition = data.position
+      tempBuffer.put(data)
+      data.position(origPosition)
+      tempBuffer.typedArray().buffer
+    }
+  }*/
 
 
   ws.onopen = { (e: Event) ⇒
@@ -78,7 +91,10 @@ object WebSocketClient {
 
     import boopickle.Default._
     val bytes = toByteBuffer(e.data)
-    println("Websocket unpickle: " + bytes.asCharBuffer())
+
+    //val bytes: ByteBuffer = TypedArrayBuffer.wrap(e.data.asInstanceOf[ArrayBuffer])
+
+    //println("Websocket unpickle: " + bytes.asCharBuffer())
 
     val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(bytes)
 
