@@ -1,9 +1,11 @@
 package controllers
 
+import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 import java.nio.ByteBuffer
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import akka.stream.ActorMaterializer
-import akka.util.ByteString
+import akka.util.{ByteString, CompactByteString}
 import boopickle.Default._
 import com.google.inject.Inject
 import play.api.{Configuration, Environment}
@@ -15,6 +17,8 @@ import play.api.libs.ws._
 import play.api.Logger
 import play.api.libs.json.JsValue
 import play.api.libs.streams.ActorFlow
+import org.objenesis.strategy.StdInstantiatorStrategy
+import play.api.http.websocket.BinaryMessage
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -32,6 +36,10 @@ import akka.actor.ActorSystem
 import play.api.Play.materializer
 import boopickle.Default._
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def read[R: Pickler](p: ByteBuffer) = Unpickle[R].fromBytes(p)
@@ -94,7 +102,10 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
      def sendBinary(byteString: akka.util.ByteString) = {
      }
 
-       def receive = {
+
+
+
+     def receive = {
       case b: akka.util.ByteString =>
 
         ///val asString = (msg.map(_.toChar)).mkString
@@ -116,10 +127,56 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
         //d.get(arr, 0, arr.length)
 
 
-        //val byteString = ByteString.fromByteBuffer(d)
-        //val byteString = ByteString.fromArray(d.array())
+        /*val byteString = ByteString.fromByteBuffer(d)
+        out ! byteString*/
+
+       //val byteString = ByteString.fromArray(d.array())
         //val byteString = ByteString.fromArray(arr)
-        val byteString = ByteString(d)
+        //val byteString = ByteString(d)
+
+        /*
+
+        WebSocket Received message: FrontendRequest(Pickled Request)
+[error] a.a.OneForOneStrategy - java.nio.HeapByteBuffer
+java.io.NotSerializableException: java.nio.HeapByteBuffer
+
+        val buffer = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(buffer)
+        oos.writeObject(d)
+        oos.flush()
+        oos.close()
+        val byteString = buffer.toByteArray
+
+        out ! byteString*/
+
+
+
+            // fall back to copying the data
+
+        // $c_Ljava_nio_BufferUnderflowException {s$1: null, e$1: null, stackTrace$1: null, stackdata:
+        // $c_Ljava_nio_BufferUnderflowException, stack: "Error↵    at $c_Ljava_nio_BufferUnderflowException…/localhost:9000/assets/client-fastopt.js:90711:8)"}
+
+            val tempBuffer = ByteBuffer.allocateDirect(d.remaining)
+            val origPosition = d.position
+            tempBuffer.put(d)
+            d.position(origPosition)
+            val byteString = ByteString(tempBuffer)
+        out ! byteString
+
+// may be the solution:
+       // https://github.com/CodeMettle/jsactor-spa-example
+
+       /* val kryo = new com.esotericsoftware.kryo.Kryo()
+        kryo.setRegistrationRequired(false)
+        kryo.setInstantiatorStrategy(new StdInstantiatorStrategy())
+        kryo.register(classOf[scala.collection.immutable.::[_]],60)
+
+        val output = new com.esotericsoftware.kryo.io.Output(new ByteArrayOutputStream())
+        kryo.writeClassAndObject(output, d)
+        val arrayByte = output.toBytes
+        val byteString = ByteString(arrayByte)
+
+
 
         if (byteString.isEmpty) {
           println("Empty ")
@@ -130,8 +187,32 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
 
         out ! byteString
-        //sendBinary(byteString)
-    }
+        //sendBinary(byteString)*/
+
+
+        //   override val bs = new BackendSystem()
+        //         handleWebSocketMessages(withWebsocketFlow(bs.webUiFlow(id)))
+
+       /* val webSocketFlow = Http().webSocketClientFlow(WebSocketRequest("ws://echo.websocket.org"))
+
+
+        val out = Source.actorRef[FrontendResponse](1, OverflowStrategy.fail)
+          .mapMaterializedValue { FrontendResponse("Reponse pickled") }
+          .map(Pickle.intoBytes(_))
+        Flow.fromSinkAndSource(in, out)
+
+
+        val stateChangePublisher: Publisher[PipelineState] = ActorPublisher[PipelineState](stateChangePublisherRef)
+        val stateChangeSource = Source.fromPublisher(stateChangePublisher)*/
+
+        //out ! ByteString("helll world")
+
+       //val byteString = ByteString.fromByteBuffer(d)
+        //val binMess = BinaryMessage(CompactByteString(d))
+
+   //     out ! binMess.data
+
+     }
   }
 
 }

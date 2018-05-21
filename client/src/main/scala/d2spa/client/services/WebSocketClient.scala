@@ -13,6 +13,22 @@ import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 import scala.scalajs.js.typedarray._
 import scala.scalajs.js.annotation.JSGlobal
 import scala.scalajs.js
+import java.nio.ByteBuffer
+
+import org.scalajs.dom.experimental.ByteString
+
+import scala.concurrent.Future
+//import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.scalajs.js
+import scala.scalajs.js.JSON
+
+import org.scalajs.dom
+import org.scalajs.dom.raw.CloseEvent
+import org.scalajs.dom.raw.ErrorEvent
+import org.scalajs.dom.raw.Event
+import org.scalajs.dom.raw.MessageEvent
+import org.scalajs.dom.raw.WebSocket
 
 @js.native
 @JSGlobal
@@ -90,18 +106,26 @@ object WebSocketClient {
     println("Websocket received message: ")
 
     import boopickle.Default._
-    val bytes = toByteBuffer(e.data)
+    ////val bytes: ByteBuffer = toByteBuffer(e.data)
 
     //val bytes: ByteBuffer = TypedArrayBuffer.wrap(e.data.asInstanceOf[ArrayBuffer])
 
     //println("Websocket unpickle: " + bytes.asCharBuffer())
 
-    val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(bytes)
+    ////val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(bytes)
 
     //dom.console.info(s"Received response from server: $resp")
-    println("Websocket unpickle: " + resp)
 
-    handleResponse(resp)
+    val data = e.data.asInstanceOf[js.typedarray.ArrayBuffer]
+    //println("Websocket unpickle byteString size: " +  ab )
+
+
+    val byteBuf = js.typedarray.TypedArrayBuffer.wrap(data)
+    val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(byteBuf)
+
+    println("Websocket unpickle bytebuffer capacity: " +  resp )
+
+    ///handleResponse(resp)
 
 
 
