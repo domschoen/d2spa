@@ -116,7 +116,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
         println("WebSocket Received message: " + result)
 
 
-        val d = Pickle.intoBytes(FrontendResponse("Reponse pickled"))
+        val d = Pickle.intoBytes(FrontendResponse(4)) // "Reponse pickled"
 
         //val eo = EO()
         //apiService.
@@ -127,8 +127,9 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
         //d.get(arr, 0, arr.length)
 
 
-        /*val byteString = ByteString.fromByteBuffer(d)
-        out ! byteString*/
+        // This should work !! Why not ?
+        val byteString = ByteString.fromByteBuffer(d)
+        out ! byteString
 
        //val byteString = ByteString.fromArray(d.array())
         //val byteString = ByteString.fromArray(arr)
@@ -156,12 +157,12 @@ java.io.NotSerializableException: java.nio.HeapByteBuffer
         // $c_Ljava_nio_BufferUnderflowException {s$1: null, e$1: null, stackTrace$1: null, stackdata:
         // $c_Ljava_nio_BufferUnderflowException, stack: "Error↵    at $c_Ljava_nio_BufferUnderflowException…/localhost:9000/assets/client-fastopt.js:90711:8)"}
 
-            val tempBuffer = ByteBuffer.allocateDirect(d.remaining)
+         /*   val tempBuffer = ByteBuffer.allocateDirect(d.remaining)
             val origPosition = d.position
             tempBuffer.put(d)
             d.position(origPosition)
             val byteString = ByteString(tempBuffer)
-        out ! byteString
+        out ! byteString*/
 
 // may be the solution:
        // https://github.com/CodeMettle/jsactor-spa-example

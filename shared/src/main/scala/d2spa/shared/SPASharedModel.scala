@@ -327,7 +327,7 @@ object EOQualifier {
 }
 
 case class FrontendRequest(text: String)
-case class FrontendResponse(text: String)
+case class FrontendResponse(value: Int)
 
 sealed trait EOQualifier
 
