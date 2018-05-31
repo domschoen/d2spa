@@ -28,6 +28,9 @@ object D2WDisplayNumber {
       val propertyName = d2wContext.propertyKey.get
       if (eo.values.contains(propertyName)) {
 
+        // We expect a value for that property. Either:
+        // StringValue
+        // EmptyValue
         val eoValue = eo.values(propertyName)
         val value = EOValue.juiceString(eoValue)
         <.div(

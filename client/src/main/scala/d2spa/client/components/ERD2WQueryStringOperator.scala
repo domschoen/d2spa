@@ -1,7 +1,8 @@
 package d2spa.client.components
 
-import d2spa.client.{AppModel, D2WContext, D2WContextUtils, QueryValue}
+import d2spa.client._
 import d2spa.client.logger.log
+import d2spa.shared.StringValue
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react.{ReactEventFromInput, _}
@@ -25,6 +26,24 @@ object ERD2WQueryStringOperator  {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
+    def queryValueChanged(entityName: String, propertyName: String, inputValue: String) = {
+      val action = if (inputValue.length == 0) {
+        ClearQueryProperty(entityName,propertyName)
+      }  else {
+        UpdateQueryProperty(
+          entityName,
+          QueryValue(
+            propertyName,
+            StringValue(inputValue),
+            QueryOperator.Match
+          )
+        )
+      }
+      Callback.log(s"Set to Yes : $propertyName") >>
+        $.props >>= (_.proxy.dispatchCB(action))
+    }
+
+
     def render(p: Props) = {
       val d2wContextOpt = p.proxy.value.previousPage
       d2wContextOpt match {
@@ -34,11 +53,17 @@ object ERD2WQueryStringOperator  {
           val propertyName = propertyD2WContext.propertyKey.get
 
           log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
-          val value = D2WContextUtils.queryValueForKey(d2wContext, propertyName)
+          val strValue = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
+          // set id but make it unique: ^.id := "description",
           <.div(
-            <.input(^.id := "description", ^.value := value,
-              ^.placeholder := "write description", ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName,
-                QueryValue(propertyName,e.target.value, QueryOperator.Match)))} )
+            <.input(^.value := strValue,
+              ^.placeholder := "write description",  ^.onChange ==> {e: ReactEventFromInput =>
+                queryValueChanged(
+                    entityName,
+                    propertyName,
+                    e.target.value)
+              }
+            )
           )
         case _ =>
           <.div("no context")

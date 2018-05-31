@@ -47,111 +47,107 @@ object NVListComponent {
       //val destinationEntity = EOModelUtilsdes
       log.debug("NVListComponent mounted")
       val eomodel = p.proxy.value.eomodel.get
-      val d2wContext = p.d2wContext
-      val fireActions: Option[List[D2WAction]] = d2wContext.entityName match {
-        case Some(entityName) =>
-          //val propertyName = staleD2WContext.propertyKey.get
-          val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-          val ruleResultsModel = p.proxy.value.ruleResults
+      val d2wContext = p.proxy.value.previousPage.get
+      val entityName = d2wContext.entityName.get
+      //val propertyName = staleD2WContext.propertyKey.get
+      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+      val ruleResultsModel = p.proxy.value.ruleResults
 
-          //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-          //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
+      //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+      //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-          log.debug("NVListComponent mounted: entity: " + entity)
-          log.debug("NVListComponent mounted: eomodel: " + eomodel)
+      log.debug("NVListComponent mounted: entity: " + entity)
+      log.debug("NVListComponent mounted: eomodel: " + eomodel)
 
-          // listConfigurationName
-          // Then with D2WContext:
-          // - task = 'list'
-          // - entity.name = 'Project'
-          // - pageConfiguration = <listConfigurationName>
-          log.debug("NVListComponent mounted: d2wContext: " + d2wContext)
-
-
-          val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
-          log.debug("NVListComponent mounted: fireDisplayPropertyKeys: " + fireDisplayPropertyKeys)
+      // listConfigurationName
+      // Then with D2WContext:
+      // - task = 'list'
+      // - entity.name = 'Project'
+      // - pageConfiguration = <listConfigurationName>
+      log.debug("NVListComponent mounted: d2wContext: " + d2wContext)
 
 
-          // case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
-
-          val dataRep = d2wContext.dataRep
-
-          dataRep match {
-            case Some(DataRep(Some(fetchSpecification), _)) => None
-            // TODO Restore it
-            /*val drySubstrate = DrySubstrate(fetchSpecification = Some(fetchSpecification))
-            val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-            val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
-
-            Some(
-              List(
-                fireListConfiguration, // standard FieRule
-                fireListDisplayPropertyKeys, // standard FieRule
-                Hydration(
-                  drySubstrate, // Hydration of objects at the end of relationship, stored in cache
-                  WateringScope(
-                    Some(ruleFaultListDisplayPropertyKeys)
-                  )
-                ), // populate with properties to be fired rule
-                FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
-              )
-            )*/
-
-            case Some(DataRep(_, Some(eosAtKeyPath))) => {
-              log.debug("NVListComponent mounted: EOsAtKeyPath: " + eosAtKeyPath)
-              val eo = eosAtKeyPath.eo
-              val propertyName = eosAtKeyPath.keyPath
-              val entity = eo.entity
-
-              val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-
-              val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-              log.debug("NVListComponent mounted: fireListDisplayPropertyKeys: " + fireListDisplayPropertyKeys)
-
-              val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
-              log.debug("NVListComponent mounted: ruleFaultListDisplayPropertyKeys: " + ruleFaultListDisplayPropertyKeys)
+      val fireDisplayPropertyKeys = FireRule(p.d2wContext, RuleKeys.displayPropertyKeys)
+      log.debug("NVListComponent mounted: fireDisplayPropertyKeys: " + fireDisplayPropertyKeys)
 
 
-              val drySubstrate: DrySubstrate = DrySubstrate(Some(EOsAtKeyPath(eo, propertyName)))
-              log.debug("NVListComponent mounted: drySubstrate: " + drySubstrate)
+      // case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 
-              val fas = Some(
-                List(
-                  fireListDisplayPropertyKeys, // standard FieRule
-                  // Hydrate has 2 parts
-                  // 1) which eos
-                  // 2) which propertyKeys
-                  // Example:
-                  // - ToOne:
-                  //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
-                  //   2) one property, the keyWhenRelationship (fireRule is used)
-                  // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
-                  //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
-                  //         First solution seems better. Fetch spec is stored in the eomodel
-                  //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
-                  // - ERDList:
-                  //   1) property eos as eorefs (entity, In qualifier)
-                  //   2) displayPropertyKeys (fireRule is used)
-                  // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
-                  Hydration(
-                    drySubstrate, // Hydration of objects at the end of relationship, stored in cache
-                    WateringScope(  // RuleFault
-                      Some(ruleFaultListDisplayPropertyKeys)
-                    )
-                  ), // populate with properties to be fired rule
-                  FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
+      val dataRep = d2wContext.dataRep
+
+      val fireActions: Option[List[D2WAction]] = dataRep match {
+        case Some(DataRep(Some(fetchSpecification), _)) => None
+          // TODO Restore it
+          val drySubstrate = DrySubstrate(fetchSpecification = Some(fetchSpecification))
+          val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+          val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+
+          Some(
+            List(
+              //fireListConfiguration, // standard FieRule
+              fireListDisplayPropertyKeys, // standard FieRule
+              Hydration(
+                drySubstrate, // Hydration of objects at the end of relationship, stored in cache
+                WateringScope(
+                  Some(ruleFaultListDisplayPropertyKeys)
                 )
-              )
-              log.debug("NVListComponent mounted: fireActions: " + fas)
+              ), // populate with properties to be fired rule
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
+            )
+          )
 
-              fas
-            }
-            case _ => None
-          }
+        case Some(DataRep(_, Some(eosAtKeyPath))) => {
+          log.debug("NVListComponent mounted: EOsAtKeyPath: " + eosAtKeyPath)
+          val eo = eosAtKeyPath.eo
+          val propertyName = eosAtKeyPath.keyPath
+          val entity = eo.entity
+
+          val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+
+          val fireListDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+          log.debug("NVListComponent mounted: fireListDisplayPropertyKeys: " + fireListDisplayPropertyKeys)
+
+          val ruleFaultListDisplayPropertyKeys = FireRuleConverter.toRuleFault(fireListDisplayPropertyKeys)
+          log.debug("NVListComponent mounted: ruleFaultListDisplayPropertyKeys: " + ruleFaultListDisplayPropertyKeys)
 
 
-        case None => None
+          val drySubstrate: DrySubstrate = DrySubstrate(Some(EOsAtKeyPath(eo, propertyName)))
+          log.debug("NVListComponent mounted: drySubstrate: " + drySubstrate)
+
+          val fas = Some(
+            List(
+              fireListDisplayPropertyKeys, // standard FieRule
+              // Hydrate has 2 parts
+              // 1) which eos
+              // 2) which propertyKeys
+              // Example:
+              // - ToOne:
+              //   1) all destination eos or restricted (entity, qualifier -> fetchSpecification)
+              //   2) one property, the keyWhenRelationship (fireRule is used)
+              // Remark: How to get the necessary eos ? Fetch Spec name from rule -> rule. Then use the fetch spec in memory on the cache of eos ?
+              //         or current solutions which stores the eos like a pseudo rule result (with property rule storage),
+              //         First solution seems better. Fetch spec is stored in the eomodel
+              //         fetchSpecificationName or fetchAll is not specified + eomodel fetch spec + cache => eos
+              // - ERDList:
+              //   1) property eos as eorefs (entity, In qualifier)
+              //   2) displayPropertyKeys (fireRule is used)
+              // Remark: How to get the necessary eos ? propertyKeyValues (eoref) + cache => eos
+              Hydration(
+                drySubstrate, // Hydration of objects at the end of relationship, stored in cache
+                WateringScope(  // RuleFault
+                  Some(ruleFaultListDisplayPropertyKeys)
+                )
+              ), // populate with properties to be fired rule
+              FireRules(KeysSubstrate(Some(ruleFaultListDisplayPropertyKeys)), d2wContext, RuleKeys.componentName)
+            )
+          )
+          log.debug("NVListComponent mounted: fireActions: " + fas)
+
+          fas
+        }
+        case _ => None
       }
+
       log.debug("NVListComponent mounted: FireActions: " + fireActions)
 
       Callback.when(fireActions.isDefined)(p.proxy.dispatchCB(
@@ -265,65 +261,64 @@ object NVListComponent {
               } else <.div()
             },
             {
-              <.table(^.className := "listPage",
-                <.tbody(
-                  <.tr(^.className := "listHeader",
-                    <.td(^.className := "listHeaderEntityName",
+              <.table(^.className := "table table-striped table-bordered table-hover table-condensed",
+                <.thead(
+                  <.tr(^.className := "",
+                    <.th(^.className := "no-border",
                       <.span(^.className := "attribute", countText)
                     ),
-                    if (p.isEmbedded) <.td() else <.td(^.className := "listHeaderReturnButton", <.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))))
+                    if (p.isEmbedded) <.th(^.className := "no-border") else <.th(^.className := "no-border listHeaderReturnButton", <.span(<.img(^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName)))),
+                    <.th(^.className := "no-border"),
+                    <.th(^.className := "no-border"),
+                    <.th(^.className := "no-border")
                   )
                 ),
-                <.tbody(
+
+                <.thead(
+                  <.tr(^.className := "",
+                    <.th(), {
+                      displayPropertyKeys toTagMod (propertyKey =>
+                        <.th(^.className := "", {
+                          val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                          val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
+                          val displayString = displayNameFound match {
+                            case Some(stringValue) => {
+                              //case Some(stringValue) => {
+                              stringValue
+                            }
+                            case _ => propertyKey
+                          }
+                          <.span(^.className := "", displayString)
+                        })
+                        )
+                    },
+                    <.th()
+                  )
+                ),
+
+              <.tbody(
+                eos toTagMod (eo =>
                   <.tr(
                     <.td(
-                      <.table(^.className := "listRepetition",
-                        <.tbody(
-                          <.tr(^.className := "listRepetitionColumnHeader",
-                            <.td(), {
-                              displayPropertyKeys toTagMod (propertyKey =>
-                                <.td(^.className := "listRepetitionColumnHeader", {
-                                  val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
-                                  val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
-                                  val displayString = displayNameFound match {
-                                    case Some(stringValue) => {
-                                      //case Some(stringValue) => {
-                                      stringValue
-                                    }
-                                    case _ => propertyKey
-                                  }
-                                  <.span(^.className := "listRepetitionColumnHeader", displayString)
-                                })
-                                )
-                            }
-                          )
-                        ),
-                        <.tbody(
-                          eos toTagMod (eo =>
-                            <.tr(
-                              <.td(
-                                <.img(^.className := "IconButton", ^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
-                                <.img(^.className := "IconButton", ^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
-                                <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
-                              ),
-                              displayPropertyKeys toTagMod (
-                                propertyKey => {
-                                  val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
-                                  <.td(^.className := "list1",
-                                    "toto"
-                                    //D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
-                                  )
-
-                                }
-                                ),
-                              if (p.isEmbedded) <.td() else <.td(<.img(^.className := "IconButton", ^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
-                            )
-                            )
+                      <.img(^.className := "IconButton", ^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
+                      <.img(^.className := "IconButton", ^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
+                      <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
+                    ),
+                    displayPropertyKeys toTagMod (
+                      propertyKey => {
+                        val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                        <.td(^.className := "",
+                          "toto"
+                          //D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                         )
-                      )
-                    )
+                      }
+                      ),
+                    if (p.isEmbedded) <.td() else <.td(<.img(^.className := "IconButton", ^.src := "/assets/images/trashcan-btn.gif", ^.onClick --> deleteEO(eo)))
                   )
                 )
+              )
+
+
               )
             }
           )
@@ -337,7 +332,7 @@ object NVListComponent {
   private val component = ScalaComponent.builder[Props]("NVListComponent")
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
-    //.componentDidMount(scope => scope.backend.willmounted(scope.props))
+    .componentDidMount(scope => scope.backend.willmounted(scope.props))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, isEmbedded, proxy))

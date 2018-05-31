@@ -2,7 +2,7 @@ package d2spa.client.components
 
 
 import d2spa.client._
-import d2spa.shared.EO
+import d2spa.shared.{EO, EOValue}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -49,11 +49,11 @@ object ERDEditRelationship  {
 
       val queryKey = p.property.name + "." + keyWhenRelationship
       val pretext = "where " + displayNameForKeyWhenRelationship + " is "
-      val value = D2WContextUtils.queryValueForKey(d2wContext, propertyName)
+      val value = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
       <.div(
         <.span(pretext),
         <.input(^.id := "toOneTextField", ^.value := value,
-          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey,e.target.value, QueryOperator.Match)))} )
+          ^.onChange ==> {e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey,EOValue.eoValueWithString(e.target.value), QueryOperator.Match)))} )
       )
     }
   }

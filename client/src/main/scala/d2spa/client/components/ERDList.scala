@@ -6,11 +6,11 @@ import d2spa.client.logger.log
 import d2spa.shared._
 import diode.react.ModelProxy
 import diode.Action
+import diode.data.Ready
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
 
@@ -43,6 +43,9 @@ object ERDList {
       }
     }
 
+
+    // We need to fire rule for Destination Entity (in case it is not given by the eomodel
+    // But be careful, the rule can return nothing and it shouldn't be an error
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
@@ -60,7 +63,6 @@ object ERDList {
           fireActions
         )
       ))
-
     }
 
     def render(p: Props) = {
@@ -80,50 +82,65 @@ object ERDList {
 
           eoOpt match {
             case Some(eo) =>
-              val propertyName = staleD2WContext.propertyKey.get
+              staleD2WContext.propertyKey match {
+                case Some(propertyName) =>
+                  val eomodelOpt = p.proxy.value.eomodel
 
-              val ruleResultsModel = p.proxy.value.ruleResults
+                  eomodelOpt match {
+                    case Ready(eomodel) =>
 
-              val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.destinationEntity)
-              log.debug(": " + listDestinationEntityOpt)
+                      val ruleResultsModel = p.proxy.value.ruleResults
 
-              val destinationEntityName = listDestinationEntityOpt match {
-                case Some(aDestinationEntityName) => aDestinationEntityName
-                case None =>
-                  val eomodel = p.proxy.value.eomodel.get
-                  val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-                  val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-                  destinationEntity.name
+                      val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.destinationEntity)
+                      log.debug(": " + listDestinationEntityOpt)
+
+                      val destinationEntityNameOpt = listDestinationEntityOpt match {
+                        case Some(aDestinationEntityName) => Some(aDestinationEntityName)
+                        case None =>
+                          val eomodel = p.proxy.value.eomodel.get
+                          val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+                          val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                          destinationEntityOpt match {
+                            case Some(destinationEntity) => Some(destinationEntity.name)
+                            case None => None
+                          }
+
+                      }
+
+                      destinationEntityNameOpt match {
+                        case Some(destinationEntityName) =>
+                          val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.listConfigurationName)
+                          log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
+
+                          //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+
+                          //val size = eoValueOpt match {
+                          //  case Some(ObjectsValue(eos)) => eos.size
+                          //  case _ => 0
+                          //}
+                          //val size = 1
+
+
+                          // D2WContext with
+                          // - Entity (destinationEntity)
+                          // - task = list
+                          // - DataRep
+                          // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
+                          val embeddedListD2WContext = D2WContext(
+                            entityName = Some(destinationEntityName),
+                            task = Some(TaskDefine.list),
+                            dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName)))),
+                            pageConfiguration = if (listConfigurationNameOpt.isDefined) Some(Right(listConfigurationNameOpt.get)) else None
+                          )
+                          log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
+                          <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
+
+                        case None => <.div("No destinaton Entity name")
+                      }
+                    case _ => <.div("no eomodel")
+                  }
+                case _ => <.div("no propertyName")
               }
-
-
-              val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.listConfigurationName)
-              log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
-
-              //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
-
-              //val size = eoValueOpt match {
-              //  case Some(ObjectsValue(eos)) => eos.size
-              //  case _ => 0
-              //}
-              //val size = 1
-
-
-              // D2WContext with
-              // - Entity (destinationEntity)
-              // - task = list
-              // - DataRep
-              // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
-              val embeddedListD2WContext = D2WContext(
-                entityName = Some(destinationEntityName),
-                task = Some(TaskDefine.list),
-                dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName)))),
-                pageConfiguration = if (listConfigurationNameOpt.isDefined) Some(Right(listConfigurationNameOpt.get)) else None
-              )
-              log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
-              <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
-
-            //<.div(size + " " + destinationEntityName + " " + propertyName)
             case None => <.div("")
           }
         case None => <.div("no context")

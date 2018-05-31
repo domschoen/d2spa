@@ -2,7 +2,8 @@ package d2spa.shared
 import scala.concurrent.Future
 
 trait Api {
-
+  
+  def getDebugConfiguration() : Future[DebugConf]
   def searchAll(fs: EOFetchAll): Future[Seq[EO]]
   def search(fs: EOQualifiedFetch): Future[Seq[EO]]
 

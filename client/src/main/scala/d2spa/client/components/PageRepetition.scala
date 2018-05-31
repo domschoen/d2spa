@@ -1,27 +1,26 @@
-package d2spa.client
+package d2spa.client.components
 
-
+import d2spa.client.D2WQueryPage.Props
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
-
 import scalacss.ScalaCssReact._
 import org.scalajs.dom.ext.KeyCode
 import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
-import d2spa.client.components.{D2WComponentInstaller, ERD2WQueryStringOperator, ERD2WQueryToOneField}
+import d2spa.client.logger.log
+import d2spa.client._
 import d2spa.shared._
-import d2spa.client.logger._
+import diode.data.Ready
 
-object D2WQueryPage {
+object PageRepetition {
+
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
-
   class Backend($ : BackendScope[Props, Unit]) {
-
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       val cEntityName = currentProps.d2wContext.entityName
@@ -57,11 +56,6 @@ object D2WQueryPage {
 
 
 
-    def search(router: RouterCtl[TaskAppPage],entityName: String) = {
-      Callback.log(s"Search: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entityName)))
-    }
-
 
     def render(p: Props) = {
       val d2wContext = p.d2wContext
@@ -81,20 +75,6 @@ object D2WQueryPage {
 
           entityDisplayNameOpt match {
             case Some(entityDisplayName) =>
-              <.div(
-                <.div(^.id := "b", MenuHeader(p.router, entityName, p.proxy)),
-                <.div(^.id := "a",
-                  <.div(^.className := "banner d2wPage",
-                    <.span(<.img(^.src := "/assets/images/SearchBan.gif"))
-                  ),
-                  <.div(^.className := "liner d2wPage", <.img(^.src := "/assets/images/Line.gif")),
-                  <.div(^.className := "buttonsbar d2wPage",
-                    <.span(^.className := "buttonsbar attribute beforeFirstButton", entityDisplayName),
-                    <.span(^.className := "buttonsbar",
-                      <.img(^.src := "/assets/images/ButtonSearch.gif", ^.onClick --> search(p.router, entityName))
-                      //p.router.link(ListPage(p.entity))("Search")
-                    )
-                  ),
                   <.div(^.className := "repetition d2wPage",
                     <.table(^.className := "query",
                       <.tbody(
@@ -122,15 +102,13 @@ object D2WQueryPage {
                                       )
                                     )
                                   }
-                                )
+                                  )
                               )
                             )
                           )
                         )
                       )
                     )
-                  )
-                )
               )
             case _ => <.div("no entity display name")
           }
@@ -139,20 +117,18 @@ object D2WQueryPage {
           <.div("no meta datas")
       }
     }
+
+
   }
 
 
-  //                               //componentByName(property.componentName).asInstanceOf[QueryComponent](p.router,property,p.proxy)
-
-
-  private val component = ScalaComponent.builder[Props]("D2WQueryPage")
+  private val component = ScalaComponent.builder[Props]("NVListComponent")
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
-    log.debug("ctl " + ctl.hashCode())
-    component(Props(ctl, d2wContext, proxy))
-  }
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+
+
 }

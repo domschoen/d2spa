@@ -3,7 +3,7 @@ package d2spa.client.components
 
 import d2spa.client.EOCacheUtils
 import d2spa.client.D2WContext
-import d2spa.shared.{StringValue}
+import d2spa.shared.{EmptyValue, StringValue}
 import diode.react.ModelProxy
 import diode.Action
 import japgolly.scalajs.react._
@@ -30,6 +30,7 @@ object ERD2WEditString  {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
+
     def render(p: Props) = {
       //log.debug("eo: " + p.eo)
       val d2wContext = p.d2wContext
@@ -42,7 +43,7 @@ object ERD2WEditString  {
           <.div(
             <.input(^.id := "description", ^.value := value,
               ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, StringValue(Some(e.target.value))))} )
+                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.eoValueWithString(e.target.value)))} )
           )
         case None => <.div("No eo out of cache")
       }

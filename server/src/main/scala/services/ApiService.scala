@@ -47,9 +47,12 @@ case class FetchedEOEntity (
                            primaryKeyAttributeNames: Seq[String],
                            relationships: Seq[FetchedEORelationship] = Seq()
                            )
-case class FetchedEORelationship (
-                                   name: String,
-                                   destinationEntityName: String)
+case class FetchedEORelationship (sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
+                                  name: String,
+                                  destinationEntityName: String)
+case class FetchedEOAttribute (`type`: String, name: String)
+
+
 
 
 
@@ -57,7 +60,7 @@ case class FetchedEORelationship (
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
   val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
-  val d2spaServerBaseUrl = "http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra";
+  val d2spaServerBaseUrl = config.getString("woappURL").getOrElse("http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra")
 
 
 
@@ -88,9 +91,17 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     )(FetchedEOEntity.apply _)
 
   implicit lazy val fetchedEORelationshipReads: Reads[FetchedEORelationship] = (
-    (JsPath \ "name").read[String] and
+    ((JsPath \ "sourceAttributes").lazyRead(Reads.seq(fetchedEOAttributeReads)) or
+      Reads.pure(Seq.empty[FetchedEOAttribute])
+      ) and
+      (JsPath \ "name").read[String] and
       (JsPath \ "destinationEntityName").read[String]
     )(FetchedEORelationship.apply _)
+
+  implicit lazy val fetchedEOAttributeReads: Reads[FetchedEOAttribute] = (
+    (JsPath \ "type").read[String] and
+      (JsPath \ "name").read[String]
+    )(FetchedEOAttribute.apply _)
 
   implicit lazy val menuItemReads: Reads[MenuItem] = (
       (JsPath \ "id").read[Int] and
@@ -156,7 +167,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val fetchedEOEntity = s.get
               val primaryKeyAttributeName = fetchedEOEntity.primaryKeyAttributeNames(0)
               val fetchedRelationships = fetchedEOEntity.relationships
-              val relationships = fetchedRelationships.map(r => EORelationship(r.name,r.destinationEntityName)).toList
+              val relationships = fetchedRelationships.map(
+                r => {
+                  val sourceAttributesNames = r.sourceAttributes map (_.name)
+
+                  EORelationship(sourceAttributesNames.toList, r.name,r.destinationEntityName)
+                }).toList
               entities =  EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, relationships) :: entities
             }
             case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
@@ -229,6 +245,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     val arguments = nonNullArguments.filter(x => !x._2.isEmpty).map(x => (x._1, x._2.get))
 
     //Logger.debug("Args : " + arguments)
+    Logger.debug("Fire Rule with url: " + url)
+    Logger.debug("Fire Rule with arguments: " + arguments)
 
     val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
@@ -400,6 +418,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     searchOnD2SPAServer(entityName,Some(fs.qualifier))
   }
 
+  def getDebugConfiguration() : Future[DebugConf] = {
+    Future(DebugConf(showDebugButton))
+  }
 
 
   // TBD Sorting parameter
@@ -415,9 +436,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
     val value = qualifier.value
     return value match {
-      case StringValue(stringV) => "qualifier=" + qualifier.key + " like '*" + stringV.get + "*'"
+      case StringValue(stringV) => qualifier.key + " caseInsensitiveLike '*" + stringV + "*'"
       case IntValue(i)  => "" // TODO
-      case ObjectValue(isSome, eo) => "" // TODO
+      case BooleanValue(b)  => qualifier.key + " = " + (if (b) "1" else "0")
+      case ObjectValue(eo) => "" // TODO
       // To Restore case ObjectsValue(eos) => "" // TODO
     }
   }
@@ -430,7 +452,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
     val qualifierSuffix = qualifierOpt match {
-      case Some(q) => "?" + qualifiersUrlPart(q)
+      case Some(q) => "?qualifier=" + qualifiersUrlPart(q)
       case _ => ""
     }
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
@@ -449,34 +471,57 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
           //Logger.debug("value class " + value.getClass.getName)
           value match {
             case s: play.api.libs.json.JsString =>
-              valuesMap += (key -> StringValue(Some(s.value)))
+              valuesMap += (key -> StringValue(s.value))
+
+            case n: play.api.libs.json.JsBoolean =>
+              val boolVal = n.value
+              // TBD use a BigDecimal container
+              valuesMap += (key -> BooleanValue(boolVal))
+
             case n: play.api.libs.json.JsNumber =>
               val bigDecimal = n.value
               // TBD use a BigDecimal container
-              valuesMap += (key -> IntValue(Some(bigDecimal.toInt)))
+              valuesMap += (key -> IntValue(bigDecimal.toInt))
             case play.api.libs.json.JsNull =>
               // TBD use a kind of Null ?
-              valuesMap += (key -> StringValue(None))
+              valuesMap += (key -> EmptyValue)
             case play.api.libs.json.JsObject(fields) =>
               // case class EORef(entityName: String, id: Int)
+
+              // get EORelationship from key
+              //val relationship = EOModelUtils.relationshipNamed(eomodel(),entityName,key)
+              //Logger.debug("relationship " + relationship)
+
               val fieldsMap = fields.toMap
               Logger.debug("fieldsMap " + fieldsMap)
               val destinationEntityName = fieldsMap("type").asInstanceOf[JsString].value
-              val destinationEntity = EOModelUtils.entityNamed(eomodel(),destinationEntityName).get
-              Logger.debug("destinationEntity " + destinationEntity)
-              val pkName = destinationEntity.pkAttributeName
-              val pk = fieldsMap(pkName).asInstanceOf[JsNumber].value.toInt
-              val eo = EOValue.dryEOWithEntity(destinationEntity,Some(pk))
-              valuesMap += (key -> ObjectValue(eo = eo))
+              val destinationEntityOpt = EOModelUtils.entityNamed(eomodel(),destinationEntityName)
+
+              destinationEntityOpt match {
+                case Some(destinationEntity) =>
+                  Logger.debug("destinationEntity " + destinationEntity)
+
+                  // Assume no compound fks ...
+                  //val fkName = relationship.sourceAttributeName.head
+                  //val sourceEntity = EOModelUtils.entityNamed(eomodel(),entityName).get
+
+
+                  val pk = fieldsMap("id").asInstanceOf[JsNumber].value.toInt
+                  val eo = EOValue.dryEOWithEntity(destinationEntity,Some(pk))
+                  valuesMap += (key -> ObjectValue(eo = eo))
+                case None => ()
+              }
+
             case _ =>
-              valuesMap += (key -> StringValue(Some("not supported")))
+              valuesMap += (key -> StringValue("not supported"))
 
           }
         }
-        val eo = EO(entity,valuesMap,0)
-        val pk = EOValue.pk(eo).get
-        val updatedEO = eo.copy(pk = pk)
-        eos ::= updatedEO
+        Logger.debug("valuesMap " + valuesMap)
+        val pkEOValue = valuesMap("id")
+        val pk = EOValue.juiceInt(pkEOValue)
+        val eo = EO(entity,valuesMap,pk)
+        eos ::= eo
       }
       Logger.debug("Search: eos created " + eos)
 
@@ -541,35 +586,22 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
   def woWsParameterForValue(value: EOValue): JsValue = {
     value match {
-      case StringValue(stringV) =>
-        stringV match {
-          case Some(stringValue) =>
-            JsString(stringValue)
-          case _ =>
-            JsNull
-        }
-      case IntValue(intV) =>
-        intV match {
-          case Some(intValue) =>
-            JsNumber(intValue)
-          case _ =>
-            JsNull
-        }
-      case ObjectValue(isSome, eo) => {
-        if (isSome) {
+      case StringValue(stringV) => JsString(stringV)
 
-          val entityName = eo.entity.name
-          val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
-          val pk = EOValue.pk(eo).get
-          JsObject(Seq(pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
-        } else {
-          JsNull
-        }
+      case IntValue(intV) => JsNumber(intV)
+
+      case ObjectValue(eo) => {
+        val entityName = eo.entity.name
+        val pkAttributeName = pkAttributeNameForEntityNamed(entityName)
+        val pk = EOValue.pk(eo).get
+        JsObject(Seq(pkAttributeName -> JsNumber(pk), "type" -> JsString(entityName)))
       }
+      case EmptyValue => JsNull
       case _ => JsString("")
     }
 
   }
+
 
 
   // DELETE

@@ -37,7 +37,8 @@ object SPACircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
 
   override val actionHandler = composeHandlers(
-    new DebugHandler(zoomTo(_.content.isDebugMode)),
+    new DebugConfigurationHandler(zoomTo(_.content.debugConfiguration)),
+    new BusyIndicatorHandler(zoomTo(_.content.showBusyIndicator)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new RuleResultsHandler(zoomTo(_.content.ruleResults)),
     new EOCacheHandler(zoomTo(_.content.cache)),
@@ -72,6 +73,18 @@ class MegaDataHandler[M](modelRW: ModelRW[M, MegaContent]) extends ActionHandler
 
 class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler(modelRW) {
   override def handle = {
+
+    case InitClient =>
+      value match {
+        case Ready(eomodel) =>
+          log.debug("FetchEOModel no change")
+          noChange
+        case _ =>
+          log.debug("FetchEOModel fetching")
+          effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModelThenFetchMenu(_))))
+      }
+
+
     case FetchEOModel =>
       log.debug("FetchEOModel")
       value match {
@@ -82,6 +95,10 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
           log.debug("FetchEOModel fetching")
           effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
       }
+
+    case SetEOModelThenFetchMenu(eomodel) =>
+      updated(Ready(eomodel), Effect.action(FetchMenu))
+
 
     case SetEOModel(eomodel) =>
       updated(Ready(eomodel))
@@ -106,12 +123,34 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
 }
 
-class DebugHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelRW) {
+class DebugConfigurationHandler[M](modelRW: ModelRW[M, DebugConfiguration]) extends ActionHandler(modelRW) {
   override def handle = {
+    case FetchShowD2WDebugButton =>
+      log.debug("DebugHandler | FetchShowD2WDebugButton")
+      effectOnly(Effect(AjaxClient[Api].getDebugConfiguration().call().map(SetDebugConfiguration(_))))
+
+    case SetDebugConfiguration(debugConf) =>
+      log.debug("DebugHandler | SetShowD2WDebugButton " + debugConf.showD2WDebugButton)
+      updated(value.copy(showD2WDebugButton = debugConf.showD2WDebugButton))
+
     case SwithDebugMode =>
-      updated(!value)
+      log.debug("DebugHandler | SwithDebugMode")
+      updated(value.copy(isDebugMode = !value.isDebugMode))
   }
 }
+
+class BusyIndicatorHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case ShowBusyIndicator =>
+      updated(true)
+    case HideBusyIndicator =>
+      updated(false)
+
+    case SearchWithBusyIndicator(entityName) =>
+      updated(true,Effect.action(Search(entityName)))
+  }
+}
+
 
 class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String,PageConfigurationRuleResults]]]]) extends ActionHandler(modelRW) {
 
@@ -731,6 +770,13 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
+    case ClearQueryProperty(entityName, propertyName) =>
+      log.debug("PreviousPageHandler | ClearQueryProperty: for entity " + entityName + " and property " + propertyName)
+      val d2wContext = value.get
+      val currentQueryValues = d2wContext.queryValues
+      val newQueryValues = currentQueryValues - propertyName
+      val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
+      updated(Some(newD2wContext))
 
     case Search(entityName) =>
       log.debug("PreviousPageHandler | Search | " + entityName + " | value: " + value)
@@ -771,7 +817,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case InitClient =>
+    case FetchMenu =>
       log.debug("Init Client")
       if (value.isEmpty) {
         log.debug("Api get Menus")

@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client._
-import d2spa.shared.EOModelUtils
+import d2spa.shared.{EOModelUtils, EOValue}
 import diode.react.ModelProxy
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -71,11 +71,11 @@ object ERD2WQueryToOneField  {
 
               val queryKey = propertyName + "." + keyWhenRelationship
               val pretext = "where " + whereDisplayText + " is "
-              val value = D2WContextUtils.queryValueForKey(d2wContext, propertyName)
+              val value = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
               <.div(
                 <.span(pretext),
                 <.input(^.id := "toOneTextField", ^.value := value,
-                  ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey, e.target.value, QueryOperator.Match))) })
+                  ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey, EOValue.eoValueWithString(e.target.value), QueryOperator.Match))) })
               )
             case _ => <.div("Missing query values")
           }

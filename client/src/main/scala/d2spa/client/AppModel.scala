@@ -22,7 +22,7 @@ case class CustomData()
 
 
 
-case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
+case class MegaContent(showBusyIndicator: Boolean = false,   debugConfiguration: DebugConfiguration, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
                        cache: EOCache,
                        previousPage: Option[D2WContext]
                        )
@@ -30,6 +30,7 @@ case class MegaContent(isDebugMode: Boolean, menuModel: Pot[Menus], eomodel: Pot
 sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
 }
+case class DebugConfiguration(showD2WDebugButton: Boolean = false, isDebugMode: Boolean = false)
 
 
 case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
@@ -49,6 +50,9 @@ case class EOCache(eos: Map[String, Map[Int,EO]],
 
 
 // define actions
+case object ShowBusyIndicator extends Action
+case object HideBusyIndicator extends Action
+case class SearchWithBusyIndicator(entityName: String) extends Action
 
 case object InitClient extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
@@ -58,7 +62,9 @@ case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAct
 case class UpdateRefreshEOInCache(eo:EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
+case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
+case object FetchMenu extends Action
 
 case class FetchedObjectsForEntity(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class RefreshedEOs(eos: Seq[EO])
@@ -92,6 +98,7 @@ case class Save(entityName: String, eo: EO) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
+case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
 case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOValue) extends Action
 
 case class Search(entityName: String) extends Action
@@ -129,7 +136,7 @@ object QueryOperator {
 
 
 // A container for value should be used. It would give a way to have not only String
-case class QueryValue(key: String,value: String, operator: String)
+case class QueryValue(key: String,value: EOValue, operator: String)
 
 object QueryValue {
   val operatorByQueryOperator = Map(
@@ -142,7 +149,7 @@ object QueryValue {
     val qualifiers = queryValues.map(qv => {
       log.debug("QueryValue " + qv)
       log.debug("QueryValue operatorByQueryOperator(qv.operator): " + operatorByQueryOperator(qv.operator))
-      EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),StringValue(Some(qv.value)))
+      EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),qv.value)
     })
     if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
   }
@@ -406,7 +413,14 @@ object D2WContextUtils {
 
   def queryValueForKey(d2wContext: D2WContext, key: String) = {
     val queryValues = d2wContext.queryValues
-    if (queryValues.contains(key)) queryValues(key).value else ""
+    if (queryValues.contains(key)) Some(queryValues(key).value) else None
+  }
+  def queryValueAsStringForKey(d2wContext: D2WContext, key: String) = {
+    val value = D2WContextUtils.queryValueForKey(d2wContext, key)
+    val strValue = value match {
+      case Some(StringValue(str)) => str
+      case _ => ""
+    }
   }
 
 
@@ -491,6 +505,8 @@ case class ShowPage(entity: EOEntity, task: String) extends Action
 case class SetupQueryPageForEntity(entityName: String) extends Action
 
 case object SwithDebugMode extends Action
+case object FetchShowD2WDebugButton extends Action
+case class SetDebugConfiguration(debugConf: DebugConf) extends Action
 
 /*      Menus(
         List(
@@ -511,6 +527,7 @@ object AppModel {
   val bootingModel = AppModel(
     MegaContent(
       false,
+      DebugConfiguration(),
       Empty,
       Empty,
       Map(),

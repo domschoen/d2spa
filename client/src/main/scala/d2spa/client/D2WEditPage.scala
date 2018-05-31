@@ -114,8 +114,8 @@ object D2WEditPage {
       }
     }
 
-
     def save(router: RouterCtl[TaskAppPage],entityName: String,eo: EO) = {
+
       val isNewEO = EOValue.isNew(eo)
       if (isNewEO) {
         Callback.log(s"Save new EO: $entityName") >>

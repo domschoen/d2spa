@@ -99,13 +99,15 @@ object Test4 extends MaterializePicklerFallback {
 }
 
 
-
+case class DebugConf(showD2WDebugButton: Boolean)
 
 sealed trait EOValue
-case class StringValue(value: Option[String]) extends EOValue
-case class IntValue(value : Option[Int]) extends EOValue
-case class ObjectValue(isSome: Boolean = true, eo: EO = null) extends EOValue
+case class StringValue(value: String) extends EOValue
+case class IntValue(value : Int) extends EOValue
+case class BooleanValue(value : Boolean) extends EOValue
+case class ObjectValue(eo: EO) extends EOValue
 case class ObjectsValue(eos: Seq[Int]) extends EOValue
+case object EmptyValue extends  EOValue
 //case object NoneValue extends EOValue
 
 
@@ -117,15 +119,18 @@ object EOValue {
   def objectValue(eoOpt: Option[EO]) = {
     eoOpt match {
       case Some(eo) => ObjectValue(eo = eo)
-      case None => ObjectValue(false)
+      case None => EmptyValue
     }
   }
 
-  def stringV(value: String) = StringValue(if (value == null) None else Some(value))
-  def intV(value: Int) = IntValue(if (value == null) None else Some(value))
-  def eoV(value: EO) = if (value == null) ObjectValue(false) else ObjectValue(eo = value)
+  def stringV(value: String) = StringValue(value)
+  def intV(value: Int) = IntValue(value)
+  def eoV(value: EO) =  ObjectValue(eo = value)
   def eosV(value: Seq[Int]) = ObjectsValue(eos = value)
 
+
+  def eoValueWithString(str: String) = if (str.length == 0) EmptyValue else StringValue(str)
+  def eoValueWithInt(str: String) = if (str.length == 0) EmptyValue else IntValue(str.toInt)
 
   //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
   def dryEOWith(eomodel: EOModel, entityName: String, pk: Option[Int]) = {
@@ -169,7 +174,7 @@ object EOValue {
       case Some(pk) =>
         val pkAttributeName = entity.pkAttributeName
         val pkValue = intV(pk)
-        val pkInt = pkValue.value.get
+        val pkInt = pkValue.value
         val valueMap = Map(pkAttributeName -> pkValue)
         EO(entity, valueMap, pk = pkInt)
       case None =>
@@ -180,22 +185,28 @@ object EOValue {
   }
 
 
-  def juiceString(value: EOValue): String = if (value == null) "" else {
+  def juiceString(value: EOValue): String =
     value match {
-      case StringValue(value) => if (value.isDefined) value.get else ""
-      case IntValue(value) => if (value.isDefined) value.get.toString else ""
-      case ObjectValue(isSome, eo) => if (isSome) eo.toString else ""
+      case StringValue(value) => value
+      case IntValue(value) => value.toString
+      case ObjectValue(eo) => eo.toString
       case _ => ""
     }
-  }
+
+
+  def juiceInt(v: EOValue): Int =
+    v match {
+      case StringValue(value) => 0
+      case IntValue(value) => value
+      case ObjectValue(eo) => 0
+      case _ => 0
+    }
+
 
   def isDefined(value: EOValue): Boolean =
     value match {
-      case StringValue(value) => value.isDefined
-      case IntValue(value) => value.isDefined
-      case ObjectValue(isSome, eo) => isSome
-      case ObjectsValue(eos) => !eos.isEmpty
-      case _ => false
+      case EmptyValue => false
+      case _ => true
     }
 
   def stringValueForKey(eo: EO, key: String) = {
@@ -236,7 +247,7 @@ object EOValue {
     resultOpt match {
       case Some((key, eoValue)) =>
         eoValue match {
-          case IntValue(pk) => pk
+          case IntValue(pk) => Some(pk)
           case _ => None
         }
       case _ => None
@@ -311,10 +322,40 @@ object EOQualifier {
         val eoValueOpt = EOValue.valueForKey(eo, key)
 
         eoValueOpt match {
+            // eo has a value which is not empty
           case Some(eoValue) =>
             println("Compare " + eoValue + " with " + value)
             // TODO check the value
-            eoValue.equals(value)
+            eoValue match {
+              case StringValue(str) =>
+                // Qualifier value hopefully of the same type or empty
+                value match {
+                  case StringValue(qualStr) =>
+                        val lStr = str.toLowerCase
+                        val lQualStr = qualStr.toLowerCase
+                        lStr.indexOf(lQualStr) >= 0
+                  case EmptyValue => false
+                    // comparing apple with banana -> more like an error
+                  case _ => false
+                }
+              case EmptyValue => value match {
+                case EmptyValue => true
+                case _ => false
+              }
+              case BooleanValue(bv)  =>
+                // Qualifier value hopefully of the same type or empty
+                value match {
+                  case BooleanValue(qualBv) =>
+                    bv == qualBv
+                  case EmptyValue => false
+                  // comparing apple with banana -> more like an error
+                  case _ => false
+                }
+
+                /// For all other type, we fall back the following default behaviour:
+              case _ => eoValue.equals(value)
+            }
+          // eo has no value defined for that key
           case None =>
             println("Error: try to compare no fetched or non existing value for key " + key + " for entity " + eo.entity.name)
             false
@@ -341,7 +382,7 @@ case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
-case class EORelationship(name: String, destinationEntityName: String)
+case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
 
 //case class EORef(entityName: String, id: Int)
 
@@ -389,25 +430,26 @@ case class EntityMetaData(d2wContext: D2WContextFullFledged, displayName: String
 
 object EOModelUtils {
   def destinationEntity(eomodel: EOModel, entity: EOEntity, relationshipName: String) = {
-    val sourceEntityOpt = entityNamed(eomodel, entity.name)
-    sourceEntityOpt match {
-      case Some(sourceEntity) =>
-        val relationshipOpt = sourceEntity.relationships.find(r => r.name.equals(relationshipName))
-        relationshipOpt match {
-          case Some(relationship) =>
-            val destinationEntityName = relationship.destinationEntityName
-            entityNamed(eomodel, destinationEntityName)
-          case None =>
-            None
-        }
+    val relationshipOpt = relationshipNamed(eomodel, entity.name, relationshipName)
+    relationshipOpt match {
+      case Some(relationship) =>
+        val destinationEntityName = relationship.destinationEntityName
+        entityNamed(eomodel, destinationEntityName)
       case None =>
         None
     }
-
-
   }
 
-def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
+  def relationshipNamed(eomodel: EOModel, entityName: String, relationshipName: String) = {
+    val sourceEntityOpt = entityNamed(eomodel, entityName)
+    sourceEntityOpt match {
+      case Some(sourceEntity) =>
+        sourceEntity.relationships.find(r => r.name.equals(relationshipName))
+      case None => None
+    }
+  }
+
+  def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
 }
 
 

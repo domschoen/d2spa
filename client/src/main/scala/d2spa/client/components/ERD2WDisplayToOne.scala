@@ -82,8 +82,7 @@ object ERD2WDisplayToOne  {
       val fireActions: List[D2WAction] = destinationEOValueOpt match {
         case Some(destinationEOValue) =>
           destinationEOValue match {
-            case ObjectValue(isSome,destinationEO) =>
-              if (isSome) {
+            case ObjectValue(destinationEO) =>
                 val destinationPk = EOValue.pk(destinationEO).get
                 val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
                 List[D2WAction](
@@ -91,10 +90,8 @@ object ERD2WDisplayToOne  {
                   Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
                   )
                 )
-              } else {
+            case _ =>
                 List.empty[D2WAction]
-              }
-            case _ => List.empty[D2WAction]
           }
       }
 
@@ -109,6 +106,10 @@ object ERD2WDisplayToOne  {
     def render(p: Props) = {
       val eo = p.eo
       val propertyName = p.property.name
+      // We expect a value for that property. Either:
+      // StringValue
+      // EmptyValue
+
       val eoValue = eo.values(propertyName)
       val value = EOValue.juiceString(eoValue)
       <.div(
