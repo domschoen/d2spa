@@ -46,11 +46,13 @@ object ERDList {
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
+      val fireDestinationEntity = FireRule(d2wContext, RuleKeys.destinationEntity)
       log.debug("ERDList mounted: fireListConfiguration: " + fireListConfiguration)
 
       val fireActions =
         List(
-          fireListConfiguration // standard FieRule
+          fireListConfiguration, // standard FieRule
+          fireDestinationEntity // standard FieRule
         )
       Callback.when(!fireActions.isEmpty)(p.proxy.dispatchCB(
         FireActions(
@@ -79,11 +81,22 @@ object ERDList {
           eoOpt match {
             case Some(eo) =>
               val propertyName = staleD2WContext.propertyKey.get
-              val eomodel = p.proxy.value.eomodel.get
-              val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-              val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-              val destinationEntityName = destinationEntity.name
+
               val ruleResultsModel = p.proxy.value.ruleResults
+
+              val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.destinationEntity)
+              log.debug(": " + listDestinationEntityOpt)
+
+              val destinationEntityName = listDestinationEntityOpt match {
+                case Some(aDestinationEntityName) => aDestinationEntityName
+                case None =>
+                  val eomodel = p.proxy.value.eomodel.get
+                  val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+                  val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                  destinationEntity.name
+              }
+
+
               val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.listConfigurationName)
               log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
@@ -121,7 +134,7 @@ object ERDList {
 
   private val component = ScalaComponent.builder[Props]("ERDList")
     .renderBackend[Backend]
-    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 

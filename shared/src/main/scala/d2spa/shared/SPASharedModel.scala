@@ -22,6 +22,7 @@ object RuleKeys {
   val listConfigurationName = "listConfigurationName"
   val pageConfiguration = "pageConfiguration"
   val propertyType = "propertyType"
+  val destinationEntity = "destinationEntity"
 }
 
 //case class DateValue(value: java.util.Date) extends EOValue
@@ -387,13 +388,24 @@ case class EntityMetaData(d2wContext: D2WContextFullFledged, displayName: String
 /// Important NOTE: Seems that Map is not supported in case classes managed by boopickle
 
 object EOModelUtils {
-def destinationEntity(eomodel: EOModel, entity: EOEntity, relationshipName: String) = {
-val sourceEntity = entityNamed(eomodel,entity.name).get
-val relationship = sourceEntity.relationships.find(r => r.name.equals(relationshipName)).get
-val destinationEntityName = relationship.destinationEntityName
-val destinationEntity = entityNamed(eomodel,destinationEntityName).get
-destinationEntity
-}
+  def destinationEntity(eomodel: EOModel, entity: EOEntity, relationshipName: String) = {
+    val sourceEntityOpt = entityNamed(eomodel, entity.name)
+    sourceEntityOpt match {
+      case Some(sourceEntity) =>
+        val relationshipOpt = sourceEntity.relationships.find(r => r.name.equals(relationshipName))
+        relationshipOpt match {
+          case Some(relationship) =>
+            val destinationEntityName = relationship.destinationEntityName
+            entityNamed(eomodel, destinationEntityName)
+          case None =>
+            None
+        }
+      case None =>
+        None
+    }
+
+
+  }
 
 def entityNamed(eomodel: EOModel, entityName: String) = eomodel.entities.find(e => e.name.equals(entityName))
 }

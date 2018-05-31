@@ -101,9 +101,11 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
      def sendBinary(byteString: akka.util.ByteString) = {
      }
-
-
-
+     def bb2arr(bb: ByteBuffer): Array[Byte] = {
+       val ba = new Array[Byte](bb.limit())
+       bb.get(ba)
+       ba
+     }
 
      def receive = {
       case b: akka.util.ByteString =>
@@ -128,7 +130,7 @@ class Application @Inject() (implicit val config: Configuration, env: Environmen
 
 
         // This should work !! Why not ?
-        val byteString = ByteString.fromByteBuffer(d)
+        val byteString = ByteString(bb2arr(d))
         out ! byteString
 
        //val byteString = ByteString.fromArray(d.array())

@@ -118,9 +118,14 @@ object WebSocketClient {
 
     val data = e.data.asInstanceOf[js.typedarray.ArrayBuffer]
     //println("Websocket unpickle byteString size: " +  ab )
+    import scala.scalajs.js.typedarray._
+
+    val arr = new Int8Array(data)
+    val arrayByte = arr.toArray
 
 
-    val byteBuf = js.typedarray.TypedArrayBuffer.wrap(data)
+    //val byteBuf = js.typedarray.TypedArrayBuffer.wrap(data)
+    val byteBuf = ByteBuffer wrap arrayByte
     val resp = Unpickle[d2spa.shared.FrontendResponse].fromBytes(byteBuf)
 
     println("Websocket unpickle bytebuffer capacity: " +  resp )

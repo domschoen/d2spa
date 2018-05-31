@@ -124,7 +124,7 @@ object SPAMain extends js.JSApp {
     // create stylesheet
     GlobalStyles.addToDocument()
 
-    WebSocketClient.init()
+    //WebSocketClient.init()
     SPACircuit.dispatch(InitClient)
 
     // create the router
