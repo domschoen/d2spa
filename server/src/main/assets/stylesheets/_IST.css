@@ -1,8 +1,44 @@
 
+.busyIndicator {
+  border: 7px solid #ffffff;
+  border-radius: 50%;
+  border-top: 7px solid #3498db;
+  width: 50px;
+  height: 50px;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 1s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.center {
+    margin: auto;
+}
+
+.no-border{
+    border  :   0 !important;
+}
+
 * {
 	padding: 0;
 	margin: 0;
 }
+
+.collapseTitle {
+    background : #283863;
+    color: white;
+}
+
+
 
 div#a {
 	width:auto;
@@ -87,13 +123,6 @@ div#graphInfo {
 	position: relative;
 	top: -45px;
 	z-index: 100;
-}
-
-body {
-    min-width: 1920px;
-    font-family: Arial, sans-serif;
-    font-size: 10pt;
-    color: #0c1830;
 }
 
 #nagra_logo {
@@ -197,10 +226,15 @@ table thead tr {
 	background-color: transparent;
 }
 
+.scrollable-table{
+    max-height: 300px;
+    overflow-y:auto;
+}
+
 th {
-  background-color: #336699;
+  background-color: #b7b7b7;
   border: solid 1px;
-  color: #eeeeff;
+  color: #060606;
 }
 
 tr {
@@ -743,4 +777,63 @@ td.d2wAttributeValueCell {
 	vertical-align: top;
 	padding-left: 10px;
 }
+
+.input-label {
+	margin-top: 5px;
+}
+
+.body {
+	background: #f3f3f3;
+	width: 80% !important;
+	padding: 10px;
+	margin-top: 2px !important;
+    min-height: 95vh !important;
+}
+
+.search-container {
+	margin-top: 20px;
+	margin-bottom: 20px;
+	margin-left: 5px;
+}
+
+.grey-to-blue-backgroundd {
+	background: linear-gradient(to right, #d6d6d6ee, #1f486b);
+}
+
+.glyphicon-chevron-right, .glyphicon-chevron-down {
+	color: white;
+	cursor: pointer;
+}
+
+.panel-title>a, td>i{
+    cursor: pointer;
+}
+
+td>i{
+    padding : 3px !important;
+}
+
+.panel-title{
+	font-size:12px !important;
+}
+
+.panel-heading{
+	background:#000000c7 !important;
+	color:white !important;
+	padding: 6px !important;
+}
+
+.btn {
+	margin: 0px 3px;
+}
+
+.control-label {
+	text-align: left !important;
+	width: auto !important;
+}
+
+.text-center{
+	text-align: center;
+}
+
 

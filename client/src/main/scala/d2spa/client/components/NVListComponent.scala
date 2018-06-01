@@ -47,7 +47,8 @@ object NVListComponent {
       //val destinationEntity = EOModelUtilsdes
       log.debug("NVListComponent mounted")
       val eomodel = p.proxy.value.eomodel.get
-      val d2wContext = p.proxy.value.previousPage.get
+      //val d2wContext = p.proxy.value.previousPage.get
+      val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       //val propertyName = staleD2WContext.propertyKey.get
       val entity = EOModelUtils.entityNamed(eomodel,entityName).get
@@ -184,22 +185,9 @@ object NVListComponent {
 
     def render(p: Props) = {
       log.debug("NVListComponent render ")
-      val staleD2WContext = p.d2wContext
-      val d2wContextOpt: Option[D2WContext] = staleD2WContext.dataRep match {
-        case Some(DataRep(_, Some(eosAtKeyPath))) => Some(staleD2WContext)
-        case _ =>
-          val d2wContextOpt = p.proxy.value.previousPage
-          d2wContextOpt match {
-            case Some(c) => Some(c)
-            case _ => None
-          }
-      }
+      val d2wContext = p.d2wContext
 
-      log.debug("NVListComponent render |  proxy d2wContext: " + d2wContextOpt)
-
-      d2wContextOpt match {
-        case Some(d2wContext) =>
-
+      log.debug("NVListComponent render |  proxy d2wContext: " + d2wContext)
 
           val entityName = d2wContext.entityName.get
           log.debug("NVListComponent render for entity: " + entityName)
@@ -252,7 +240,7 @@ object NVListComponent {
 
           val countText = eos.size + " " + (if (entityDisplayNameOpt.isDefined) entityDisplayNameOpt.get else "")
 
-          <.div(
+          <.div(^.className := "scrollable-table",
             {
               val eoOnError = eos.find(x => (x.validationError.isDefined))
               if (eoOnError.isDefined) {
@@ -299,10 +287,10 @@ object NVListComponent {
               <.tbody(
                 eos toTagMod (eo =>
                   <.tr(
-                    <.td(
-                      <.img(^.className := "IconButton", ^.src := "/assets/images/Magglass.gif", ^.onClick --> inspectEO(eo)),
-                      <.img(^.className := "IconButton", ^.src := "/assets/images/Write.gif", ^.onClick --> editEO(eo)),
-                      <.img(^.className := "IconButton", ^.src := "/assets/images/Clone.gif")
+                    <.td(^.className := "text-center",
+                      <.i(^.className := "glyphicon glyphicon-search", ^.onClick --> inspectEO(eo)),
+                      <.i(^.className := "glyphicon glyphicon-pencil", ^.onClick --> editEO(eo)),
+                      <.i(^.className := "glyphicon glyphicon-duplicate")
                     ),
                     displayPropertyKeys toTagMod (
                       propertyKey => {
@@ -322,8 +310,6 @@ object NVListComponent {
               )
             }
           )
-        case _ => <.div("No context")
-      }
 
     }
   }

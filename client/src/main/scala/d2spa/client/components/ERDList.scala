@@ -66,23 +66,17 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      val staleD2WContext = p.d2wContext
-      val entityName = staleD2WContext.entityName.get
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
 
-      log.debug("ERDList render with D2WContext: " + staleD2WContext)
-
-      val d2wContextOpt = p.proxy.value.previousPage
-
-      d2wContextOpt match {
-        case Some(d2wContext) =>
-
+      log.debug("ERDList render with D2WContext: " + d2wContext)
 
           // to get access to the latest version of the eo we use the previous page context
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
 
           eoOpt match {
             case Some(eo) =>
-              staleD2WContext.propertyKey match {
+              d2wContext.propertyKey match {
                 case Some(propertyName) =>
                   val eomodelOpt = p.proxy.value.eomodel
 
@@ -91,7 +85,7 @@ object ERDList {
 
                       val ruleResultsModel = p.proxy.value.ruleResults
 
-                      val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.destinationEntity)
+                      val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
                       log.debug(": " + listDestinationEntityOpt)
 
                       val destinationEntityNameOpt = listDestinationEntityOpt match {
@@ -109,7 +103,7 @@ object ERDList {
 
                       destinationEntityNameOpt match {
                         case Some(destinationEntityName) =>
-                          val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.listConfigurationName)
+                          val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
                           log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
                           //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
@@ -143,8 +137,6 @@ object ERDList {
               }
             case None => <.div("")
           }
-        case None => <.div("no context")
-      }
 
     }
   }

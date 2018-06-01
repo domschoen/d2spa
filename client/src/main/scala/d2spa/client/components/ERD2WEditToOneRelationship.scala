@@ -122,40 +122,35 @@ object ERD2WEditToOneRelationship   {
 
     def render(p: Props) = {
       log.debug("ERD2WEditToOneRelationship render")
-      val staleD2WContext = p.d2wContext
-      val entityName = staleD2WContext.entityName.get
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
       val eomodel = p.proxy.value.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
       log.debug("ERD2WEditToOneRelationship render entity " + entity)
 
-      val taskName = staleD2WContext.task.get
+      val taskName = d2wContext.task.get
       val ruleResultsModel = p.proxy.value.ruleResults
       log.debug("ERD2WEditToOneRelationship render ruleResultsModel " + ruleResultsModel)
 
 
-      val d2wContextOpt = p.proxy.value.previousPage
-      log.debug("ERD2WEditToOneRelationship render d2wContextOpt " + d2wContextOpt)
-
-      d2wContextOpt match {
-        case Some(d2wContext) =>
 
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
           eoOpt match {
             case Some(eo) =>
-              val propertyName = staleD2WContext.propertyKey.get
+              val propertyName = d2wContext.propertyKey.get
               //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
 
               //log.debug("+ rules " + p.property.ruleResults)
               log.debug("task  " + taskName)
 
               //log.debug("Edit To One Relationship " + eo)
-              val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, staleD2WContext)
+              val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
               ruleResultsOpt match {
                 case Some(ruleResults) => {
                   log.debug("ERD2WEditToOneRelationship render propertyMetaInfo rule result" + ruleResults)
 
 
-                  val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.keyWhenRelationship)
+                  val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
                   keyWhenRelationshipRuleOpt match {
                     case Some(keyWhenRelationship) => {
@@ -190,7 +185,7 @@ object ERD2WEditToOneRelationship   {
                                 }
                                 <.div(
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, staleD2WContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                                   },
                                     {
                                       val tupleOpts = eos map (x => {
@@ -229,9 +224,6 @@ object ERD2WEditToOneRelationship   {
               }
             case _ => <.div("No eo")
           }
-        case _ => <.div("No context")
-      }
-
     }
   }
 

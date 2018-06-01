@@ -45,18 +45,15 @@ object ERD2WQueryStringOperator  {
 
 
     def render(p: Props) = {
-      val d2wContextOpt = p.proxy.value.previousPage
-      d2wContextOpt match {
-        case Some(d2wContext) =>
-          val propertyD2WContext = p.d2wContext
-          val entityName = propertyD2WContext.entityName.get
-          val propertyName = propertyD2WContext.propertyKey.get
+          val d2wContext = p.d2wContext
+          val entityName = d2wContext.entityName.get
+          val propertyName = d2wContext.propertyKey.get
 
           log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
           val strValue = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
           // set id but make it unique: ^.id := "description",
           <.div(
-            <.input(^.value := strValue,
+            <.input(^.value := strValue, ^.className := "form-control",
               ^.placeholder := "write description",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
                     entityName,
@@ -65,9 +62,7 @@ object ERD2WQueryStringOperator  {
               }
             )
           )
-        case _ =>
-          <.div("no context")
-      }
+
     }
   }
 

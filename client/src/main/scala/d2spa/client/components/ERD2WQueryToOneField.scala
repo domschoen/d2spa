@@ -51,37 +51,33 @@ object ERD2WQueryToOneField  {
     }
 
     def render(p: Props) = {
-      val staleD2WContext = p.d2wContext
-      val entityName = staleD2WContext.entityName.get
-      val propertyName = staleD2WContext.propertyKey.get
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
       val ruleResultsModel = p.proxy.value.ruleResults
 
-      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.displayNameForKeyWhenRelationship)
+      val displayNameForKeyWhenRelationship = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
       val whereDisplayText = displayNameForKeyWhenRelationship match {
         case Some(text) => text
         case _ => ""
       }
 
-      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, staleD2WContext, RuleKeys.keyWhenRelationship)
+      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
       keyWhenRelationshipOpt match {
         case Some(keyWhenRelationship) => {
-          val d2wContextOpt = p.proxy.value.previousPage
-          d2wContextOpt match {
-            case Some(d2wContext) =>
 
-              val queryKey = propertyName + "." + keyWhenRelationship
-              val pretext = "where " + whereDisplayText + " is "
-              val value = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
-              <.div(
-                <.span(pretext),
-                <.input(^.id := "toOneTextField", ^.value := value,
-                  ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey, EOValue.eoValueWithString(e.target.value), QueryOperator.Match))) })
-              )
-            case _ => <.div("Missing query values")
-          }
+          val queryKey = propertyName + "." + keyWhenRelationship
+          val pretext = "where " + whereDisplayText + " is "
+          val value = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
+          <.div(
+            <.span(pretext),
+            <.input(^.id := "toOneTextField", ^.value := value,
+              ^.onChange ==> { e: ReactEventFromInput => p.proxy.dispatchCB(UpdateQueryProperty(entityName, QueryValue(queryKey, EOValue.eoValueWithString(e.target.value), QueryOperator.Match))) })
+          )
         }
-        case _ => <.div("")
+        case _ => <.div("Missing query values")
       }
+
     }
   }
 

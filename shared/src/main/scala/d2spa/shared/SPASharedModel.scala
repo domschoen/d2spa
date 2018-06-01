@@ -254,6 +254,9 @@ object EOValue {
     }
   }
 
+  def refaultEO(eo: EO) = {
+    EOFault(eo.entity.name, eo.pk)
+  }
 
 }
 
