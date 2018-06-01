@@ -20,7 +20,7 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, pk: Option[Int], proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -150,6 +150,9 @@ object D2WEditPage {
       val eoRefOpt = d2wContext.eo
       eoRefOpt match {
         case Some(eoRef) =>
+          log.debug("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
+          log.debug("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
+
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, d2wContext.entityName.get, eoRef)
           log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
 
@@ -251,8 +254,8 @@ object D2WEditPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, pk: Option[Int], proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
     log.debug("ctl " + ctl.hashCode())
-    component(Props(ctl, d2wContext, pk, proxy))
+    component(Props(ctl, d2wContext, proxy))
   }
 }

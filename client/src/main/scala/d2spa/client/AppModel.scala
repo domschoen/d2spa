@@ -168,7 +168,8 @@ case class D2WContext(entityName: Option[String],
                       queryValues: Map[String, QueryValue] = Map(),
                       dataRep: Option[DataRep] = None,
                       propertyKey:  Option[String] = None,
-                      pageConfiguration: Option[Either[RuleFault,String]] = None)
+                      pageConfiguration: Option[Either[RuleFault,String]] = None,
+                      pk : Option[Int] = None)
 
 case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 

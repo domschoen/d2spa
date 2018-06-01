@@ -349,7 +349,10 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                   // completeEO ends up with a MegaContent eo update
                   effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
                 case DrySubstrate(Some(eoakp), _, _) =>
+                  log.debug("Hydration | DrySubstrate " + eoakp.eo + " for key " + eoakp.keyPath)
+
                   val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
+                  log.debug("Hydration | DrySubstrate eovalueOpt " + eovalueOpt)
                   eovalueOpt match {
                     case Some(eovalue) =>
                       eovalue match {
