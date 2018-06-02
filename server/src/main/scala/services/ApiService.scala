@@ -673,7 +673,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         val pkAttributeName = entity.pkAttributeName
         val pkValue = jsObj.value(pkAttributeName)
         pkValue match {
-          case JsNumber(pkNumber) => eo.copy(values = eo.values + (pkAttributeName -> EOValue.intV(pkNumber.intValue())))
+          case JsNumber(pkNumber) =>
+            // We don't set the pk of the EO here because the client has to identify it. It's going to be its responsibility
+            val pkIntValue = pkNumber.intValue()
+            eo.copy(values = eo.values + (pkAttributeName -> EOValue.intV(pkIntValue)))
           case _ => eo
         }
       } catch {

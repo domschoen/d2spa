@@ -475,7 +475,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
   def updatedMemCacheWithEOs(eos: Seq[EO]): EOCache = {
-    val newCache = updatedModelForEntityNamed(eo => -eo.pk, value.insertedEOs, eos)
+    val newCache = updatedModelForEntityNamed(eo => eo.pk, value.insertedEOs, eos)
     EOCache(value.eos, newCache)
   }
 
@@ -512,9 +512,16 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   def removeEOFromCache(eo: EO, idExtractor: EO => Int, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
     val entityName = eo.entity.name
     val id = idExtractor(eo)
+    log.debug("CacheHandler | removeEOFromCache " + id)
+
     val entityCache = eos(entityName)
+    log.debug("CacheHandler | entityCache " + entityCache)
+
     val updatedEntityCache = entityCache - id
+    log.debug("CacheHandler | updatedEntityCache " + updatedEntityCache)
     val updatedCache = eos + (entityName -> updatedEntityCache)
+    log.debug("CacheHandler | updatedCache " + updatedCache)
+
     updatedCache
   }
 
@@ -524,15 +531,22 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // EO goes from inserted EO to db eos
     case SavedEO(fromTask, eo) =>
       log.debug("CacheHandler | SavedEO " + eo)
-      val insertedEOs = if (EOValue.isNew(eo)) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
-      log.debug("CacheHandler | SavedEO | removed if new  " + EOValue.isNew(eo))
-      val updatedEO = if (EOValue.isNew(eo)) {
+
+      val isNewEO = EOValue.isNew(eo)
+      // Adjust the insertedEOs cache
+      val insertedEOs = if (isNewEO) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
+      log.debug("CacheHandler | SavedEO | removed if new  " + isNewEO)
+      val updatedEO = if (isNewEO) {
         val pk = EOValue.pk(eo)
         eo.copy(pk = pk.get)
       } else eo
+      log.debug("CacheHandler | SavedEO | updated insertedEOs  " + insertedEOs)
       log.debug("CacheHandler | SavedEO | register eo  " + updatedEO)
 
+      // Adjust the db cache
       val eos = addEOToDBCache(updatedEO, value.eos)
+      log.debug("CacheHandler | SavedEO | updated dbEOS  " + eos)
+
       val d2WContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
       log.debug("CacheHandler | SavedEO update cache, call action Register with context " + d2WContext)
       updated(
@@ -664,12 +678,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       log.debug("EO: " + eo)
-      val newEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
+      val updatedEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
 
-      if (newEO.pk < 0) {
-        updated(updatedMemCacheWithEOs(Seq(newEO)))
+      if (updatedEO.pk < 0) {
+        updated(updatedMemCacheWithEOs(Seq(updatedEO)))
       } else {
-        updated(updatedOutOfDBCacheWithEOs(Seq(newEO)))
+        updated(updatedOutOfDBCacheWithEOs(Seq(updatedEO)))
       }
 
     case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>

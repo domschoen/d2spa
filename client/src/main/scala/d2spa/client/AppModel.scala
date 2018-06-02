@@ -601,7 +601,7 @@ object EOCacheUtils {
       log.debug("Out of cache " + pk)
       log.debug("Cache " + memCache)
       log.debug("e name " + entityName)
-      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, -pk)
+      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, pk)
     } else {
       val dbCache = cache.cache.eos
       log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)

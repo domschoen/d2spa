@@ -1,0 +1,85 @@
+Display Query (at beginning of application)
+
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&key=displayNameForEntity 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/Menu.json 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=customer&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=customer&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=customer&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=descr&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=descr&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=projectNumber&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=descr&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=projectNumber&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=projectNumber&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=customer&key=keyWhenRelationship 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=query&propertyKey=customer&key=displayNameForKeyWhenRelationship 
+
+------------
+New Project
+
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&key=displayNameForEntity 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=descr&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=descr&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=descr&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=projectNumber&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=projectNumber&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=projectNumber&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=potentialCustomers&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=potentialCustomers&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=potentialCustomers&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=potentialCustomers&key=listConfigurationName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/Customer.json 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=potentialCustomers&key=destinationEntity 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Customer&task=list&pageConfiguration=ListEmbeddedCustomer&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=list&propertyKey=acronym&key=componentName&pageConfiguration=ListEmbeddedCustomer&entity=Customer 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=list&propertyKey=address&key=componentName&pageConfiguration=ListEmbeddedCustomer&entity=Customer 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=list&propertyKey=name&key=componentName&pageConfiguration=ListEmbeddedCustomer&entity=Customer 
+
+Note: Fetch customer for the embedded list (why a fetch all ?)
+--------
+Save Project
+
+POST /cgi-bin/WebObjects/D2SPAServer.woa/ra/Project.json {WOIsmapCoords = ("{"descr":"1","projectNumber":1}"); }
+Jun 02 13:05:54 D2SPAServer[1666] DEBUG NSLog  -  === Begin Internal Transaction
+Jun 02 13:05:54 D2SPAServer[1666] DEBUG NSLog  -  === Commit Internal Transaction
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&key=displayNameForEntity 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=descr&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=projectNumber&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=descr&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=projectNumber&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=projectNumber&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=descr&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=customer&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=customer&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=inspect&propertyKey=customer&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/1/propertyValues.json?missingKeys=(%22projectNumber%22,%22descr%22,%22customer%22) 
+
+--------
+Click on menu to get the Project query page
+
+Note: no ws ! Good !
+-------
+Search Project
+
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/Project.json 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&key=displayNameForEntity 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=descr&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=descr&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=descr&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=projectNumber&key=displayNameForProperty 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=projectNumber&key=attributeType 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&propertyKey=projectNumber&key=componentName 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=list&key=displayPropertyKeys 
+GET /cgi-bin/WebObjects/D2SPAServer.woa/ra/Project.json 
+
+Note: why 2 times the Get of Project ? 
+
+

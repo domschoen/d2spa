@@ -1,0 +1,15 @@
+Line 2053
+
+	public WOResponse dispatchRequest(WORequest request) {
+		WOResponse response = null;
+		ERXDelayedRequestHandler delayedRequestHandler = delayedRequestHandler();
+		if(delayedRequestHandler == null) {
+			String method = request.valueForKey("method").toString();
+			String formsValues = method.equals("POST") ? request.valueForKey("formValues").toString() : "";
+			System.out.println("Request " + method + " " + request.valueForKey("uri") + " " + formsValues);
+			response = dispatchRequestImmediately(request);
+		} else {
+			response = delayedRequestHandler.handleRequest(request);
+		}
+		return response;
+	}

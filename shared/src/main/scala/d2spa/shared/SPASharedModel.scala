@@ -148,14 +148,14 @@ object EOValue {
     val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
     insertedEOsForEntityOpt match {
       case Some(insertedEOsForEntity) =>
-        val newMemID = insertedEOsForEntity.keySet.max + 1
-        val newEO = EO(entity, Map.empty[String, EOValue], pk = -newMemID)
+        val newMemID = insertedEOsForEntity.keySet.min - 1
+        val newEO = EO(entity, Map.empty[String, EOValue], pk = newMemID)
         val newEntityMap = insertedEOsForEntity + (newMemID -> newEO)
         val newInsertedEOs = insertedEOs + (entityName -> newEntityMap)
         (newInsertedEOs, newEO)
       case None =>
-        val newMemID = 1
-        val newEO = EO(entity, Map.empty[String, EOValue], pk = -newMemID)
+        val newMemID = -1
+        val newEO = EO(entity, Map.empty[String, EOValue], pk = newMemID)
         val newEntityMap = Map(newMemID -> newEO)
         val newInsertedEOs = Map(entityName -> newEntityMap)
         (newInsertedEOs, newEO)
