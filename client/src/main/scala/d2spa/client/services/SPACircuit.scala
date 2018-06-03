@@ -556,8 +556,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     case Save(selectedEntityName, eo) =>
       log.debug("CacheHandler | SAVE " + eo)
+
+      val purgedEO = EOValue.purgedEO(eo)
+
+
       // Update the DB and dispatch the result withing UpdatedEO action
-      effectOnly(Effect(AjaxClient[Api].updateEO(eo).call().map(savingEO => {
+      effectOnly(Effect(AjaxClient[Api].updateEO(purgedEO).call().map(savingEO => {
         val onError = savingEO.validationError.isDefined
         if (onError) {
           UpdateEOInCache(savingEO)

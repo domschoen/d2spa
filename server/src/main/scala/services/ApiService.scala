@@ -45,7 +45,8 @@ case class MenuItem (
 case class FetchedEOEntity (
                            name: String,
                            primaryKeyAttributeNames: Seq[String],
-                           relationships: Seq[FetchedEORelationship] = Seq()
+                           relationships: Seq[FetchedEORelationship] = Seq(),
+                             attributes: Seq[FetchedEOAttribute] = Seq()
                            )
 case class FetchedEORelationship (sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
                                   name: String,
@@ -173,7 +174,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
                   EORelationship(sourceAttributesNames.toList, r.name,r.destinationEntityName)
                 }).toList
-              entities =  EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, relationships) :: entities
+              val attributes: List [String] = fetchedEOEntity.attributes.map {
+                a => a.name
+              }.toList
+              entities =  EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, attributes, relationships) :: entities
             }
             case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
           }

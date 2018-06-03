@@ -116,6 +116,10 @@ case object EmptyValue extends  EOValue
 object EOValue {
 
 
+  def purgedEO(eo: EO) = {
+    eo
+  }
+
   def objectValue(eoOpt: Option[EO]) = {
     eoOpt match {
       case Some(eo) => ObjectValue(eo = eo)
@@ -384,7 +388,7 @@ case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
 case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
-case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
+case class EOEntity(name: String, pkAttributeName: String, attributes: List[String] = List(), relationships: List[EORelationship])
 case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
 
 //case class EORef(entityName: String, id: Int)
