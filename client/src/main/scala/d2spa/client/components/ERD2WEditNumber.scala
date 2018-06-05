@@ -31,7 +31,7 @@ object ERD2WEditNumber {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
       eoOpt match {
         case Some(eo) =>
           val value = EOValue.stringValueForKey(eo, propertyName)

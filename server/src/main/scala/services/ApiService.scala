@@ -23,73 +23,67 @@ import play.api.libs.functional.syntax._
 import play.api.Logger
 
 case class CountryItem(
-                        name : String,
+                        name: String,
                         alpha2_code: String,
                         alpha3_code: String
                       )
 
-case class EntityItem (
-                      name: String,
-                      pkAttributeName: String
-                    )
+case class EntityItem(
+                       name: String,
+                       pkAttributeName: String
+                     )
 
 
-case class MenuItem (
-                        id : Int,
-                        `type`: String,
-                        title: String,
-                        entity: EntityItem,
-                        parent: Option[MenuItem]
-                      )
+case class MenuItem(
+                     id: Int,
+                     `type`: String,
+                     title: String,
+                     entity: EntityItem,
+                     parent: Option[MenuItem]
+                   )
 
-case class FetchedEOEntity (
-                           name: String,
-                           primaryKeyAttributeNames: Seq[String],
-                           relationships: Seq[FetchedEORelationship] = Seq(),
-                             attributes: Seq[FetchedEOAttribute] = Seq()
-                           )
-case class FetchedEORelationship (sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
-                                  name: String,
-                                  destinationEntityName: String)
-case class FetchedEOAttribute (`type`: String, name: String)
+case class FetchedEOEntity(
+                            name: String,
+                            primaryKeyAttributeNames: Seq[String],
+                            attributes: Seq[FetchedEOAttribute] = Seq(),
+                            relationships: Seq[FetchedEORelationship] = Seq()
+                          )
 
+case class FetchedEORelationship(sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
+                                 name: String,
+                                 destinationEntityName: String)
 
-
-
-
+case class FetchedEOAttribute(`type`: String, name: String)
 
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
   val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
-  val d2spaServerBaseUrl = config.getString("woappURL").getOrElse("http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra")
-
-
-
-  val safeUrl = "http://galactica.hq.k.grp:1445/cgi-bin/WebObjects/D2SPAServer.woa/ra/User?qualifier=firstname='Mike'"
-
-  //def wsGetSync(url: String): Any = Await.result(WS.url(url).get(), scala.concurrent.duration.Duration(120000, MILLISECONDS))
+  val d2spaServerBaseUrl = config.getString("woappURL").getOrElse("http://localhost:1445/cgi-bin/WebObjects/CustomerBackend.woa/ra")
 
 
   implicit val CountryReads: Reads[CountryItem] = (
     (JsPath \ "name").read[String] and
       (JsPath \ "alpha2_code").read[String] and
       (JsPath \ "alpha3_code").read[String]
-    )(CountryItem.apply _)
+    ) (CountryItem.apply _)
 
   implicit lazy val entityItemReads: Reads[EntityItem] = (
-      (JsPath \ "name").read[String] and
+    (JsPath \ "name").read[String] and
       (JsPath \ "pkAttributeName").read[String]
-    )(EntityItem.apply _)
-
+    ) (EntityItem.apply _)
 
   implicit lazy val fetchedEOEntityReads: Reads[FetchedEOEntity] = (
-      (JsPath \ "name").read[String] and
+    (JsPath \ "name").read[String] and
       (JsPath \ "primaryKeyAttributeNames").read[Seq[String]] and
+      (
+        (JsPath \ "attributes").lazyRead(Reads.seq(fetchedEOAttributeReads)) or
+          Reads.pure(Seq.empty[FetchedEOAttribute])
+        ) and
       (
         (JsPath \ "relationships").lazyRead(Reads.seq(fetchedEORelationshipReads)) or
           Reads.pure(Seq.empty[FetchedEORelationship])
         )
-    )(FetchedEOEntity.apply _)
+    ) (FetchedEOEntity.apply _)
 
   implicit lazy val fetchedEORelationshipReads: Reads[FetchedEORelationship] = (
     ((JsPath \ "sourceAttributes").lazyRead(Reads.seq(fetchedEOAttributeReads)) or
@@ -97,21 +91,21 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       ) and
       (JsPath \ "name").read[String] and
       (JsPath \ "destinationEntityName").read[String]
-    )(FetchedEORelationship.apply _)
+    ) (FetchedEORelationship.apply _)
 
   implicit lazy val fetchedEOAttributeReads: Reads[FetchedEOAttribute] = (
     (JsPath \ "type").read[String] and
       (JsPath \ "name").read[String]
-    )(FetchedEOAttribute.apply _)
+    ) (FetchedEOAttribute.apply _)
+
 
   implicit lazy val menuItemReads: Reads[MenuItem] = (
-      (JsPath \ "id").read[Int] and
+    (JsPath \ "id").read[Int] and
       (JsPath \ "type").read[String] and
       (JsPath \ "title").read[String] and
-      ((JsPath \ "entity").read[EntityItem] orElse(Reads.pure(null))) and
+      ((JsPath \ "entity").read[EntityItem] orElse (Reads.pure(null))) and
       (JsPath \ "parent").lazyReadNullable(menuItemReads)
-    )(MenuItem.apply _)
-
+    ) (MenuItem.apply _)
 
 
   var _eomodelF: Option[Future[EOModel]] = None
@@ -120,7 +114,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def eomodel(): EOModel = {
     if (!_eomodel.isDefined) {
       Logger.debug("fetch eomodel")
-      _eomodel = Some(Await.result(eomodelF(),10 seconds))
+      _eomodel = Some(Await.result(eomodelF(), 10 seconds))
     }
     _eomodel.get
   }
@@ -135,7 +129,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
 
-  def fetchEOModel() : Future[EOModel] = {
+  def fetchEOModel(): Future[EOModel] = {
     eomodelF()
   }
 
@@ -143,7 +137,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
   // case class EORelationship(name: String, destinationEntityName: String)
 
-  def executeEOModelWS() : Future[EOModel] = {
+  def executeEOModelWS(): Future[EOModel] = {
     val url = d2spaServerBaseUrl + "/EOModel.json";
     Logger.debug("WS " + url)
     val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
@@ -172,12 +166,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
                 r => {
                   val sourceAttributesNames = r.sourceAttributes map (_.name)
 
-                  EORelationship(sourceAttributesNames.toList, r.name,r.destinationEntityName)
+                  EORelationship(sourceAttributesNames.toList, r.name, r.destinationEntityName)
                 }).toList
-              val attributes: List [String] = fetchedEOEntity.attributes.map {
+              val attributes: List[String] = fetchedEOEntity.attributes.map {
                 a => a.name
               }.toList
-              entities =  EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, attributes, relationships) :: entities
+              entities = EOEntity(fetchedEOEntity.name, primaryKeyAttributeName, attributes, relationships) :: entities
             }
             case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
           }
@@ -192,55 +186,55 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   override def getMenus(): Future[Menus] = {
     Logger.debug("get Menus")
 
-      val fetchedEOModel = eomodel()
-      val url = d2spaServerBaseUrl + "/Menu.json";
-      val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-      val futureResponse: Future[WSResponse] = request.get()
-      futureResponse.map { response =>
-        val resultBody = response.json
-        val array = resultBody.asInstanceOf[JsArray]
-        var menus = List[MenuItem]()
-        for (menuRaw <- array.value) {
-          //Logger.debug(menuRaw)
-          val obj = menuRaw.validate[MenuItem]
-          obj match {
-            case s: JsSuccess[MenuItem] => {
-              val wiObj = s.get
-              menus = wiObj :: menus
-            }
-            case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
+    val fetchedEOModel = eomodel()
+    val url = d2spaServerBaseUrl + "/Menu.json";
+    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val futureResponse: Future[WSResponse] = request.get()
+    futureResponse.map { response =>
+      val resultBody = response.json
+      val array = resultBody.asInstanceOf[JsArray]
+      var menus = List[MenuItem]()
+      for (menuRaw <- array.value) {
+        //Logger.debug(menuRaw)
+        val obj = menuRaw.validate[MenuItem]
+        obj match {
+          case s: JsSuccess[MenuItem] => {
+            val wiObj = s.get
+            menus = wiObj :: menus
           }
-        }
-        val children = menus.filter(_.parent.isDefined)
-        val childrenByParent = children.groupBy(_.parent.get)
-
-        val mainMenus = childrenByParent.map{
-          case (mm, cs) =>
-
-            val childMenus = cs.map(cm => {
-              Logger.debug("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
-
-              val entity = EOModelUtils.entityNamed(fetchedEOModel,cm.entity.name).get
-              Menu(cm.id,cm.title,entity)
-            })
-            MainMenu(mm.id,mm.title,childMenus)
-        }
-        if (mainMenus.isEmpty) {
-          // TOTO Menus containing D2WContext is not a good choice because better to have
-          // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
-          // D2WContext(null,null,null)
-
-          Menus(List(),showDebugButton)
-        } else {
-          val firstChildEntity = mainMenus.head.children.head.entity
-          Menus(mainMenus.toList,showDebugButton)
+          case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
         }
       }
+      val children = menus.filter(_.parent.isDefined)
+      val childrenByParent = children.groupBy(_.parent.get)
+
+      val mainMenus = childrenByParent.map {
+        case (mm, cs) =>
+
+          val childMenus = cs.map(cm => {
+            Logger.debug("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
+
+            val entity = EOModelUtils.entityNamed(fetchedEOModel, cm.entity.name).get
+            Menu(cm.id, cm.title, entity)
+          })
+          MainMenu(mm.id, mm.title, childMenus)
+      }
+      if (mainMenus.isEmpty) {
+        // TOTO Menus containing D2WContext is not a good choice because better to have
+        // None D2WContext if no menus (at least, D2WContext should be an option instead of returning
+        // D2WContext(null,null,null)
+
+        Menus(List(), showDebugButton)
+      } else {
+        val firstChildEntity = mainMenus.head.children.head.entity
+        Menus(mainMenus.toList, showDebugButton)
+      }
+    }
   }
 
-  val fireRuleArguments = List("entity","task","propertyKey","pageConfiguration","key")
+  val fireRuleArguments = List("entity", "task", "propertyKey", "pageConfiguration", "key")
 
-  def fireRuleFuture(rhs: D2WContextFullFledged, key: String) : Future[WSResponse] = {
+  def fireRuleFuture(rhs: D2WContextFullFledged, key: String): Future[WSResponse] = {
     //Logger.debug("Fire Rule for key " + key + " rhs:" + rhs)
     val url = d2spaServerBaseUrl + "/fireRuleForKey.json";
     //val entityName = entity.map(_.name)
@@ -259,7 +253,9 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
   private def lift[T](futures: Seq[Future[T]]) =
-    futures.map(_.map { Success(_) }.recover { case t => Failure(t) })
+    futures.map(_.map {
+      Success(_)
+    }.recover { case t => Failure(t) })
 
 
   def waitAll[T](futures: Seq[Future[T]]) =
@@ -271,8 +267,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // - componentName
   // - attributeType
   def propertyMetaInfosForTask(displayPropertyKeys: Seq[String], entity: EOEntity, task: String) = {
-    val propertiesFutures = displayPropertyKeys.map( propertyKey => {
-      val rhs = D2WContextFullFledged(Some(entity.name),Some(task),Some(propertyKey))
+    val propertiesFutures = displayPropertyKeys.map(propertyKey => {
+      val rhs = D2WContextFullFledged(Some(entity.name), Some(task), Some(propertyKey))
       val propertyDisplayNameFuture = fireRuleFuture(rhs, "displayNameForProperty")
       val componentNameFuture = fireRuleFuture(rhs, "componentName")
       val typeFuture = fireRuleFuture(rhs, "attributeType")
@@ -304,7 +300,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       subResult
     }).toList
     val futureOfList = Future sequence propertiesFutures
-    val properties = Await result (futureOfList, 2 seconds)
+    val properties = Await result(futureOfList, 2 seconds)
     properties
   }
 
@@ -318,6 +314,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
     (key, value)
   }
+
   def fromRuleResponseToKeyAndArray(response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
@@ -343,36 +340,34 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?task=edit&entity=Customer&key=displayPropertyKeys
   def getMetaData(d2wContext: D2WContextFullFledged): Future[EntityMetaData] = {
     val fetchedEOModel = eomodel()
-      val entityDisplayNameFuture = fireRuleFuture(d2wContext, RuleKeys.displayNameForEntity)
-      val displayPropertyKeysFuture = fireRuleFuture(d2wContext, RuleKeys.displayPropertyKeys)
+    val entityDisplayNameFuture = fireRuleFuture(d2wContext, RuleKeys.displayNameForEntity)
+    val displayPropertyKeysFuture = fireRuleFuture(d2wContext, RuleKeys.displayPropertyKeys)
 
-      val result = for {
-        r1 <- entityDisplayNameFuture
-        displayPropertyKeys <- displayPropertyKeysFuture
-      } yield {
-        val entityDisplayName = fromRuleResponseToKeyAndString(r1)
-        val entityName = d2wContext.entityName.get
-        Logger.debug("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
-        val entity = EOModelUtils.entityNamed(fetchedEOModel,entityName).get
-        val task = d2wContext.task.get
+    val result = for {
+      r1 <- entityDisplayNameFuture
+      displayPropertyKeys <- displayPropertyKeysFuture
+    } yield {
+      val entityDisplayName = fromRuleResponseToKeyAndString(r1)
+      val entityName = d2wContext.entityName.get
+      Logger.debug("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
+      val entity = EOModelUtils.entityNamed(fetchedEOModel, entityName).get
+      val task = d2wContext.task.get
 
-        val properties = fromResponseToMetaInfo(displayPropertyKeys,entity,task)
+      val properties = fromResponseToMetaInfo(displayPropertyKeys, entity, task)
 
-        val emd = EntityMetaData(d2wContext, entityDisplayName._2, properties)
-        emd
-      }
-      result
-
+      val emd = EntityMetaData(d2wContext, entityDisplayName._2, properties)
+      emd
+    }
+    result
 
 
   }
 
 
-
   def fireRule(rhs: D2WContextFullFledged, key: String): Future[RuleResult] = {
     Logger.debug("Fire rule for key " + key + " and d2wContext: " + rhs)
     val f = fireRuleFuture(rhs, key)
-    f.map(ruleResultWithResponse(rhs,_))
+    f.map(ruleResultWithResponse(rhs, _))
   }
 
 
@@ -382,12 +377,12 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     Logger.debug("Rule response: " + jsObj)
 
-      // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship
-      /* Response:
-      {
-         "keyWhenRelationship": "name"
-      }
-       */
+    // http://localhost:1666//cgi-bin/WebObjects/D2SPAServer.woa/ra/fireRuleForKey.json?entity=Project&task=edit&propertyKey=customer&key=keyWhenRelationship
+    /* Response:
+    {
+       "keyWhenRelationship": "name"
+    }
+     */
     val jsvalue = jsObj.values.toSeq(0)
     Logger.debug("jsvalue " + jsvalue)
     val ruleValue = if (jsvalue.asOpt[JsArray].isDefined) {
@@ -395,18 +390,18 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       RuleValue(stringsV = value.toList)
     } else {
       val (key, value) = fromRuleResponseToKeyAndString(response)
-      Logger.debug("key  " + key + " value "+ value)
+      Logger.debug("key  " + key + " value " + value)
       RuleValue(Some(value))
     }
 
-    val result  =RuleResult(rhs, key, ruleValue)
-    Logger.debug("Result " + result )
+    val result = RuleResult(rhs, key, ruleValue)
+    Logger.debug("Result " + result)
     result
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
   }
 
   def hydrateEOs(entityName: String, pks: Seq[Int], missingKeys: Set[String]): scala.concurrent.Future[Seq[d2spa.shared.EO]] = {
-    val futures = pks.map(pk => completeEO(EOFault(entityName,pk),missingKeys))
+    val futures = pks.map(pk => completeEO(EOFault(entityName, pk), missingKeys))
     val futureOfList = Future sequence futures
     futureOfList
   }
@@ -414,22 +409,23 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def searchAll(fs: EOFetchAll): Future[Seq[EO]] = {
     val entityName = EOFetchSpecification.entityName(fs)
 
-    searchOnD2SPAServer(entityName,None)
+    searchOnD2SPAServer(entityName, None)
   }
+
   def search(fs: EOQualifiedFetch): Future[Seq[EO]] = {
     val entityName = EOFetchSpecification.entityName(fs)
 
-    searchOnD2SPAServer(entityName,Some(fs.qualifier))
+    searchOnD2SPAServer(entityName, Some(fs.qualifier))
   }
 
-  def getDebugConfiguration() : Future[DebugConf] = {
+  def getDebugConfiguration(): Future[DebugConf] = {
     Future(DebugConf(showDebugButton))
   }
 
 
   // TBD Sorting parameter
   // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
-  def qualifiersUrlPart(q: EOQualifier) : String = {
+  def qualifiersUrlPart(q: EOQualifier): String = {
     val qualifiersStrings = q match {
       case EOAndQualifier(qualifiers) => qualifiers.map(q => qualifierUrlPart(q.asInstanceOf[EOKeyValueQualifier]))
       case _ => List()
@@ -437,22 +433,21 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     return qualifiersStrings.mkString(" and ")
   }
 
-  def qualifierUrlPart(qualifier: EOKeyValueQualifier) : String = {
+  def qualifierUrlPart(qualifier: EOKeyValueQualifier): String = {
     val value = qualifier.value
     return value match {
       case StringValue(stringV) => qualifier.key + " caseInsensitiveLike '*" + stringV + "*'"
-      case IntValue(i)  => "" // TODO
-      case BooleanValue(b)  => qualifier.key + " = " + (if (b) "1" else "0")
+      case IntValue(i) => "" // TODO
+      case BooleanValue(b) => qualifier.key + " = " + (if (b) "1" else "0")
       case ObjectValue(eo) => "" // TODO
       // To Restore case ObjectsValue(eos) => "" // TODO
     }
   }
 
 
-
   def searchOnD2SPAServer(entityName: String, qualifierOpt: Option[EOQualifier]): Future[Seq[EO]] = {
     Logger.debug("Search with fs:" + entityName)
-    val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
+    val entity = EOModelUtils.entityNamed(eomodel(), entityName).get
 
 
     val qualifierSuffix = qualifierOpt match {
@@ -499,7 +494,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
               val fieldsMap = fields.toMap
               Logger.debug("fieldsMap " + fieldsMap)
               val destinationEntityName = fieldsMap("type").asInstanceOf[JsString].value
-              val destinationEntityOpt = EOModelUtils.entityNamed(eomodel(),destinationEntityName)
+              val destinationEntityOpt = EOModelUtils.entityNamed(eomodel(), destinationEntityName)
 
               destinationEntityOpt match {
                 case Some(destinationEntity) =>
@@ -511,7 +506,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
                   val pk = fieldsMap("id").asInstanceOf[JsNumber].value.toInt
-                  val eo = EOValue.dryEOWithEntity(destinationEntity,Some(pk))
+                  val eo = EOValue.dryEOWithEntity(destinationEntity, Some(pk))
                   valuesMap += (key -> ObjectValue(eo = eo))
                 case None => ()
               }
@@ -524,7 +519,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         Logger.debug("valuesMap " + valuesMap)
         val pkEOValue = valuesMap("id")
         val pk = EOValue.juiceInt(pkEOValue)
-        val eo = EO(entity,valuesMap,pk)
+        val eo = EO(entity, valuesMap, pk)
         eos ::= eo
       }
       Logger.debug("Search: eos created " + eos)
@@ -535,32 +530,32 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
 
   // http://www.groupkt.com/post/c9b0ccb9/country-and-other-related-rest-webservices.htm
-/*  def searchOnOnlineCountryWs(qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
-    val url = "http://services.groupkt.com/country/search?text=" + qualifiers.head.value;
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
-    val futureResponse: Future[WSResponse] = request.get()
-    futureResponse.map { response =>
+  /*  def searchOnOnlineCountryWs(qualifiers: List[EOKeyValueQualifier]): Future[Seq[EO]] = {
+      val url = "http://services.groupkt.com/country/search?text=" + qualifiers.head.value;
+      val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+      val futureResponse: Future[WSResponse] = request.get()
+      futureResponse.map { response =>
 
-      val resultBody = response.json \ "RestResponse" \ "result"
-      val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
-      var eos = List[EO]()
-      for (country <- array.value) {
-        val obj = country.validate[CountryItem]
-        obj match {
-          case s: JsSuccess[CountryItem] => {
-            val wiObj = s.get
+        val resultBody = response.json \ "RestResponse" \ "result"
+        val array = resultBody.asInstanceOf[JsDefined].value.asInstanceOf[JsArray]
+        var eos = List[EO]()
+        for (country <- array.value) {
+          val obj = country.validate[CountryItem]
+          obj match {
+            case s: JsSuccess[CountryItem] => {
+              val wiObj = s.get
 
-            eos ::= EO("Project", Map(
-              "name" -> StringValue(wiObj.name),
-              "alpha2_code" -> StringValue(wiObj.alpha2_code),
-              "alpha3_code" -> StringValue(wiObj.alpha3_code)))
+              eos ::= EO("Project", Map(
+                "name" -> StringValue(wiObj.name),
+                "alpha2_code" -> StringValue(wiObj.alpha2_code),
+                "alpha3_code" -> StringValue(wiObj.alpha3_code)))
+            }
+            case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
           }
-          case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
         }
+        eos.toSeq
       }
-      eos.toSeq
-    }
-  }*/
+    }*/
 
   /* stays with future
 
@@ -607,7 +602,6 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   }
 
 
-
   // DELETE
   // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/2.json
   // => 2
@@ -629,18 +623,17 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
             eo
           } catch {
             case parseException: JsonParseException => {
-              handleException(response.body,eo)
+              handleException(response.body, eo)
             }
             case t: Throwable => {
-              handleException(t.getMessage(),eo)
+              handleException(t.getMessage(), eo)
             }
           }
         }
       case _ =>
-        Future(handleException("No value found for primary key in eo",eo))
+        Future(handleException("No value found for primary key in eo", eo))
     }
   }
-
 
 
   // POST (create)
@@ -657,10 +650,11 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = eo.values filter (v => {
       Logger.debug("v._2" + v._2)
-      EOValue.isDefined(v._2) })
+      EOValue.isDefined(v._2)
+    })
 
     Logger.debug("eoDefinedValues " + eoDefinedValues)
-    val eoValues = eoDefinedValues map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
+    val eoValues = eoDefinedValues map { case (key, valContainer) => (key, woWsParameterForValue(valContainer)) }
     Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
@@ -672,7 +666,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       try {
         val resultBody = response.json
         val jsObj = resultBody.asInstanceOf[JsObject]
-        val entity = EOModelUtils.entityNamed(eomodel(),entityName).get
+        val entity = EOModelUtils.entityNamed(eomodel(), entityName).get
 
         val pkAttributeName = entity.pkAttributeName
         val pkValue = jsObj.value(pkAttributeName)
@@ -685,10 +679,10 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         }
       } catch {
         case parseException: JsonParseException => {
-          handleException(response.body,eo)
+          handleException(response.body, eo)
         }
         case t: Throwable => {
-          handleException(t.getMessage(),eo)
+          handleException(t.getMessage(), eo)
         }
       }
     }
@@ -709,94 +703,139 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def completeEO(eoFault: EOFault, missingKeys: Set[String]): Future[EO] = {
     Logger.debug("Complete EO: " + eoFault)
     // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Customer/2/propertyValues.json?missingKeys=("projects")
-    val toArrayString= missingKeys.map(x => s""""${x}"""").mkString("(",",",")")
+    val toArrayString = missingKeys.map(x => s""""${x}"""").mkString("(", ",", ")")
     val url = d2spaServerBaseUrl + "/" + eoFault.entityName + "/" + eoFault.pk + "/propertyValues.json?missingKeys=" + toArrayString
-    val entity = EOModelUtils.entityNamed(eomodel(), eoFault.entityName).get
-    val eo = EOValue.dryEOWithEntity(entity,Some(eoFault.pk))
+
+    val entityOpt = EOModelUtils.entityNamed(eomodel(), eoFault.entityName)
+    entityOpt match {
+      case Some(entity) =>
+        val eo = EOValue.dryEOWithEntity(entity, Some(eoFault.pk))
 
 
-    // returns
-    // {
-    //  "id": 2,
-    //  "type": "Customer",
-    //  "projects": [
-    //    {
-    //      "id": 1,
-    //      "type": "Project"
-    //    }
-    //  ]
-    // }
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+        // returns
+        // {
+        //  "id": 2,
+        //  "type": "Customer",
+        //  "projects": [
+        //    {
+        //      "id": 1,
+        //      "type": "Project"
+        //    }
+        //  ]
+        // }
 
-    val futureResponse: Future[WSResponse] = request.get
-    futureResponse.map { response =>
-      try {
-        val resultBody = response.json
-        val jObj = resultBody.asInstanceOf[JsObject]
+        // Another WS response:
+        // {
+        //   "id": 1536517,
+        //   "type": "ActionEvent",
+        //   "date": "2013-09-25T17:23:54Z",
+        //   "text": "CMC",
+        //   "responsible": {
+        //     "id": 9,
+        //     "type": "User"
+        //   },
+        //   "typeDescription": "Ftp Login changed to"
+        // }
+        val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+        Logger.debug("Complete EO: request : " + request)
 
-        val pkName = entity.pkAttributeName
-        // Seq[(String, JsValue)]
-        val jObjValues = jObj.fields.filter(x => !(x._1.equals(pkName) || x._1.equals("type")))
-//case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
-// case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
+        val futureResponse: Future[WSResponse] = request.get
+        futureResponse.map { response =>
+          try {
+            val resultBody = response.json
+            val jObj = resultBody.asInstanceOf[JsObject]
 
-        val newValues = jObjValues.map ( kvTuple => {
-          val value = kvTuple._2
+            val pkName = entity.pkAttributeName
+            // Seq[(String, JsValue)]
+            val jObjValues = jObj.fields.filter(x => !(x._1.equals(pkName) || x._1.equals("type")))
+            //case class EORef(entity: String, displayName: String, id: Int, pkAttributeName: String)
+            // case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
 
-          Logger.debug("Complete EO: value : " + value)
-          // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
-          val newValue = value match {
-            case jsArray: play.api.libs.json.JsArray =>
-              val seqJsValues = jsArray.value
-              // {"id":1,"type":"Project"}
-              val eos = seqJsValues.map (x => {
-                eoWithJObj(x.asInstanceOf[JsObject])
-              })
-              val eoPks = eos.map(eo => eo.pk)
-              ObjectsValue(eoPks)
+            val newValues = jObjValues.map(kvTuple => {
+              val value = kvTuple._2
 
-            case jsObj: JsObject =>
-              ObjectValue(eo = eoWithJObj(jsObj))
+              Logger.debug("Complete EO: value : " + value)
+              // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
+              val newValue = value match {
+                case jsArray: play.api.libs.json.JsArray =>
+                  val seqJsValues = jsArray.value
+                  // {"id":1,"type":"Project"}
+                  val eos = seqJsValues.map(x => {
+                    eoWithJObj(x.asInstanceOf[JsObject])
+                  })
+                  /*val hasError = !eos.find(eoOpt => eoOpt.isEmpty).isEmpty
+                  if (hasError) {
+                    handleException(response.body, eo)
 
-            case jsString: JsString =>
-              val stringV = jsString.value
-              EOValue.stringV(stringV)
+                  }*/
+                  val eoPks = eos.map(eo => eo.pk)
+                  ObjectsValue(eoPks)
 
-            case _ =>
-              val stringV = value.toString()
-              EOValue.stringV(stringV)
+                case jsObj: JsObject =>
+                  ObjectValue(eo = eoWithJObj(jsObj))
 
+                case jsString: JsString =>
+                  val stringV = jsString.value
+                  EOValue.stringV(stringV)
+
+                case _ =>
+                  val stringV = value.toString()
+                  EOValue.stringV(stringV)
+
+              }
+
+              Logger.debug("JsObj value " + value.getClass.getName + " value: " + value)
+              (kvTuple._1, newValue)
+            }).toMap
+
+            val updatedValues = eo.values ++ newValues
+            Logger.debug("Complete EO: updatedValues : " + updatedValues)
+
+            eo.copy(values = updatedValues)
+          } catch {
+            case parseException: JsonParseException => {
+              handleException(response.body, eo)
+            }
+            case t: Throwable => {
+              handleException(t.getMessage(), eo)
+            }
           }
-
-          Logger.debug("JsObj value " + value.getClass.getName + " value: " + value)
-          (kvTuple._1,newValue)
-        }).toMap
-
-        val updatedValues = eo.values ++ newValues
-        eo.copy(values = updatedValues)
-      } catch {
-        case parseException: JsonParseException => {
-          handleException(response.body,eo)
         }
-        case t: Throwable => {
-          handleException(t.getMessage(),eo)
-        }
-      }
+      case None =>
+        Logger.error("Complete EO: error : " + "No entity found for name: " + eoFault.entityName)
+
+        val pseudoEOWithFault = EO(entity = EOEntity(eoFault.entityName, pkAttributeName = ""), pk = eoFault.pk)
+        Future(handleException("No entity found for name: " + eoFault.entityName, pseudoEOWithFault))
+
     }
+
   }
 
 
-  def eoWithJObj (jsObj: JsObject) = {
+  def eoWithJObj(jsObj: JsObject) = {
     val jsEO = jsObj.fields.toList.toMap
     val entityName = jsEO("type").asInstanceOf[JsString].value
     val id = jsEO("id").asInstanceOf[JsNumber].value.toInt
 
-    // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
-    EOValue.dryEOWith(eomodel(),entityName,Some(id))
+    val entityOpt = EOModelUtils.entityNamed(eomodel(),entityName)
+    entityOpt match {
+      case Some(entity) =>
+        // !!! Hardcoding of displayName and "id" as if always "id" for primary Key name
+        EOValue.dryEOWithEntity(entity, Some(id))
+      case None =>
+        val pseudoEntity = EOEntity(name = entityName, pkAttributeName = "fake")
+        val pseudoEO = EOValue.dryEOWithEntity(pseudoEntity, Some(id))
+
+        val errorMessage = "Entity not found " + entityName + " parsing wo data: " + jsEO
+        Logger.error("error " + errorMessage)
+
+        pseudoEO.copy(validationError = Some(errorMessage))
+    }
+
   }
 
-// Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
-//  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
+  // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
+  //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
   def updateEO(eo: EO): Future[EO] = {
     Logger.debug("Update EO: " + eo)
@@ -811,7 +850,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
       EOValueUtils.isDefined(v._2) })*/
 
     Logger.debug("eoDefinedValues " + eo.values)
-    val eoValues = eo.values map {case (key,valContainer) => (key, woWsParameterForValue(valContainer))}
+    val eoValues = eo.values map { case (key, valContainer) => (key, woWsParameterForValue(valContainer)) }
     Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
@@ -826,19 +865,20 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         eo
       } catch {
         case parseException: JsonParseException => {
-          handleException(response.body,eo)
+          handleException(response.body, eo)
         }
         case t: Throwable => {
-          handleException(t.getMessage(),eo)
+          handleException(t.getMessage(), eo)
         }
       }
     }
   }
 
-  def handleException(error: String, eo: EO) : EO = {
+  def handleException(error: String, eo: EO): EO = {
+    Logger.debug("error " + error + " with eo " + eo)
+
     eo.copy(validationError = Some(error))
   }
-
 
 
 }

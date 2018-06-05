@@ -34,7 +34,7 @@ If you want to have less log, you have to change the elideOptions in the build.s
 elideOptions := Seq("-Xelide-below", "WARNING"),
 ```
 
-This will remove INFO, DEBUG, TRACE, ALL from your the log. You need to recompile to have it:
+This will remove INFO, DEBUG, TRACE, ALL from your the log. You need to reload and recompile to have it:
   - reload
   - compile
 

@@ -128,6 +128,52 @@ case class FetchMetaData(d2wContext: D2WContext) extends D2WAction
 case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
 
+object Hydration {
+
+  def isEOHydrated(cache: EOCache, entityName: String, pk : Int, propertyKeys: List[String]) : Boolean = {
+    val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, entityName, pk)
+    eoOpt match {
+      case Some(eo) =>
+        val valuesKeys = eo.values.keySet
+        val anyMissingPropertyKey = propertyKeys.find(p => !valuesKeys.contains(p))
+        anyMissingPropertyKey.isEmpty
+      case None => false
+    }
+
+  }
+
+  def isHydratedForPropertyKeys(eomodel: EOModel, cache: EOCache, drySubstrate: DrySubstrate, propertyKeys: List[String]): Boolean = {
+    drySubstrate match {
+      case DrySubstrate(_, Some(eoFault), _) =>
+        isEOHydrated(cache,eoFault.entityName, eoFault.pk, propertyKeys)
+      case DrySubstrate(Some(eoakp), _, _) =>
+        //log.debug("Hydration DrySubstrate " + eoakp.eo.entity.name + " for key " + eoakp.keyPath)
+        val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
+        //log.debug("Hydration DrySubstrate valueForKey " + eovalueOpt)
+
+        eovalueOpt match {
+          case Some(eovalue) =>
+            eovalue match {
+              case ObjectsValue(pks) =>
+                //log.debug("NVListComponent render pks " + pks)
+                val destinationEntityName = eoakp.destinationEntityName
+                val nonHydrated = pks.find(pk => !isEOHydrated(cache, destinationEntityName, pk, propertyKeys))
+                log.debug("AppModel | Hydration | isHydratedForPropertyKeys " + destinationEntityName + " at path: " + eoakp.keyPath + " any non hydrated " + nonHydrated)
+                nonHydrated.isEmpty
+
+              case _ => true
+            }
+          case _ => true
+        }
+      case DrySubstrate(_, _, Some(fs)) =>
+        val eos = EOCacheUtils.objectsWithFetchSpecification(cache,fs)
+        val nonHydrated = eos.find(eo => !isEOHydrated(cache, eo.entity.name, eo.pk, propertyKeys))
+        !nonHydrated.isDefined
+    }
+  }
+
+}
+
 object QueryOperator {
   val Match = "Match"
   val Min = "Min"
@@ -193,7 +239,7 @@ object EOQualifierType {
 }
 
 
-case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
+case class KeysSubstrate(ruleFault: Option[RuleFault] = None, ruleResult: Option[RuleResult] = None)
 
 
 // A rule fault should be a FullFledged because it is a rule
@@ -201,9 +247,9 @@ case class KeysSubstrate(ruleFault: Option[RuleFault] = None)
 // That's a feature of D2WContext. So we use it here
 case class RuleFault(rhs: D2WContext, key: String)
 case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
-case class WateringScope(fireRule: Option[RuleFault] = None)
+case class WateringScope(ruleFault: Option[RuleFault] = None, ruleResult: Option[RuleResult] = None)
 //case class EORefsDefinition()
-case class EOsAtKeyPath(eo: EO, keyPath: String)
+case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 //case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
 object RuleUtils {
@@ -565,7 +611,7 @@ object EOCacheUtils {
     }
   }
 
-  def outOfCacheEOsUsingPkFromEOs(cache: MegaContent, entityName: String, eos: List[EO]): List[EO] = {
+  def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
     eos.map(eo => outOfCacheEOUsingPkFromD2WContextEO(cache,entityName,eo)).flatten
   }
 
@@ -587,23 +633,23 @@ object EOCacheUtils {
   }
 
 
-  def outOfCacheEOUsingPkFromD2WContextEO(cache: MegaContent, entityName: String, eo: EO): Option[EO] = {
+  def outOfCacheEOUsingPkFromD2WContextEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
     outOfCacheEOUsingPk(cache, entityName, eo.pk)
   }
 
-  def outOfCacheEOUsingPks(cache: MegaContent, entityName: String, pks: Seq[Int]): Seq[EO] = {
+  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: Seq[Int]): Seq[EO] = {
     pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
   }
 
-  def outOfCacheEOUsingPk(cache: MegaContent, entityName: String, pk: Int): Option[EO] = {
+  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: Int): Option[EO] = {
     if (pk < 0) {
-      val memCache = cache.cache.insertedEOs
+      val memCache = cache.insertedEOs
       log.debug("Out of cache " + pk)
       log.debug("Cache " + memCache)
       log.debug("e name " + entityName)
       EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, pk)
     } else {
-      val dbCache = cache.cache.eos
+      val dbCache = cache.eos
       log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
       EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, pk)
     }

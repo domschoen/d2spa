@@ -50,7 +50,6 @@ object D2WListPage {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
-    log.debug("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, proxy))
   }
 }

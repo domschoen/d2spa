@@ -33,7 +33,7 @@ object AfterEffectRouter {
         val pk = eo.pk
         if (pk < 0) {
           val page = NewEOPage(entityName)
-          log.debug(" " + page)
+          log.debug("Set Router to page " + page)
           setRouterToPage(page)
         } else {
           val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)

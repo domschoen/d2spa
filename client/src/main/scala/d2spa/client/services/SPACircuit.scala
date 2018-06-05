@@ -275,10 +275,15 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
           // TODO avoid double fetch
 
 
-          log.debug("RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
+          log.debug("RuleResultsHandler | FireActions | FireRules")
+          //log.debug("RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
           // For the moment, a KeySubstrate can have only a RuleFault
           // Let's resolve the fault (= firing the fault)
-          val ruleResultOpt = RuleUtils.fireRuleFault(value, keysSubstrate.ruleFault.get)
+          val ruleResultOpt  = keysSubstrate match {
+            case KeysSubstrate(Some(ruleFault),_) =>
+              RuleUtils.fireRuleFault(value, ruleFault)
+            case KeysSubstrate(_, Some(ruleResult)) => Some(ruleResult)
+          }
           val updatedActions = ruleResultOpt match {
             case Some(RuleResult(rhs, rk, value)) => {
               //val ruleValue = rulesContainer.ruleResults
@@ -293,7 +298,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
               val dc = D2WContextUtils.convertFullFledgedToD2WContext(rhs)
               val rulesActions = keys.toList.map(k => {
                 val d2wContextProperty = dc.copy(propertyKey = Some(k))
-                FireRule(d2wContextProperty,key)
+                FireRule(d2wContextProperty, key)
               })
               remainingActions ::: rulesActions
             }
@@ -317,7 +322,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
         // case class WateringScope(fireRule: Option[RuleFault] = None)
         // case class RuleFault(rhs: D2WContextFullFledged, key: String)
 
-        case Hydration(drySubstrate,  wateringScope) =>
+        case Hydration(drySubstrate, wateringScope) =>
           log.debug("RuleResultsHandler | FireActions | Hydration: " + drySubstrate + " wateringScope: " + wateringScope)
           // We handle only RuleFault
           // -> we expect it
@@ -326,33 +331,40 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
           // How to proceed:
           // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
-          val ruleResultOpt = RuleUtils.fireRuleFault(value, wateringScope.fireRule.get)
+          val ruleResultOpt  = wateringScope match {
+            case WateringScope(Some(ruleFault),_) =>
+              RuleUtils.fireRuleFault(value, ruleFault)
+            case WateringScope(_, Some(ruleResult)) => Some(ruleResult)
+          }
+
           log.debug("Hydration with scope defined by rule " + ruleResultOpt)
           log.debug("Hydration drySubstrate " + drySubstrate)
 
           ruleResultOpt match {
-            case Some(RuleResult(rhs,key,value)) => {
+            case Some(RuleResult(rhs, key, value)) => {
 
               //val ruleValue = rulesContainer.ruleResults
               val missingKeys: Set[String] = key match {
                 case RuleKeys.keyWhenRelationship =>
                   Set(value.stringV.get)
-                  //Set(value)
+                //Set(value)
                 case RuleKeys.displayPropertyKeys =>
                   value.stringsV.toSet
-                  //Set(value)
+                //Set(value)
               }
               log.debug("Hydration missingKeys " + missingKeys)
 
               drySubstrate match {
-                case DrySubstrate(_ , Some(eoFault), _) =>
+                case DrySubstrate(_, Some(eoFault), _) =>
                   // completeEO ends up with a MegaContent eo update
-                  effectOnly(Effect(AjaxClient[Api].completeEO(eoFault,missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
-                case DrySubstrate(Some(eoakp), _, _) =>
-                  log.debug("Hydration | DrySubstrate " + eoakp.eo + " for key " + eoakp.keyPath)
+                  log.debug("Hydration Call server with eo " + eoFault.pk + " missingKeys " + missingKeys)
+                  effectOnly(Effect(AjaxClient[Api].completeEO(eoFault, missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
 
+                case DrySubstrate(Some(eoakp), _, _) =>
+                  log.debug("Hydration DrySubstrate " + eoakp.eo.entity.name + " for key " + eoakp.keyPath)
                   val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
-                  log.debug("Hydration | DrySubstrate eovalueOpt " + eovalueOpt)
+                  log.debug("Hydration DrySubstrate valueForKey " + eovalueOpt)
+
                   eovalueOpt match {
                     case Some(eovalue) =>
                       eovalue match {
@@ -363,18 +375,18 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
                       }
                     case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
                   }
-                case DrySubstrate(_ , _ , Some(fs)) =>
+                case DrySubstrate(_, _, Some(fs)) =>
                   log.debug("Hydration with fs " + fs)
                   fs match {
-                    case fa: EOFetchAll => effectOnly(Effect(AjaxClient[Api].searchAll(fa).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
-                    case fq: EOQualifiedFetch => effectOnly(Effect(AjaxClient[Api].search(fq).call().map(FetchedObjectsForEntity(_ , d2wContext, remainingActions))))
+                    case fa: EOFetchAll => effectOnly(Effect(AjaxClient[Api].searchAll(fa).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
+                    case fq: EOQualifiedFetch => effectOnly(Effect(AjaxClient[Api].search(fq).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
                   }
 
 
-                case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
+                case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
               }
             }
-            case _ =>  effectOnly(Effect.action(FireActions(d2wContext,remainingActions))) // we skip the action ....
+            case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
           }
       }
     }
@@ -387,13 +399,14 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String,Map[String,Map[String
 
     // many rules
     case SetRuleResults(ruleResults, d2wContext, actions: List[D2WAction]) =>
-      log.debug("RuleResultsHandler | SetRuleResults " + ruleResults + " in d2w context " + d2wContext)
-      log.debug("RuleResultsHandler | SetRuleResults | actions: " + actions)
+      log.debug("RuleResultsHandler | SetRuleResults")
+      //log.debug("RuleResultsHandler | SetRuleResults " + ruleResults + " in d2w context " + d2wContext)
+      //log.debug("RuleResultsHandler | SetRuleResults | actions: " + actions)
       var updatedRuleResults = value
       for (ruleResult <- ruleResults) {
         updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, ruleResult)
       }
-      updated(updatedRuleResults,Effect.action(FireActions(d2wContext, actions)))
+      updated(updatedRuleResults, Effect.action(FireActions(d2wContext, actions)))
 
   }
 }
@@ -413,13 +426,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     } else {
 
       val result: Map[String, Map[Int, EO]] = newUpdatedCache(idExtractor, cache, eos)
-      log.debug("storing result as :" + result)
+      //log.debug("storing result as :" + result)
       result
     }
   }
 
   //EOValueUtils.pk(eo)
-  def newUpdatedCache(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int,EO]] = {
+  def newUpdatedCache(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
@@ -444,7 +457,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         val newAndUpdateMap = refreshedPks.map(id => {
           log.debug("Refresh " + entityName + "[" + id +"]")
           val refreshedEO = refreshedEOs(id)
-          log.debug("Refreshed " + refreshedEO)
+          //log.debug("Refreshed " + refreshedEO)
 
           // 2 cases:
           // new
@@ -469,7 +482,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     val insertedEOs = value.insertedEOs
     val outOfDBEOs = updatedModelForEntityNamed(eo => eo.pk, value.eos, eos)
     val newCache = EOCache(outOfDBEOs, insertedEOs)
-    log.debug("New cache " + newCache)
+    //log.debug("New cache " + newCache)
     newCache
   }
 
@@ -512,15 +525,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   def removeEOFromCache(eo: EO, idExtractor: EO => Int, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
     val entityName = eo.entity.name
     val id = idExtractor(eo)
-    log.debug("CacheHandler | removeEOFromCache " + id)
+    //log.debug("CacheHandler | removeEOFromCache " + id)
 
     val entityCache = eos(entityName)
-    log.debug("CacheHandler | entityCache " + entityCache)
+    //log.debug("CacheHandler | entityCache " + entityCache)
 
     val updatedEntityCache = entityCache - id
-    log.debug("CacheHandler | updatedEntityCache " + updatedEntityCache)
+    //log.debug("CacheHandler | updatedEntityCache " + updatedEntityCache)
     val updatedCache = eos + (entityName -> updatedEntityCache)
-    log.debug("CacheHandler | updatedCache " + updatedCache)
+    //log.debug("CacheHandler | updatedCache " + updatedCache)
 
     updatedCache
   }
@@ -597,13 +610,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       //   - Save error -> update error in EO
       //   - New eo from server
     case UpdateEOInCache(eo) =>
-      log.debug("CacheHandler | UpdateEOInCache " + eo)
+      log.debug("CacheHandler | UpdateEOInCache " + eo.entity.name)
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo))
       )
 
     case UpdateRefreshEOInCache(eo, property, actions) =>
-      log.debug("CacheHandler | Refreshed EO " + eo)
+      log.debug("CacheHandler | Refreshed EO " + eo.entity.name)
       updated(
         updatedOutOfDBCacheWithEOs(Seq(eo)),
         Effect.action(FireActions(property,actions))

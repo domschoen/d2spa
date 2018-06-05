@@ -87,7 +87,7 @@ object D2WEditPage {
               fireDisplayPropertyKeys,
               // in order to have an EO completed with all attributes for the task,
               // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleFault = Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
             )
           }
         case None => noneFireActions
@@ -141,7 +141,7 @@ object D2WEditPage {
 
       val staleD2WContext = p.d2wContext
       val entityName = staleD2WContext.entityName.get
-      log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
+      //log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
 
 
       val d2wContext = p.d2wContext
@@ -150,10 +150,10 @@ object D2WEditPage {
       val eoRefOpt = d2wContext.eo
       eoRefOpt match {
         case Some(eoRef) =>
-          log.debug("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
-          log.debug("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
+          //log.debug("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
+          //log.debug("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
 
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, d2wContext.entityName.get, eoRef)
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, d2wContext.entityName.get, eoRef)
           log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
 
           eoOpt match {
@@ -255,7 +255,6 @@ object D2WEditPage {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
-    log.debug("ctl " + ctl.hashCode())
     component(Props(ctl, d2wContext, proxy))
   }
 }

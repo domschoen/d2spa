@@ -87,7 +87,7 @@ object ERD2WDisplayToOne  {
                 val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
                 List[D2WAction](
                   keyWhenRelationshipFireRule,
-                  Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope(Some(keyWhenRelationshipRuleFault))
+                  Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope( ruleFault = Some(keyWhenRelationshipRuleFault))
                   )
                 )
             case _ =>

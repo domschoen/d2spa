@@ -75,7 +75,7 @@ object ERD2WEditToOneRelationship   {
                 //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
                 //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
 
-                Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),WateringScope(Some(keyWhenRelationshipRuleFault)))
+                Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),WateringScope(ruleFault = Some(keyWhenRelationshipRuleFault)))
               )
             )
           ))
@@ -105,7 +105,7 @@ object ERD2WEditToOneRelationship   {
         val optPk = EOValue.pk(eo)
         optPk.isDefined && optPk.get.equals(idAsInt)
       })
-          optEO
+      optEO
     }
 
     /*def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
@@ -134,96 +134,96 @@ object ERD2WEditToOneRelationship   {
 
 
 
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value, entityName, d2wContext.eo.get)
-          eoOpt match {
-            case Some(eo) =>
-              val propertyName = d2wContext.propertyKey.get
-              //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
+      eoOpt match {
+        case Some(eo) =>
+          val propertyName = d2wContext.propertyKey.get
+          //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
 
-              //log.debug("+ rules " + p.property.ruleResults)
-              log.debug("task  " + taskName)
+          //log.debug("+ rules " + p.property.ruleResults)
+          log.debug("task  " + taskName)
 
-              //log.debug("Edit To One Relationship " + eo)
-              val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
-              ruleResultsOpt match {
-                case Some(ruleResults) => {
-                  log.debug("ERD2WEditToOneRelationship render propertyMetaInfo rule result" + ruleResults)
+          //log.debug("Edit To One Relationship " + eo)
+          val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
+          ruleResultsOpt match {
+            case Some(ruleResults) => {
+              log.debug("ERD2WEditToOneRelationship render propertyMetaInfo rule result" + ruleResults)
 
 
-                  val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+              val keyWhenRelationshipRuleOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
-                  keyWhenRelationshipRuleOpt match {
-                    case Some(keyWhenRelationship) => {
-                      val destinationEntityOpt = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
-                      destinationEntityOpt match {
-                        case Some (destinationEntity) =>
-                          val eoCache = p.proxy.value.cache.eos
+              keyWhenRelationshipRuleOpt match {
+                case Some(keyWhenRelationship) => {
+                  val destinationEntityOpt = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
+                  destinationEntityOpt match {
+                    case Some (destinationEntity) =>
+                      val eoCache = p.proxy.value.cache.eos
 
-                          log.debug("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
-                          log.debug("ERD2WEditToOneRelationship render eoCache " + eoCache)
-                          val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
+                      log.debug("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
+                      log.debug("ERD2WEditToOneRelationship render eoCache " + eoCache)
+                      val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
 
-                          <.div(
-                            //{
-                            //log.debug("p.property.ruleKeyValues " + p.property.ruleKeyValues)
-                            /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
-                             <.div("entity " +entity),
-                             <.div("propertyName " +propertyName)*/
+                      <.div(
+                        //{
+                        //log.debug("p.property.ruleKeyValues " + p.property.ruleKeyValues)
+                        /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
+                         <.div("entity " +entity),
+                         <.div("propertyName " +propertyName)*/
 
-                            destinationEOs match {
-                              case Some(eos) => {
-                                log.debug("ERD2WEditToOneRelationship render eoRefs " + eos)
-                                log.debug("ERD2WEditToOneRelationship render eo " + eo)
-                                val destinationEO = EOValue.valueForKey(eo, propertyName)
-                                log.debug("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
-                                val defaultValue = destinationEO match {
-                                  case Some(ObjectValue(eoV)) => EOValue.pk(eoV) match {
-                                    case Some(pk) => pk.toString
-                                    case None => "None"
-                                  }
-                                  case _ => "None"
-                                }
-                                <.div(
-                                  <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
-                                  },
-                                    {
-                                      val tupleOpts = eos map (x => {
-
-                                        val id = EOValue.pk(x)
-                                        log.debug("id " + id + " for eo: " + x)
-                                        if (id.isDefined) {
-                                          val displayName = EOValue.stringValueForKey(x, keyWhenRelationship)
-                                          Some((id.get.toString, displayName))
-                                        } else None
-                                      })
-                                      // remove None
-                                      val tupleValids = tupleOpts.flatten.toList
-                                      val tuplesWithNone = ("None", "- none -") :: tupleValids
-                                      log.debug("valid tuples " + tupleValids)
-                                      tuplesWithNone toTagMod (eo => {
-                                        <.option(^.value := eo._1, eo._2)
-                                      })
-                                    }
-                                  )
-                                )
+                        destinationEOs match {
+                          case Some(eos) => {
+                            log.debug("ERD2WEditToOneRelationship render eoRefs " + eos)
+                            log.debug("ERD2WEditToOneRelationship render eo " + eo)
+                            val destinationEO = EOValue.valueForKey(eo, propertyName)
+                            log.debug("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
+                            val defaultValue = destinationEO match {
+                              case Some(ObjectValue(eoV)) => EOValue.pk(eoV) match {
+                                case Some(pk) => pk.toString
+                                case None => "None"
                               }
-                              case _ => {
-                                <.div("No destination objects")
-                              }
+                              case _ => "None"
                             }
-                          )
-                        case None =>
-                          <.div("No destination entity")
-                      }
-                    }
-                    case _ => <.div("keyWhenRelationshipRule is None")
+                            <.div(
+                              <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
+                                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+                              },
+                                {
+                                  val tupleOpts = eos map (x => {
+
+                                    val id = EOValue.pk(x)
+                                    log.debug("id " + id + " for eo: " + x)
+                                    if (id.isDefined) {
+                                      val displayName = EOValue.stringValueForKey(x, keyWhenRelationship)
+                                      Some((id.get.toString, displayName))
+                                    } else None
+                                  })
+                                  // remove None
+                                  val tupleValids = tupleOpts.flatten.toList
+                                  val tuplesWithNone = ("None", "- none -") :: tupleValids
+                                  log.debug("valid tuples " + tupleValids)
+                                  tuplesWithNone toTagMod (eo => {
+                                    <.option(^.value := eo._1, eo._2)
+                                  })
+                                }
+                              )
+                            )
+                          }
+                          case _ => {
+                            <.div("No destination objects")
+                          }
+                        }
+                      )
+                    case None =>
+                      <.div("No destination entity")
                   }
                 }
-                case _ => <.div("No rule results")
+                case _ => <.div("keyWhenRelationshipRule is None")
               }
-            case _ => <.div("No eo")
+            }
+            case _ => <.div("No rule results")
           }
+        case _ => <.div("No eo")
+      }
     }
   }
 

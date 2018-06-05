@@ -27,7 +27,7 @@ object RuleKeys {
 
 //case class DateValue(value: java.util.Date) extends EOValue
 
-case class EO(entity: EOEntity, values: Map[String,EOValue], pk: Int, validationError: Option[String] = None)
+case class EO(entity: EOEntity, values: Map[String,EOValue] = Map(), pk: Int, validationError: Option[String] = None)
 
 
 
@@ -116,6 +116,7 @@ case object EmptyValue extends  EOValue
 object EOValue {
 
 
+  // When saving an EO, we have to remove any non db attributes
   def purgedEO(eo: EO) = {
     eo
   }
@@ -193,6 +194,7 @@ object EOValue {
     value match {
       case StringValue(value) => value
       case IntValue(value) => value.toString
+      case BooleanValue(value) => value.toString
       case ObjectValue(eo) => eo.toString
       case _ => ""
     }
@@ -206,6 +208,14 @@ object EOValue {
       case _ => 0
     }
 
+  def juiceBoolean(v: EOValue): Boolean =
+    v match {
+      case BooleanValue(value) => value
+      case StringValue(value) => value.equals("true")
+      case IntValue(value) => value == 1
+      case ObjectValue(eo) => false
+      case _ => false
+    }
 
   def isDefined(value: EOValue): Boolean =
     value match {
@@ -283,7 +293,7 @@ object EOFetchSpecification {
     fs match {
       case fa: EOFetchAll => eos
       case fq: EOQualifiedFetch =>
-        println("filter with Qualifier " + fq.qualifier)
+        //println("filter with Qualifier " + fq.qualifier)
         EOQualifier.filteredEOsWithQualifier(eos, fq.qualifier)
     }
   }
@@ -305,7 +315,7 @@ object EOQualifier {
   }
 
   def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
-    println("evaluateWithEO " + eo + " q " + qualifier)
+    //println("evaluateWithEO " + eo + " q " + qualifier)
     qualifier match {
       case EOAndQualifier(qualifiers) =>
         val headQ = qualifiers.head
@@ -331,7 +341,7 @@ object EOQualifier {
         eoValueOpt match {
             // eo has a value which is not empty
           case Some(eoValue) =>
-            println("Compare " + eoValue + " with " + value)
+            //println("Compare " + eoValue + " with " + value)
             // TODO check the value
             eoValue match {
               case StringValue(str) =>
@@ -388,7 +398,7 @@ case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
 case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
-case class EOEntity(name: String, pkAttributeName: String, attributes: List[String] = List(), relationships: List[EORelationship])
+case class EOEntity(name: String, pkAttributeName: String, attributes: List[String] = List(), relationships: List[EORelationship] = List())
 case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
 
 //case class EORef(entityName: String, id: Int)
