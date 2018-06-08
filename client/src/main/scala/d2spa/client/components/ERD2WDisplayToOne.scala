@@ -1,7 +1,7 @@
 package d2spa.client.components
 
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
-import d2spa.client.{D2WAction, _}
+import d2spa.client.{D2WAction, Hydration, _}
 import d2spa.client.logger.log
 import d2spa.shared._
 import diode.react.ModelProxy
@@ -75,7 +75,6 @@ object ERD2WDisplayToOne  {
 
 
       val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-      val keyWhenRelationshipRuleFault = RuleFault(d2wContext, RuleKeys.keyWhenRelationship)
       val destinationEOValueOpt = EOValue.valueForKey(p.eo,propertyName)
 
 
@@ -87,8 +86,8 @@ object ERD2WDisplayToOne  {
                 val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
                 List[D2WAction](
                   keyWhenRelationshipFireRule,
-                  Hydration(DrySubstrate(eo = Some(destEOFault)),WateringScope( ruleFault = Some(keyWhenRelationshipRuleFault))
-                  )
+                  Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(keyWhenRelationshipFireRule))))
+
                 )
             case _ =>
                 List.empty[D2WAction]

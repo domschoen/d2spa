@@ -55,15 +55,19 @@ object ERDList {
     // But be careful, the rule can return nothing and it shouldn't be an error
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
-      val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-      val fireDestinationEntity = FireRule(d2wContext, RuleKeys.destinationEntity)
-      log.debug("ERDList mounted: fireListConfiguration: " + fireListConfiguration)
+      log.debug("ERDList mounted " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      val ruleResultsModel = p.proxy.value.ruleResults
+
+      val listConfigurationNameOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
+      val destinationEntityOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
 
       val fireActions =
         List(
-          fireListConfiguration, // standard FieRule
-          fireDestinationEntity // standard FieRule
-        )
+          listConfigurationNameOpt, // standard FieRule
+          destinationEntityOpt // standard FieRule
+        ).flatten
+
+
       Callback.when(!fireActions.isEmpty)(p.proxy.dispatchCB(
         FireActions(
           d2wContext,
@@ -73,8 +77,8 @@ object ERDList {
     }
 
     def render(p: Props) = {
-      log.debug("ERDList render")
       val d2wContext = p.d2wContext
+      log.debug("ERDList render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
       val entityName = d2wContext.entityName.get
 
       //log.debug("ERDList render with D2WContext: " + d2wContext)
@@ -90,55 +94,71 @@ object ERDList {
 
               eomodelOpt match {
                 case Ready(eomodel) =>
+                  d2wContext.pageConfiguration match {
+                    case PotFiredKey(Right(_)) =>
 
-                  val ruleResultsModel = p.proxy.value.ruleResults
 
-                  val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
-                  log.debug(": " + listDestinationEntityOpt)
+                      val ruleResultsModel = p.proxy.value.ruleResults
 
-                  val destinationEntityNameOpt = listDestinationEntityOpt match {
-                    case Some(aDestinationEntityName) => Some(aDestinationEntityName)
-                    case None =>
-                      val eomodel = p.proxy.value.eomodel.get
-                      val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-                      destinationEntityOpt match {
-                        case Some(destinationEntity) => Some(destinationEntity.name)
-                        case None => None
+                      val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
+                      log.debug(": " + listDestinationEntityOpt)
+
+                      val destinationEntityNameOpt = listDestinationEntityOpt match {
+                        case Some(aDestinationEntityName) => Some(aDestinationEntityName)
+                        case None =>
+                          val eomodel = p.proxy.value.eomodel.get
+                          val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+                          val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                          destinationEntityOpt match {
+                            case Some(destinationEntity) => Some(destinationEntity.name)
+                            case None => None
+                          }
+
                       }
 
+                      destinationEntityNameOpt match {
+                        case Some(destinationEntityName) =>
+                          val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
+                          log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
+
+                          val potPageConf = listConfigurationNameOpt match {
+                            case Some(_) =>
+                              PotFiredKey(Right(listConfigurationNameOpt))
+                            case None =>
+                              val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
+                              PotFiredKey(Left(fireListConfiguration))
+                          }
+
+
+                          //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
+
+                          //val size = eoValueOpt match {
+                          //  case Some(ObjectsValue(eos)) => eos.size
+                          //  case _ => 0
+                          //}
+                          //val size = 1
+
+
+                          // D2WContext with
+                          // - Entity (destinationEntity)
+                          // - task = list
+                          // - DataRep
+                          // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
+                          val embeddedListD2WContext = D2WContext(
+                            entityName = Some(destinationEntityName),
+                            task = Some(TaskDefine.list),
+                            dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
+                            pageConfiguration = potPageConf
+                          )
+                          //log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
+                          <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
+
+                        case None => <.div("No destinaton Entity name")
+                      }
+                    case PotFiredKey(Left(_)) =>
+                      <.div("page configuration not yet fired")
                   }
 
-                  destinationEntityNameOpt match {
-                    case Some(destinationEntityName) =>
-                      val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
-                      log.debug("ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
-
-                      //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
-
-                      //val size = eoValueOpt match {
-                      //  case Some(ObjectsValue(eos)) => eos.size
-                      //  case _ => 0
-                      //}
-                      //val size = 1
-
-
-                      // D2WContext with
-                      // - Entity (destinationEntity)
-                      // - task = list
-                      // - DataRep
-                      // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
-                      val embeddedListD2WContext = D2WContext(
-                        entityName = Some(destinationEntityName),
-                        task = Some(TaskDefine.list),
-                        dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
-                        pageConfiguration = if (listConfigurationNameOpt.isDefined) Some(Right(listConfigurationNameOpt.get)) else None
-                      )
-                      //log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
-                      <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
-
-                    case None => <.div("No destinaton Entity name")
-                  }
                 case _ => <.div("no eomodel")
               }
             case _ => <.div("no propertyName")

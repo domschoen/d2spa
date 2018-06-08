@@ -13,25 +13,13 @@ import jdk.nashorn.internal.ir.PropertyKey
 
 
 
-case class AppModel (content: MegaContent)
 
-// , genericPart: GenericData, customPart: CustomData
-
-
-case class CustomData()
-
-
-
-case class MegaContent(showBusyIndicator: Boolean = false,   debugConfiguration: DebugConfiguration, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
-                       cache: EOCache,
-                       previousPage: Option[D2WContext]
-                       )
 
 sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
 }
-case class DebugConfiguration(showD2WDebugButton: Boolean = false, isDebugMode: Boolean = false)
 
+case class DebugConfiguration(showD2WDebugButton: Boolean = false, isDebugMode: Boolean = false)
 
 case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
 case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), typeV: String = "stringV") extends RulesContainer
@@ -111,7 +99,7 @@ case class SavedEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
-case class InspectEO(fromTask: String, eo: EO) extends Action
+case class InspectEO(fromTask: String, eo: EO, isOneRecord: Boolean = false) extends Action
 
 case class SaveError(eo: EO) extends Action
 object ListEOs extends Action
@@ -184,6 +172,8 @@ object QueryOperator {
 // A container for value should be used. It would give a way to have not only String
 case class QueryValue(key: String,value: EOValue, operator: String)
 
+
+
 object QueryValue {
   val operatorByQueryOperator = Map(
     QueryOperator.Max -> NSSelector.QualifierOperatorLessThanOrEqualTo,
@@ -214,8 +204,19 @@ case class D2WContext(entityName: Option[String],
                       queryValues: Map[String, QueryValue] = Map(),
                       dataRep: Option[DataRep] = None,
                       propertyKey:  Option[String] = None,
-                      pageConfiguration: Option[Either[RuleFault,String]] = None,
+
+                      // Either
+                      // - defined by a rule not yet fired (RuleFault). It is a action which is before in the list
+                      // - a value
+                      // - None
+                      pageConfiguration: PotFiredKey = PotFiredKey(Right(None)),
                       pk : Option[Int] = None)
+
+// Right = Some
+// here right is an result which could be Some or None
+// left is not yet a result because it is a rule to be fired
+case class PotFiredKey (value: Either[FireRule, Option[String]])
+case class PotFiredRuleResult (value: Either[FireRule, RuleResult])
 
 case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 
@@ -239,18 +240,17 @@ object EOQualifierType {
 }
 
 
-case class KeysSubstrate(ruleFault: Option[RuleFault] = None, ruleResult: Option[RuleResult] = None)
+case class KeysSubstrate(ruleResult: PotFiredRuleResult)
 
 
-// A rule fault should be a FullFledged because it is a rule
-// but the goal is to be used for watering the displayPropertyKeys but this one can be available only after fetch of the configuration
-// That's a feature of D2WContext. So we use it here
-case class RuleFault(rhs: D2WContext, key: String)
 case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
-case class WateringScope(ruleFault: Option[RuleFault] = None, ruleResult: Option[RuleResult] = None)
+case class WateringScope(ruleResult: PotFiredRuleResult)
 //case class EORefsDefinition()
 case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 //case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
+
+
+
 
 object RuleUtils {
 
@@ -262,7 +262,42 @@ object RuleUtils {
     }
   }
 
+  def potentialFireRule(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String) : Option[FireRule] = {
+    val ruleResultOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, key)
+    ruleResultOpt match {
+      case Some(_) => None
+      case None =>
+        Some(FireRule(d2wContext, key))
+    }
+  }
 
+
+
+
+  def potentialFireRules(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
+                         d2wContext: D2WContext,
+                         displayPropertyKeysRuleResultOpt: Option[RuleResult],
+                         key: String) : Option[FireRules] = {
+
+    displayPropertyKeysRuleResultOpt match {
+      case Some(displayPropertyKeysRuleResult) =>
+        val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
+        if (displayPropertyKeys.size == 0) {
+          None
+        } else {
+          val propertyD2WContext = d2wContext.copy(propertyKey = Some(displayPropertyKeys.head))
+          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
+          ruleResultOpt match {
+            case Some(_) => None
+            case None =>
+              Some(FireRules(KeysSubstrate(ruleResult = PotFiredRuleResult(Right(displayPropertyKeysRuleResult))), d2wContext, key))
+          }
+        }
+      case None =>
+        val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+        Some(FireRules(KeysSubstrate(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))), d2wContext, key))
+    }
+  }
 
   /*
     RuleFault(
@@ -307,11 +342,11 @@ object RuleUtils {
     )
    */
 
-  def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
+  /*def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
     val ruleKey = ruleFault.key
     val ruleRhs = D2WContextUtils.d2wContextByResolvingRuleFaults(ruleResults,ruleFault.rhs)
     RuleUtils.ruleResultForContextAndKey(ruleResults,ruleRhs,ruleKey)
-  }
+  }*/
 
 
 
@@ -322,6 +357,14 @@ object RuleUtils {
   def ruleStringValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[String] = {
     val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
     ruleStringValueWithRuleResult(ruleResult)
+  }
+
+  def ruleBooleanValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Boolean = {
+    val booleanAsStringOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, key)
+    booleanAsStringOpt match {
+      case Some(boolVal) => boolVal.equals("true")
+      case None => false
+    }
   }
 
   def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
@@ -392,7 +435,12 @@ object RuleUtils {
   def pageConfigurationRuleResultsForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[PageConfigurationRuleResults] = {
     val entityName = d2wContext.entityName.get
     val task = d2wContext.task.get
-    val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get.right.get else PageConfiguration.NoPageConfiguration
+    val pageConfiguration: String = if (d2wContext.pageConfiguration.value.isRight) {
+      d2wContext.pageConfiguration.value.right.get match {
+        case Some(pc) => pc
+        case None => PageConfiguration.NoPageConfiguration
+      }
+    } else PageConfiguration.NoPageConfiguration
     if (ruleResults.contains(entityName)) {
       val entitySubTree = ruleResults(entityName)
       if (entitySubTree.contains(task)) {
@@ -462,6 +510,7 @@ object D2WContextUtils {
     val queryValues = d2wContext.queryValues
     if (queryValues.contains(key)) Some(queryValues(key).value) else None
   }
+
   def queryValueAsStringForKey(d2wContext: D2WContext, key: String) = {
     val value = D2WContextUtils.queryValueForKey(d2wContext, key)
     val strValue = value match {
@@ -470,53 +519,21 @@ object D2WContextUtils {
     }
   }
 
-
   def convertD2WContextToFullFledged(d2wContext: D2WContext): D2WContextFullFledged = {
-    log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
-    if(d2wContext.pageConfiguration.isDefined) {
+    //log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
+    /*if(d2wContext.pageConfiguration.isDefined) {
       log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
       log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
       log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
 
-    }
+    }*/
 
     D2WContextFullFledged(
       d2wContext.entityName,
       d2wContext.task,
       d2wContext.propertyKey,
-      if(d2wContext.pageConfiguration.isDefined) Some(d2wContext.pageConfiguration.get.right.get) else None
+      d2wContext.pageConfiguration.value.right.get
     )
-  }
-
-
-  def convertD2WContextToFullFledgedByResolvingRuleFaults(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext): D2WContextFullFledged = {
-    val resolvedD2WContext = d2wContextByResolvingRuleFaults(ruleResults,d2wContext)
-    D2WContextUtils.convertD2WContextToFullFledged(resolvedD2WContext)
-  }
-
-
-  def d2wContextByResolvingRuleFaults(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): D2WContext = {
-    d2wContext.pageConfiguration match {
-      case Some(pc) =>
-        pc match {
-          case Right(pageConf) =>
-            d2wContext
-          case Left(pageConfFromRule) =>
-            val ruleResultOpt = RuleUtils.fireRuleFault(ruleResults, pageConfFromRule)
-            ruleResultOpt match {
-              case Some(ruleResult) =>
-                val pageConfiguration = ruleResult.value.stringV.get
-                val tmpContext = d2wContext.copy(pageConfiguration = Some(Right(pageConfiguration)))
-                tmpContext
-              case None =>
-                // Remove the page configuration is the best thing we can do ... (?)
-                val tmpContext = d2wContext.copy(pageConfiguration = None)
-                tmpContext
-            }
-        }
-      case None => d2wContext
-    }
-
   }
 
   def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
@@ -527,7 +544,7 @@ object D2WContextUtils {
     Map(),
     None,
     d2wContext.propertyKey,
-    if(d2wContext.pageConfiguration.isDefined) Some(Right(d2wContext.pageConfiguration.get)) else None
+    PotFiredKey(Right(d2wContext.pageConfiguration))
   )
 
 
@@ -535,9 +552,7 @@ object D2WContextUtils {
     if (!a.entityName.equals(b.entityName)) return false
     if (!a.task.equals(b.task)) return false
     if (!a.propertyKey.equals(b.propertyKey)) return false
-    if (b.pageConfiguration.isDefined && b.pageConfiguration.get.isLeft) return false
-    val comparableValue = if (b.pageConfiguration.isDefined) Some(b.pageConfiguration.get.right.get) else None
-    if (!a.pageConfiguration.equals(comparableValue)) return false
+    if (!(b.pageConfiguration.value.isRight && a.pageConfiguration.equals(b.pageConfiguration.value.right.get))) return false
     return true
   }
 
@@ -554,37 +569,6 @@ case class SetupQueryPageForEntity(entityName: String) extends Action
 case object SwithDebugMode extends Action
 case object FetchShowD2WDebugButton extends Action
 case class SetDebugConfiguration(debugConf: DebugConf) extends Action
-
-/*      Menus(
-        List(
-          MainMenu(1, "MCU",
-            List(
-              Menu(2, "Nagra MCU", "DTEChipset"),
-              Menu(3, "EMI", "DTEEMI"),
-              Menu(4, "Chipset Security Type", "ChipsetSecurityType")
-            )
-          )
-        ),
-        D2WContext("DTEEMI", "query", null)
-      ),
-*/
-
-
-object AppModel {
-  val bootingModel = AppModel(
-    MegaContent(
-      false,
-      DebugConfiguration(),
-      Empty,
-      Empty,
-      Map(),
-      //EditEOFault(Empty,0),
-      EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
-      None
-    )
-  )
-
-}
 
 object EOCacheUtils {
 
@@ -603,7 +587,7 @@ object EOCacheUtils {
 
   def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
-    log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
+    //log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
       case Some(eos) =>
         Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fs))
@@ -650,13 +634,9 @@ object EOCacheUtils {
       EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, pk)
     } else {
       val dbCache = cache.eos
-      log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
+      //log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
       EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, pk)
     }
   }
 }
 
-
-object FireRuleConverter {
-  def toRuleFault(fireRule: FireRule) = RuleFault(fireRule.rhs,fireRule.key)
-}

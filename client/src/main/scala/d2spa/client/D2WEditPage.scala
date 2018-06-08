@@ -87,7 +87,7 @@ object D2WEditPage {
               fireDisplayPropertyKeys,
               // in order to have an EO completed with all attributes for the task,
               // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleFault = Some(FireRuleConverter.toRuleFault(fireDisplayPropertyKeys))))
+              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
             )
           }
         case None => noneFireActions
@@ -141,11 +141,11 @@ object D2WEditPage {
 
       val staleD2WContext = p.d2wContext
       val entityName = staleD2WContext.entityName.get
-      //log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
+      log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
 
 
       val d2wContext = p.d2wContext
-      log.debug("D2WEditPage: render eo with fresh context : " + d2wContext)
+      //log.debug("D2WEditPage: render eo with fresh context : " + d2wContext)
 
       val eoRefOpt = d2wContext.eo
       eoRefOpt match {
