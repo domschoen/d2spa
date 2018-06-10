@@ -16,7 +16,7 @@ import jdk.nashorn.internal.ir.PropertyKey
 case class AppModel (content: MegaContent)
 
 
-case class MegaContent(showBusyIndicator: Boolean = false,   debugConfiguration: DebugConfiguration, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
+case class MegaContent(showBusyIndicator: Boolean = false,   appConfiguration: AppConfiguration, menuModel: Pot[Menus], eomodel: Pot[EOModel], ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
                        cache: EOCache,
                        previousPage: Option[D2WContext]
                        )
@@ -27,7 +27,7 @@ object AppModel {
   val bootingModel = AppModel(
     MegaContent(
       false,
-      DebugConfiguration(),
+      AppConfiguration(),
       Empty,
       Empty,
       Map(),

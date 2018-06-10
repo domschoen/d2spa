@@ -49,7 +49,7 @@ object MenuHeader {
 
     def render(p: Props) = {
       val style = bss.listGroup
-      val debugButtonText = if (p.proxy.value.debugConfiguration.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
+      val debugButtonText = if (p.proxy.value.appConfiguration.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
           log.debug("MenuHeader, render, Menu not empty")

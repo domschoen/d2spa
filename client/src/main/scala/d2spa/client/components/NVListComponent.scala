@@ -342,8 +342,8 @@ object NVListComponent {
                         propertyKey => {
                           val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
                           <.td(^.className := "",
-                            //"toto"
-                            D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                            "toto"
+                            //D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
                           )
                         }
                         ),

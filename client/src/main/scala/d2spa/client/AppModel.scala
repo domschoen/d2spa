@@ -19,7 +19,7 @@ sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
 }
 
-case class DebugConfiguration(showD2WDebugButton: Boolean = false, isDebugMode: Boolean = false)
+case class AppConfiguration(serverAppConf: DebugConf = DebugConf(true), isDebugMode: Boolean = false, fetchMenus: Boolean = true)
 
 case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
 case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), typeV: String = "stringV") extends RulesContainer
@@ -50,6 +50,9 @@ case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAct
 case class UpdateRefreshEOInCache(eo:EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
+case object FetchEOModelAndMenus extends Action
+
+
 case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 case object FetchMenu extends Action

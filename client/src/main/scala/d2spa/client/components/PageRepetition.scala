@@ -27,8 +27,8 @@ object PageRepetition {
       val nEntityName = nextProps.d2wContext.entityName
       val entityNameChanged = !cEntityName.equals(nEntityName)
 
-      val cIsDebugMode = currentProps.proxy.value.debugConfiguration.isDebugMode
-      val nIsDebugMode = nextProps.proxy.value.debugConfiguration.isDebugMode
+      val cIsDebugMode = currentProps.proxy.value.appConfiguration.isDebugMode
+      val nIsDebugMode = nextProps.proxy.value.appConfiguration.isDebugMode
       val isDebugModeChanged = !cIsDebugMode.equals(nIsDebugMode)
 
 

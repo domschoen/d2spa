@@ -37,7 +37,7 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
 
   override val actionHandler = composeHandlers(
-    new DebugConfigurationHandler(zoomTo(_.content.debugConfiguration)),
+    new AppConfigurationHandler(zoomTo(_.content.appConfiguration)),
     new BusyIndicatorHandler(zoomTo(_.content.showBusyIndicator)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new RuleResultsHandler(zoomTo(_.content.ruleResults)),

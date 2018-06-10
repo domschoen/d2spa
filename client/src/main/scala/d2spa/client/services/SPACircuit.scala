@@ -30,20 +30,20 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
     case InitClient =>
       log.debug("Init Client")
-      effectOnly(
-        Effect.action(FetchEOModel)
-      )
+      effectOnly(Effect.action(FetchShowD2WDebugButton))
 
     case FetchEOModel =>
       log.debug("FetchEOModel")
-      value match {
-        case Ready(eomodel) =>
-          log.debug("FetchEOModel no change")
-          noChange
-        case _ =>
-          log.debug("FetchEOModel fetching")
-          effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
-      }
+
+      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
+
+    case FetchEOModelAndMenus =>
+      log.debug("FetchEOModel")
+      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModelThenFetchMenu(_))))
+
+    case SetEOModelThenFetchMenu(eomodel) =>
+       updated(Ready(eomodel), Effect.action(FetchMenu))
+
 
     case SetEOModel(eomodel) =>
       log.debug("FetchEOModel set eomodel " + eomodel)
@@ -69,7 +69,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
 }
 
-class DebugConfigurationHandler[M](modelRW: ModelRW[M, DebugConfiguration]) extends ActionHandler(modelRW) {
+class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends ActionHandler(modelRW) {
   override def handle = {
     case FetchShowD2WDebugButton =>
       log.debug("DebugHandler | FetchShowD2WDebugButton")
@@ -77,7 +77,8 @@ class DebugConfigurationHandler[M](modelRW: ModelRW[M, DebugConfiguration]) exte
 
     case SetDebugConfiguration(debugConf) =>
       log.debug("DebugHandler | SetShowD2WDebugButton " + debugConf.showD2WDebugButton)
-      updated(value.copy(showD2WDebugButton = debugConf.showD2WDebugButton))
+      val nextAction = if (value.fetchMenus) FetchEOModelAndMenus else FetchEOModel
+      updated(value.copy(serverAppConf = DebugConf(debugConf.showD2WDebugButton)), Effect.action(nextAction))
 
     case SwithDebugMode =>
       log.debug("DebugHandler | SwithDebugMode")
@@ -738,6 +739,14 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 
   override def handle = {
+    case FetchMenu =>
+       log.debug("Init Client")
+       if (value.isEmpty) {
+         log.debug("Api get Menus")
+         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
+       } else
+         noChange
+
     case InitMenuAndEO(eo, missingKeys) =>
       effectOnly(Effect(AjaxClient[Api].getMenus().call().map(menus => {
         SetMenusAndEO(menus, eo, missingKeys)
