@@ -58,7 +58,7 @@ case class FetchedEOAttribute(`type`: String, name: String)
 
 class ApiService(config: Configuration, ws: WSClient) extends Api {
   val showDebugButton = config.getBoolean("d2spa.showDebugButton").getOrElse(true)
-  val d2spaServerBaseUrl = config.getString("woappURL").getOrElse("http://localhost:1445/cgi-bin/WebObjects/CustomerBackend.woa/ra")
+  val d2spaServerBaseUrl = config.getString("d2spa.woappURL").getOrElse("http://localhost:1445/cgi-bin/WebObjects/CustomerBackend.woa/ra")
 
 
   implicit val CountryReads: Reads[CountryItem] = (

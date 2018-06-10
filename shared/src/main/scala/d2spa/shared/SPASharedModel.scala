@@ -23,6 +23,9 @@ object RuleKeys {
   val pageConfiguration = "pageConfiguration"
   val propertyType = "propertyType"
   val destinationEntity = "destinationEntity"
+  val isInspectAllowed = "isInspectAllowed"
+  val isEditAllowed = "isEditAllowed"
+  val isDeleteAllowed = "isDeleteAllowed"
 }
 
 //case class DateValue(value: java.util.Date) extends EOValue

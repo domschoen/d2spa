@@ -80,6 +80,7 @@ case class RegisterPreviousPage(d2WContext: D2WContext) extends Action
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
+case object ShowResults extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
