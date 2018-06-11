@@ -133,6 +133,8 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     eomodelF()
   }
 
+  val timeout = 50.seconds
+
 
   // case class EOEntity(name: String, pkAttributeName: String, relationships: List[EORelationship])
   // case class EORelationship(name: String, destinationEntityName: String)
@@ -140,7 +142,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
   def executeEOModelWS(): Future[EOModel] = {
     val url = d2spaServerBaseUrl + "/EOModel.json";
     Logger.debug("WS " + url)
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
@@ -188,7 +190,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
 
     val fetchedEOModel = eomodel()
     val url = d2spaServerBaseUrl + "/Menu.json";
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
       val resultBody = response.json
@@ -456,7 +458,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
     }
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     Logger.debug("Search URL:" + url)
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
@@ -736,7 +738,7 @@ class ApiService(config: Configuration, ws: WSClient) extends Api {
         //   },
         //   "typeDescription": "Ftp Login changed to"
         // }
-        val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+        val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
         Logger.debug("Complete EO: request : " + request)
 
         val futureResponse: Future[WSResponse] = request.get
