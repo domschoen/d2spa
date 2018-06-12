@@ -8,10 +8,10 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, _}
 import d2spa.client.components.Bootstrap._
 import d2spa.client.components.GlobalStyles
-
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client.logger._
+import japgolly.scalajs.react.component.Scala
 
 
 
@@ -65,5 +65,5 @@ object D2WComponentInstaller  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]): Scala.Unmounted[D2WComponentInstaller.Props, Unit, D2WComponentInstaller.Backend] = component(Props(ctl, d2wContext, eo, proxy))
 }

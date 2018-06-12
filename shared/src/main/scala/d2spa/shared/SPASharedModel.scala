@@ -118,10 +118,18 @@ case object EmptyValue extends  EOValue
 
 object EOValue {
 
-
   // When saving an EO, we have to remove any non db attributes
   def purgedEO(eo: EO) = {
     eo
+  }
+
+  def size(value: EOValue) = value match {
+    case StringValue(s) => s.length
+    case IntValue(i) => i.toString.length
+    case BooleanValue(value) => 1
+    case ObjectValue(eo) => 0
+    case ObjectsValue(eos: Seq[Int]) => eos.size
+    case EmptyValue => 0
   }
 
   def objectValue(eoOpt: Option[EO]) = {

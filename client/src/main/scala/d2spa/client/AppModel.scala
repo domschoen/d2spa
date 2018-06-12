@@ -43,6 +43,7 @@ case object HideBusyIndicator extends Action
 case class SearchWithBusyIndicator(entityName: String) extends Action
 
 case object InitClient extends Action
+case object InitAppSpecificClient extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
@@ -178,6 +179,8 @@ case class QueryValue(key: String,value: EOValue, operator: String)
 
 
 
+
+
 object QueryValue {
   val operatorByQueryOperator = Map(
     QueryOperator.Max -> NSSelector.QualifierOperatorLessThanOrEqualTo,
@@ -193,6 +196,8 @@ object QueryValue {
     })
     if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
   }
+
+  def size(queryValue: QueryValue) = EOValue.size(queryValue.value)
 }
 
 
@@ -575,6 +580,77 @@ case object FetchShowD2WDebugButton extends Action
 case class SetDebugConfiguration(debugConf: DebugConf) extends Action
 
 object EOCacheUtils {
+
+  //EOValueUtils.pk(eo)
+  def newUpdatedCache(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
+    val anyHead = eos.headOption
+    anyHead match {
+      case Some(head) =>
+        val entity = head.entity
+        val pkAttributeName = entity.pkAttributeName
+        val entityName = entity.name
+        val entityMap = if (cache.contains(entityName)) cache(entity.name) else Map.empty[Int, EO]
+
+        // we create a Map with eo and id
+        val refreshedEOs = eos.map(eo => {
+          val pk = idExtractor(eo)
+          Some((pk, eo))
+        }).flatten.toMap
+
+        // work with new and eo to be updated
+        val refreshedPks = refreshedEOs.keySet
+        val existingPks = entityMap.keySet
+
+        val newPks = refreshedPks -- existingPks
+
+        // Iterate on eos
+        val newAndUpdateMap = refreshedPks.map(id => {
+          log.debug("Refresh " + entityName + "[" + id + "]")
+          val refreshedEO = refreshedEOs(id)
+          //log.debug("Refreshed " + refreshedEO)
+
+          // 2 cases:
+          // new
+          if (newPks.contains(id)) {
+            (id, refreshedEO)
+          } else {
+            // existing -> to be updated
+            // Complete EOs !
+            val existingEO = entityMap(id)
+            (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
+          }
+        }).toMap
+        val newEntityMap = entityMap ++ newAndUpdateMap
+
+        cache + (entity.name -> newEntityMap)
+      case _ => Map.empty[String, Map[Int, EO]]
+    }
+  }
+
+
+
+  // Entity Name is retreived from the eos
+  def updatedModelForEntityNamed(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
+    if (eos.isEmpty) {
+      cache
+    } else {
+
+      val result: Map[String, Map[Int, EO]] = newUpdatedCache(idExtractor, cache, eos)
+      //log.debug("storing result as :" + result)
+      result
+    }
+  }
+
+
+
+  def updatedOutOfDBCacheWithEOs(cache: EOCache, eos: Seq[EO]): EOCache = {
+    //log.debug("Cache before update " + cache)
+    val insertedEOs = cache.insertedEOs
+    val outOfDBEOs = updatedModelForEntityNamed(eo => eo.pk, cache.eos, eos)
+    val newCache = EOCache(outOfDBEOs, insertedEOs)
+    //log.debug("New cache " + newCache)
+    newCache
+  }
 
   // Returns None if nothing registered in the cache for that entityName
   def objectsForEntityNamed(eos: Map[String, Map[Int,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {

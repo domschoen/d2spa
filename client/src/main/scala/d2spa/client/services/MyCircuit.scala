@@ -61,6 +61,8 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
   }
 
   override def handle = {
+    case InitAppSpecificClient =>
+      noChange
 
     case  InspectEO (fromTask, eo, isOneRecord) =>
       log.debug("PreviousPageHandler | InspectEO from: " + fromTask)

@@ -28,9 +28,21 @@ import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, EO, EOValue, Debug
 class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler(modelRW) {
   override def handle = {
 
+    // Action chain:
+    // 1 InitClient
+    // 2 FetchShowD2WDebugButton
+    // 3 SetDebugConfiguration
+    // 4 FetchEOModelAndMenus or go directly to 8
+    // 5 SetEOModelThenFetchMenu
+    // 6 FetchMenu
+    // 7 SetMenus
+    // 8 FetchEOModel
+    // 9 SetEOModel
+    // 10 InitAppSpecificClient (to be implemented in the app specific part)
     case InitClient =>
       log.debug("Init Client")
       effectOnly(Effect.action(FetchShowD2WDebugButton))
+
 
     case FetchEOModel =>
       log.debug("FetchEOModel")
@@ -47,7 +59,7 @@ class EOModelHandler[M](modelRW: ModelRW[M, Pot[EOModel]]) extends ActionHandler
 
     case SetEOModel(eomodel) =>
       log.debug("FetchEOModel set eomodel " + eomodel)
-      updated(Ready(eomodel), Effect.action(FetchShowD2WDebugButton))
+      updated(Ready(eomodel), Effect.action(InitAppSpecificClient))
 
 
     // get the eomodel
@@ -420,76 +432,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   // Map of entityName -> Map of id -> eo
   // eos: Map[String, Map[Int,EO]],
 
-  // Entity Name is retreived from the eos
-  def updatedModelForEntityNamed(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
-    if (eos.isEmpty) {
-      cache
-    } else {
 
-      val result: Map[String, Map[Int, EO]] = newUpdatedCache(idExtractor, cache, eos)
-      //log.debug("storing result as :" + result)
-      result
-    }
-  }
-
-  //EOValueUtils.pk(eo)
-  def newUpdatedCache(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
-    val anyHead = eos.headOption
-    anyHead match {
-      case Some(head) =>
-        val entity = head.entity
-        val pkAttributeName = entity.pkAttributeName
-        val entityName = entity.name
-        val entityMap = if (cache.contains(entityName)) cache(entity.name) else Map.empty[Int, EO]
-
-        // we create a Map with eo and id
-        val refreshedEOs = eos.map(eo => {
-          val pk = idExtractor(eo)
-          Some((pk, eo))
-        }).flatten.toMap
-
-        // work with new and eo to be updated
-        val refreshedPks = refreshedEOs.keySet
-        val existingPks = entityMap.keySet
-
-        val newPks = refreshedPks -- existingPks
-
-        // Iterate on eos
-        val newAndUpdateMap = refreshedPks.map(id => {
-          log.debug("Refresh " + entityName + "[" + id + "]")
-          val refreshedEO = refreshedEOs(id)
-          //log.debug("Refreshed " + refreshedEO)
-
-          // 2 cases:
-          // new
-          if (newPks.contains(id)) {
-            (id, refreshedEO)
-          } else {
-            // existing -> to be updated
-            // Complete EOs !
-            val existingEO = entityMap(id)
-            (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
-          }
-        }).toMap
-        val newEntityMap = entityMap ++ newAndUpdateMap
-
-        cache + (entity.name -> newEntityMap)
-      case _ => Map.empty[String, Map[Int, EO]]
-    }
-  }
-
-  def updatedOutOfDBCacheWithEOs(eos: Seq[EO]): EOCache = {
-    log.debug("Cache before update " + value)
-    val insertedEOs = value.insertedEOs
-    val outOfDBEOs = updatedModelForEntityNamed(eo => eo.pk, value.eos, eos)
-    val newCache = EOCache(outOfDBEOs, insertedEOs)
-    //log.debug("New cache " + newCache)
-    newCache
-  }
 
 
   def updatedMemCacheWithEOs(eos: Seq[EO]): EOCache = {
-    val newCache = updatedModelForEntityNamed(eo => -eo.pk, value.insertedEOs, eos)
+    val newCache = EOCacheUtils.updatedModelForEntityNamed(eo => -eo.pk, value.insertedEOs, eos)
     EOCache(value.eos, newCache)
   }
 
@@ -513,7 +460,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
   def addEOToCache(eo: EO, idExtractor: EO => Int, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
-    updatedModelForEntityNamed(idExtractor, eos, Seq(eo))
+    EOCacheUtils.updatedModelForEntityNamed(idExtractor, eos, Seq(eo))
   }
 
   def removeEOFromDBCache(eo: EO, eos: Map[String, Map[Int, EO]]): Map[String, Map[Int, EO]] = {
@@ -601,20 +548,20 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case UpdateEOInCache(eo) =>
       log.debug("CacheHandler | UpdateEOInCache " + eo.entity.name)
       updated(
-        updatedOutOfDBCacheWithEOs(Seq(eo))
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value,Seq(eo))
       )
 
     case UpdateRefreshEOInCache(eo, property, actions) =>
       log.debug("CacheHandler | Refreshed EO " + eo.entity.name)
       updated(
-        updatedOutOfDBCacheWithEOs(Seq(eo)),
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value,Seq(eo)),
         Effect.action(FireActions(property, actions))
       )
 
 
     case RefreshedEOs(eoses) =>
       updated(
-        updatedOutOfDBCacheWithEOs(eoses)
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value,eoses)
       )
 
     case FetchedObjectsForEntity(eoses, d2wContext, actions) =>
@@ -622,7 +569,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       log.debug("CacheHandler | FetchedObjectsForEntity eoses " + eoses)
 
       updated(
-        updatedOutOfDBCacheWithEOs(eoses),
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value,eoses),
         Effect.action(FireActions(d2wContext, actions))
       )
 
@@ -638,7 +585,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       }
 
       updated(
-        updatedOutOfDBCacheWithEOs(eoses),
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value, eoses),
         Effect.action(action)
       )
 
@@ -698,7 +645,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       if (updatedEO.pk < 0) {
         updated(updatedMemCacheWithEOs(Seq(updatedEO)))
       } else {
-        updated(updatedOutOfDBCacheWithEOs(Seq(updatedEO)))
+        updated(EOCacheUtils.updatedOutOfDBCacheWithEOs(value, Seq(updatedEO)))
       }
 
     case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>
