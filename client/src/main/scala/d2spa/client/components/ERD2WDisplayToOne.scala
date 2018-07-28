@@ -1,8 +1,9 @@
 package d2spa.client.components
 
+import d2spa.client.RuleUtils.ruleResultForContextAndKey
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client.{D2WAction, Hydration, _}
-import d2spa.client.logger.log
+import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared._
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
@@ -18,7 +19,7 @@ import d2spa.shared.PropertyMetaInfo
 object ERD2WDisplayToOne  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   /*
@@ -53,74 +54,162 @@ object ERD2WDisplayToOne  {
 // the relationship to customer is a dry object (only the pk)
 
   class Backend($ : BackendScope[Props, Unit]) {
-    def mounted(p: Props) = {
-      log.debug("ERD2WEditToOneRelationship mounted")
-      val d2wContext = p.d2wContext
-      val entityName = d2wContext.entityName.get
-      val propertyName = d2wContext.propertyKey.get
 
-      val ruleResultsModel = p.proxy.value.ruleResults
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
 
-      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched" + dataNotFetched)
-
-      val eomodel = p.proxy.value.eomodel.get
-      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + entity)
-      log.debug("ERD2WEditToOneRelationship mounted: entity" + propertyName)
-
-      log.debug("ERD2WEditToOneRelationship mounted: eomodel" + eomodel)
-      val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
-      log.debug("ERD2WEditToOneRelationship mounted: destinationEntity" + destinationEntity)
+      val cD2WContext = currentProps.d2wContext
+      val nD2WContext = nextProps.d2wContext
+      val d2wContextChanged = !cD2WContext.equals(nD2WContext)
 
 
-      val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-      val destinationEOValueOpt = EOValue.valueForKey(p.eo,propertyName)
+      val anyChange =  d2wContextChanged
+      //D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne willReceiveProps | anyChange: " + anyChange)
 
-
-      val fireActions: List[D2WAction] = destinationEOValueOpt match {
-        case Some(destinationEOValue) =>
-          destinationEOValue match {
-            case ObjectValue(destinationEO) =>
-                val destinationPk = EOValue.pk(destinationEO).get
-                val destEOFault = EOFault(destinationEO.entity.name,destinationPk)
-                List[D2WAction](
-                  keyWhenRelationshipFireRule,
-                  Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(keyWhenRelationshipFireRule))))
-
-                )
-            case _ =>
-                List.empty[D2WAction]
-          }
+      Callback.when(anyChange) {
+        mounted(nextProps)
       }
-
-      Callback.when(!fireActions.isEmpty && dataNotFetched)(p.proxy.dispatchCB(
-        FireActions(
-          d2wContext,
-          fireActions
-        )
-      ))
     }
 
+    def mounted(p: Props) = {
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne mounted")
+
+      val eomodel = p.proxy.value.cache.eomodel.get
+
+      val eoOpt = d2wContext.eo
+      eoOpt match {
+        case Some(eo) =>
+
+
+          val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
+          entityOpt match {
+            case Some(entity) =>
+
+
+              val propertyName = d2wContext.propertyKey.get
+
+              val ruleResultsModel = p.proxy.value.ruleResults
+              val keyWhenRelationshipOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+
+
+              val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+              val hydrationOpt = destinationEOValueOpt match {
+                case Some(destinationEOValue) =>
+                  destinationEOValue match {
+                    case ObjectValue(destinationEO) =>
+                      val destinationPk = EOValue.pk(eomodel,destinationEO).get
+                      val destinationEntityName = destinationEO.entityName
+                      val destEOFault = EOFault(destinationEntityName, destinationPk)
+
+                      keyWhenRelationshipOpt match {
+                        case Some(keyWhenRelationshipFireRule) =>
+                          Some(Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(keyWhenRelationshipFireRule)))))
+
+                        case None =>
+                          val keyWhenRelationshipRuleResult = RuleUtils.ruleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship).get
+                          Some(Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = PotFiredRuleResult(Right(keyWhenRelationshipRuleResult)))))
+                      }
+                    case _ =>
+                      None
+                  }
+                case _ =>
+                  None
+              }
+
+              val fireActions =
+                List(
+                  keyWhenRelationshipOpt,
+                  hydrationOpt
+                ).flatten
+
+              D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne mounted: dispatch : " + fireActions.size + " rule firing")
+
+              Callback.when(!fireActions.isEmpty)(p.proxy.dispatchCB(
+                FireActions(
+                  d2wContext,
+                  fireActions
+                )
+              ))
+            case None =>
+              D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne mounted: no entity for entity name: " + entityName)
+              Callback.empty
+          }
+        case None =>
+          D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+          Callback.empty
+      }
+    }
     def render(p: Props) = {
-      val eo = p.eo
-      val propertyName = p.property.name
-      // We expect a value for that property. Either:
+      val d2wContext = p.d2wContext
+      val entityName = d2wContext.entityName.get
+      D2SpaLogger.logDebug( entityName, "ERD2WDisplayToOne render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+
+      val propertyName = d2wContext.propertyKey.get
+
+      val eoOpt = d2wContext.eo
+      eoOpt match {
+        case Some(eo) =>
+
+
+
+          // We expect a value for that property. Either:
       // StringValue
       // EmptyValue
+          val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+          destinationEOValueOpt match {
+            case Some(destinationEOValue) =>
+              destinationEOValue match {
+                case ObjectValue(destinationEO) =>
+                  val destinationEntityName = destinationEO.entityName
+                  D2SpaLogger.logDebug(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
+                  val cache = p.proxy.value.cache
+                  //log.debug("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
+                  val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(cache, destinationEntityName, destinationEO)
+                  eoOpt match {
+                    case Some(eo) =>
+                      val ruleResultsModel = p.proxy.value.ruleResults
+                      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+                      keyWhenRelationshipOpt match {
+                        case Some(keyWhenRelationship) =>
+                          val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
+                          eoValueOpt match {
+                            case Some(eoValue) =>
 
-      val eoValue = eo.values(propertyName)
-      val value = EOValue.juiceString(eoValue)
-      <.div(
-        <.span(^.id := "description", value)
-      )
+                              val value = EOValue.juiceString(eoValue)
+                              <.div(
+                                <.span(^.id := "description", value))
+
+                            case None =>
+                              <.div("No value for key " + keyWhenRelationship)
+                          }
+                        case None =>
+                          <.div("No keyWhenRelationship")
+                      }
+                    case None =>
+                      <.div("No eo out of cache")
+                  }
+                  // This is a nominal case
+                case _ =>
+                  <.div("")
+              }
+            case _ =>
+              <.div("No value for key " + propertyName)
+          }
+        case None =>
+          D2SpaLogger.logDebug(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+          <.div("No eo for entity: " + entityName + " for key " + propertyName)
+      }
     }
   }
 
   private val component = ScalaComponent.builder[Props]("ERD2WDisplayToOne")
     .renderBackend[Backend]
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
+    .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property,eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext,  proxy: ModelProxy[MegaContent]) =
+    component(Props(ctl, d2wContext,  proxy))
 
 }

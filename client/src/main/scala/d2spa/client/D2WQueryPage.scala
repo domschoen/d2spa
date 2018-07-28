@@ -118,7 +118,7 @@ object D2WQueryPage {
                                       ),
                                       // Component part
                                       <.td(^.className := "query d2wAttributeValueCell",
-                                        D2WComponentInstaller(p.router, propertyD2WContext, null, p.proxy)
+                                        D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
                                       )
                                     )
                                   }

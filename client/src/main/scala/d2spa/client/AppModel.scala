@@ -31,8 +31,9 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 
 
-case class EOCache(eos: Map[String, Map[Int,EO]],
-                    insertedEOs: Map[String, Map[Int,EO]])
+case class EOCache(eomodel: Pot[EOModel],
+                   eos: Map[String, Map[List[Int],EO]],
+                   insertedEOs: Map[String, Map[List[Int],EO]])
 
 
 
@@ -48,7 +49,7 @@ case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class UpdateRefreshEOInCache(eo:EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
 case object FetchEOModelAndMenus extends Action
@@ -123,7 +124,14 @@ case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends
 
 object Hydration {
 
-  def isEOHydrated(cache: EOCache, entityName: String, pk : Int, propertyKeys: List[String]) : Boolean = {
+  // case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
+  def entityName(drySubstrate: DrySubstrate) = drySubstrate match {
+    case DrySubstrate(Some(eosAtKeyPath), _ , _) => eosAtKeyPath.eo.entityName
+    case DrySubstrate(_, Some(eoFault) , _) => eoFault.entityName
+    case DrySubstrate(_, _ , Some(fs)) => EOFetchSpecification.entityName(fs)
+  }
+
+  def isEOHydrated(cache: EOCache, entityName: String, pk : List[Int], propertyKeys: List[String]) : Boolean = {
     val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, entityName, pk)
     eoOpt match {
       case Some(eo) =>
@@ -154,13 +162,13 @@ object Hydration {
                 log.debug("AppModel | Hydration | isHydratedForPropertyKeys " + destinationEntityName + " at path: " + eoakp.keyPath + " any non hydrated " + nonHydrated)
                 nonHydrated.isEmpty
 
-              case _ => true
+              case _ => false
             }
-          case _ => true
+          case _ => false
         }
       case DrySubstrate(_, _, Some(fs)) =>
-        val eos = EOCacheUtils.objectsWithFetchSpecification(cache,fs)
-        val nonHydrated = eos.find(eo => !isEOHydrated(cache, eo.entity.name, eo.pk, propertyKeys))
+        val eos = EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache,fs)
+        val nonHydrated = eos.find(eo => !isEOHydrated(cache, eo.entityName, eo.pk, propertyKeys))
         !nonHydrated.isDefined
     }
   }
@@ -378,6 +386,9 @@ object RuleUtils {
 
   def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
     val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
+    /*if (key.equals(RuleKeys.displayPropertyKeys)) {
+      log.debug("Rule result for display property keys " + ruleResult)
+    }*/
     ruleListValueWithRuleResult(ruleResult)
   }
 
@@ -582,18 +593,19 @@ case class SetDebugConfiguration(debugConf: DebugConf) extends Action
 object EOCacheUtils {
 
   //EOValueUtils.pk(eo)
-  def newUpdatedCache(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
+  def newUpdatedCache(eomodel: EOModel, cache: Map[String, Map[List[Int], EO]], eos: Seq[EO]): Map[String, Map[List[Int], EO]] = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
-        val entity = head.entity
-        val pkAttributeName = entity.pkAttributeName
-        val entityName = entity.name
-        val entityMap = if (cache.contains(entityName)) cache(entity.name) else Map.empty[Int, EO]
+        val entityName = head.entityName
+        val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+        val pkAttributeNames = entity.pkAttributeNames
+        val entityMap = if (cache.contains(entityName)) cache(entityName) else Map.empty[List[Int], EO]
 
         // we create a Map with eo and id
+        // From eos to update, we create a map of key ->
         val refreshedEOs = eos.map(eo => {
-          val pk = idExtractor(eo)
+          val pk = eo.pk
           Some((pk, eo))
         }).flatten.toMap
 
@@ -605,7 +617,7 @@ object EOCacheUtils {
 
         // Iterate on eos
         val newAndUpdateMap = refreshedPks.map(id => {
-          log.debug("Refresh " + entityName + "[" + id + "]")
+          //log.debug("Refresh " + entityName + "[" + id + "]")
           val refreshedEO = refreshedEOs(id)
           //log.debug("Refreshed " + refreshedEO)
 
@@ -623,19 +635,19 @@ object EOCacheUtils {
         val newEntityMap = entityMap ++ newAndUpdateMap
 
         cache + (entity.name -> newEntityMap)
-      case _ => Map.empty[String, Map[Int, EO]]
+      case _ => Map.empty[String, Map[List[Int], EO]]
     }
   }
 
 
 
   // Entity Name is retreived from the eos
-  def updatedModelForEntityNamed(idExtractor: EO => Int, cache: Map[String, Map[Int, EO]], eos: Seq[EO]): Map[String, Map[Int, EO]] = {
+  def updatedModelForEntityNamed(eomodel: EOModel,cache: Map[String, Map[List[Int], EO]], eos: Seq[EO]): Map[String, Map[List[Int], EO]] = {
     if (eos.isEmpty) {
       cache
     } else {
 
-      val result: Map[String, Map[Int, EO]] = newUpdatedCache(idExtractor, cache, eos)
+      val result: Map[String, Map[List[Int], EO]] = newUpdatedCache(eomodel, cache, eos)
       //log.debug("storing result as :" + result)
       result
     }
@@ -643,29 +655,29 @@ object EOCacheUtils {
 
 
 
-  def updatedOutOfDBCacheWithEOs(cache: EOCache, eos: Seq[EO]): EOCache = {
+  def updatedOutOfDBCacheWithEOs(eomodel: EOModel, cache: EOCache, eos: Seq[EO]): EOCache = {
     //log.debug("Cache before update " + cache)
     val insertedEOs = cache.insertedEOs
-    val outOfDBEOs = updatedModelForEntityNamed(eo => eo.pk, cache.eos, eos)
-    val newCache = EOCache(outOfDBEOs, insertedEOs)
+    val outOfDBEOs = updatedModelForEntityNamed(eomodel, cache.eos, eos)
+    val newCache = EOCache(Ready(eomodel), outOfDBEOs, insertedEOs)
     //log.debug("New cache " + newCache)
     newCache
   }
 
   // Returns None if nothing registered in the cache for that entityName
-  def objectsForEntityNamed(eos: Map[String, Map[Int,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
+  def objectsForEntityNamed(eos: Map[String, Map[List[Int],EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
     val entityEOs = eos(entityName).values.toList
     Some(entityEOs)
   } else None
 
-  def objectForEntityNamedAndPk(eos: Map[String, Map[Int,EO]], entityName: String, pk: Int): Option[EO] =
+  def objectForEntityNamedAndPk(eos: Map[String, Map[List[Int],EO]], entityName: String, pk: List[Int]): Option[EO] =
     if (eos.contains(entityName)) {
       val entityEOById = eos(entityName)
 
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def objectsWithFetchSpecification(eos: Map[String, Map[Int,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
+  def objectsWithFetchSpecification(eos: Map[String, Map[List[Int],EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
     //log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
@@ -679,7 +691,7 @@ object EOCacheUtils {
     eos.map(eo => outOfCacheEOUsingPkFromD2WContextEO(cache,entityName,eo)).flatten
   }
 
-  def objectsWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
+  def objectsFromAllCachesWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
     val eosOpt = objectsWithFetchSpecification(cache.eos,fetchSpecification)
     val insertedEOsOpt = objectsWithFetchSpecification(cache.insertedEOs,fetchSpecification)
 
@@ -701,12 +713,13 @@ object EOCacheUtils {
     outOfCacheEOUsingPk(cache, entityName, eo.pk)
   }
 
-  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: Seq[Int]): Seq[EO] = {
+  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: Seq[List[Int]]): Seq[EO] = {
     pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
   }
 
-  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: Int): Option[EO] = {
-    if (pk < 0) {
+  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: List[Int]): Option[EO] = {
+    val isInMemory = EOValue.isNew(pk)
+    if (isInMemory) {
       val memCache = cache.insertedEOs
       log.debug("Out of cache " + pk)
       log.debug("Cache " + memCache)

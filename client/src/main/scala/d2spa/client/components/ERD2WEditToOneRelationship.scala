@@ -28,7 +28,7 @@ object ERD2WEditToOneRelationship {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($: BackendScope[Props, Unit]) {
@@ -43,7 +43,7 @@ object ERD2WEditToOneRelationship {
       log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched " + dataNotFetched)
 
       val entityName = p.d2wContext.entityName.get
-      val eomodel = p.proxy.value.eomodel.get
+      val eomodel = p.proxy.value.cache.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
       log.debug("ERD2WEditToOneRelationship mounted: entity " + entity)
       log.debug("ERD2WEditToOneRelationship mounted: propertyName " + propertyName)
@@ -97,11 +97,10 @@ object ERD2WEditToOneRelationship {
     def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
       //log.debug("id " + id + " class " + id.getClass.getName)
       if (id.equals("None")) None
-      val idAsInt = id.toInt
-      val pkAttributeName = entity.pkAttributeName
+      val pk = id.split("_").map(_.toInt).toList
+
       val optEO = eos.find(eo => {
-        val optPk = EOValue.pk(eo)
-        optPk.isDefined && optPk.get.equals(idAsInt)
+        pk.equals(eo.pk)
       })
       optEO
     }
@@ -122,13 +121,14 @@ object ERD2WEditToOneRelationship {
       log.debug("ERD2WEditToOneRelationship render")
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      val eomodel = p.proxy.value.eomodel.get
+      val eomodel = p.proxy.value.cache.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
       log.debug("ERD2WEditToOneRelationship render entity " + entity)
 
       val taskName = d2wContext.task.get
       val ruleResultsModel = p.proxy.value.ruleResults
       log.debug("ERD2WEditToOneRelationship render ruleResultsModel " + ruleResultsModel)
+
 
       d2wContext.eo match {
         case Some(deo) =>
@@ -155,7 +155,7 @@ object ERD2WEditToOneRelationship {
 
                   keyWhenRelationshipRuleOpt match {
                     case Some(keyWhenRelationship) => {
-                      val destinationEntityOpt = EOModelUtils.destinationEntity(p.proxy.value.eomodel.get, entity, propertyName)
+                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
                       destinationEntityOpt match {
                         case Some(destinationEntity) =>
                           val eoCache = p.proxy.value.cache.eos
@@ -178,7 +178,7 @@ object ERD2WEditToOneRelationship {
                                 val destinationEO = EOValue.valueForKey(eo, propertyName)
                                 log.debug("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
                                 val defaultValue = destinationEO match {
-                                  case Some(ObjectValue(eoV)) => EOValue.pk(eoV) match {
+                                  case Some(ObjectValue(eoV)) => EOValue.pk(eomodel,eoV) match {
                                     case Some(pk) => pk.toString
                                     case None => "None"
                                   }
@@ -189,19 +189,16 @@ object ERD2WEditToOneRelationship {
                                     p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                                   },
                                     {
-                                      val tupleOpts = eos map (x => {
+                                      val tuples = eos map (deo => {
 
-                                        val id = EOValue.pk(x)
-                                        log.debug("id " + id + " for eo: " + x)
-                                        if (id.isDefined) {
-                                          val displayName = EOValue.stringValueForKey(x, keyWhenRelationship)
-                                          Some((id.get.toString, displayName))
-                                        } else None
+                                        //log.debug("id " + id + " for eo: " + x)
+                                        val displayName = EOValue.stringValueForKey(deo, keyWhenRelationship)
+                                        val valueString = deo.pk.mkString("_")
+                                        (valueString, displayName)
                                       })
                                       // remove None
-                                      val tupleValids = tupleOpts.flatten.toList
-                                      val tuplesWithNone = ("None", "- none -") :: tupleValids
-                                      log.debug("valid tuples " + tupleValids)
+                                      val tuplesWithNone = ("None", "- none -") :: tuples
+                                      log.debug("valid tuples " + tuples)
                                       tuplesWithNone toTagMod (eo => {
                                         <.option(^.value := eo._1, eo._2)
                                       })
@@ -236,5 +233,5 @@ object ERD2WEditToOneRelationship {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 }

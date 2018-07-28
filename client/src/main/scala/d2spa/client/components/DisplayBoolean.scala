@@ -15,30 +15,40 @@ import d2spa.client.SPAMain.TaskAppPage
 object DisplayBoolean {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val eo = p.eo
       val d2wContext = p.d2wContext
-      val entityName = d2wContext.entityName.get
-      val propertyName = d2wContext.propertyKey.get
-      if (eo.values.contains(propertyName)) {
+      val eoOpt = d2wContext.eo
 
-        // We expect a value for that property. Either:
-        // StringValue
-        // EmptyValue
-        val eoValue = eo.values(propertyName)
-        val value = EOValue.juiceBoolean(eoValue)
-        <.div(
-          (<.i(^.className := "glyphicon glyphicon-ok")).when(value)
-        )
-      } else {
-        <.div(
-          <.span("No data found")
-        )
+      eoOpt match {
+        case Some(eo) =>
+          val entityName = d2wContext.entityName.get
+          val propertyName = d2wContext.propertyKey.get
+          if (eo.values.contains(propertyName)) {
+
+            // We expect a value for that property. Either:
+            // StringValue
+            // EmptyValue
+            val eoValue = eo.values(propertyName)
+            val value = EOValue.juiceBoolean(eoValue)
+            <.div(
+              (<.i(^.className := "glyphicon glyphicon-ok")).when(value)
+            )
+          } else {
+            <.div(
+              <.span("No data found")
+            )
+          }
+
+        case None =>
+          <.div(
+            <.span("No eo found")
+          )
+
       }
     }
   }
@@ -47,6 +57,6 @@ object DisplayBoolean {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, eo, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }

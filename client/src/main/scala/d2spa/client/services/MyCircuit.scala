@@ -42,7 +42,6 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new MenuHandler(zoomTo(_.content.menuModel)),
     new RuleResultsHandler(zoomTo(_.content.ruleResults)),
     new EOCacheHandler(zoomTo(_.content.cache)),
-    new EOModelHandler(zoomTo(_.content.eomodel)),
     new PreviousPageHandler(zoomTo(_.content.previousPage))
   )
 
@@ -66,7 +65,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case  InspectEO (fromTask, eo, isOneRecord) =>
       log.debug("PreviousPageHandler | InspectEO from: " + fromTask)
-      val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.inspect), eo = Some(eo))
+      val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
       effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
 
 

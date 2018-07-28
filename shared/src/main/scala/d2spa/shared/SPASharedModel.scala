@@ -20,6 +20,7 @@ object RuleKeys {
   val destinationEos = "destinationEos"
   val pkAttributeName = "pkAttributeName"
   val listConfigurationName = "listConfigurationName"
+  val inspectConfigurationName = "inspectConfigurationName"
   val pageConfiguration = "pageConfiguration"
   val propertyType = "propertyType"
   val destinationEntity = "destinationEntity"
@@ -30,7 +31,11 @@ object RuleKeys {
 
 //case class DateValue(value: java.util.Date) extends EOValue
 
-case class EO(entity: EOEntity, values: Map[String,EOValue] = Map(), pk: Int, validationError: Option[String] = None)
+case class EO(entityName: String, values: Map[String,EOValue] = Map(), pk: List[Int], validationError: Option[String] = None)
+
+/*sealed trait PKValue
+case class SinglePK(pk: Int) extends PKValue
+case class SinglePK(pk: Int) extends PKValue*/
 
 
 
@@ -109,7 +114,7 @@ case class StringValue(value: String) extends EOValue
 case class IntValue(value : Int) extends EOValue
 case class BooleanValue(value : Boolean) extends EOValue
 case class ObjectValue(eo: EO) extends EOValue
-case class ObjectsValue(eos: Seq[Int]) extends EOValue
+case class ObjectsValue(eos: Seq[List[Int]]) extends EOValue
 case object EmptyValue extends  EOValue
 //case object NoneValue extends EOValue
 
@@ -117,6 +122,10 @@ case object EmptyValue extends  EOValue
 
 
 object EOValue {
+
+
+  def isNew(pk: List[Int]) = pk.size == 1 && pk.head < 0
+
 
   // When saving an EO, we have to remove any non db attributes
   def purgedEO(eo: EO) = {
@@ -128,7 +137,7 @@ object EOValue {
     case IntValue(i) => i.toString.length
     case BooleanValue(value) => 1
     case ObjectValue(eo) => 0
-    case ObjectsValue(eos: Seq[Int]) => eos.size
+    case ObjectsValue(eos: Seq[List[Int]]) => eos.size
     case EmptyValue => 0
   }
 
@@ -142,71 +151,56 @@ object EOValue {
   def stringV(value: String) = StringValue(value)
   def intV(value: Int) = IntValue(value)
   def eoV(value: EO) =  ObjectValue(eo = value)
-  def eosV(value: Seq[Int]) = ObjectsValue(eos = value)
+  def eosV(value: Seq[List[Int]]) = ObjectsValue(eos = value)
 
 
   def eoValueWithString(str: String) = if (str.length == 0) EmptyValue else StringValue(str)
   def eoValueWithInt(str: String) = if (str.length == 0) EmptyValue else IntValue(str.toInt)
 
-  //case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
-  def dryEOWith(eomodel: EOModel, entityName: String, pk: Option[Int]) = {
-    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-    dryEOWithEntity(entity, pk)
-  }
 
-  /*def memEOWith(eomodel: EOModel, entityName: String, memID: Option[Int]) = {
-    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-    EO(entity, Map.empty[String, EOValue], memID)
-  }*/
-
-  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int, EO]], entity: EOEntity): (Map[String, Map[Int, EO]], EO) = {
-    val entityName = entity.name
+  def createAndInsertNewObject(insertedEOs: Map[String, Map[List[Int], EO]], entityName: String): (Map[String, Map[List[Int], EO]], EO) = {
+    //val entityName = entity.name
     val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
     insertedEOsForEntityOpt match {
+        // We have alreaydy existing in memory eo for that entityName
       case Some(insertedEOsForEntity) =>
-        val newMemID = insertedEOsForEntity.keySet.min - 1
-        val newEO = EO(entity, Map.empty[String, EOValue], pk = newMemID)
-        val newEntityMap = insertedEOsForEntity + (newMemID -> newEO)
+        val existingPks = insertedEOsForEntity.keySet.map(_.head)
+        val newMemID = existingPks.min - 1
+        val newPk = List(newMemID)
+        val newEO = EO(entityName, Map.empty[String, EOValue], pk = newPk)
+        val newEntityMap = insertedEOsForEntity + (newPk -> newEO)
         val newInsertedEOs = insertedEOs + (entityName -> newEntityMap)
         (newInsertedEOs, newEO)
       case None =>
-        val newMemID = -1
-        val newEO = EO(entity, Map.empty[String, EOValue], pk = newMemID)
-        val newEntityMap = Map(newMemID -> newEO)
+        val newPk = List(-1)
+        val newEO = EO(entityName, Map.empty[String, EOValue], pk = newPk)
+        val newEntityMap = Map(newPk -> newEO)
         val newInsertedEOs = Map(entityName -> newEntityMap)
         (newInsertedEOs, newEO)
     }
   }
 
-  def createAndInsertNewObject(insertedEOs: Map[String, Map[Int, EO]], eomodel: EOModel, entityName: String): (Map[String, Map[Int, EO]], EO) = {
-      val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-      createAndInsertNewObject(insertedEOs,entity)
-  }
+  //def createAndInsertNewObject(insertedEOs: Map[String, Map[List[Int], EO]], eomodel: EOModel, entityName: String): (Map[String, Map[List[Int], EO]], EO) = {
+  //    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+  //    createAndInsertNewObject(insertedEOs,entity)
+  //}
 
 
   // For creation of objects only ?
-  def dryEOWithEntity(entity: EOEntity, pk: Option[Int]) = {
-    pk match {
-      case Some(pk) =>
-        val pkAttributeName = entity.pkAttributeName
-        val pkValue = intV(pk)
-        val pkInt = pkValue.value
-        val valueMap = Map(pkAttributeName -> pkValue)
-        EO(entity, valueMap, pk = pkInt)
-      case None =>
-        // TODO review this code, can we have pk = -1 ?
-        EO(entity, Map.empty[String, EOValue], pk = -1)
-    }
-
+  def dryEOWithEntity(entity: EOEntity, pk: List[Int]) = {
+        val pkAttributeNames = entity.pkAttributeNames
+        //val valuesMap = pkAttributeNames.zip(pk.map(IntValue(_))).toMap
+        EO(entity.name, Map(), pk)
   }
 
 
   def juiceString(value: EOValue): String =
     value match {
-      case StringValue(value) => value
+      case StringValue(value) => if (value == null) "" else value
       case IntValue(value) => value.toString
       case BooleanValue(value) => value.toString
       case ObjectValue(eo) => eo.toString
+      case EmptyValue => ""
       case _ => ""
     }
 
@@ -258,29 +252,28 @@ object EOValue {
   }
 
   def isNew(eo: EO) = {
-    eo.pk < 0
+    eo.pk.head < 0
     //val pk = EOValue.pk(eo)
     //(pk.isDefined && pk.get < 0) || pk.isEmpty
     //eo.memID.isDefined
   }
 
-
-  def pk(eo: EO): Option[Int] = {
-    val resultOpt = eo.values.find(value => {
-      value._1.equals(eo.entity.pkAttributeName)
-    })
-    resultOpt match {
-      case Some((key, eoValue)) =>
-        eoValue match {
-          case IntValue(pk) => Some(pk)
-          case _ => None
-        }
-      case _ => None
+  // For single pk EO
+  def pk(eoModel: EOModel, eo: EO): Option[List[Int]] = {
+    val entityName = eo.entityName
+    val entityOpt = EOModelUtils.entityNamed(eoModel,entityName)
+    entityOpt match {
+      case Some(entity) =>
+        val pkAttributeNames = entity.pkAttributeNames
+        if (eo.values.contains(pkAttributeNames.head)) {
+          Some(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(eo.values(pkAttributeName))))
+        } else None
+      case None => None
     }
   }
 
   def refaultEO(eo: EO) = {
-    EOFault(eo.entity.name, eo.pk)
+    EOFault(eo.entityName, eo.pk)
   }
 
 }
@@ -385,7 +378,7 @@ object EOQualifier {
             }
           // eo has no value defined for that key
           case None =>
-            println("Error: try to compare no fetched or non existing value for key " + key + " for entity " + eo.entity.name)
+            println("Error: try to compare no fetched or non existing value for key " + key + " for entity " + eo.entityName)
             false
         }
 
@@ -409,8 +402,10 @@ case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
 case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
-case class EOEntity(name: String, pkAttributeName: String, attributes: List[String] = List(), relationships: List[EORelationship] = List())
+case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attributes: List[String] = List(), relationships: List[EORelationship] = List())
 case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
+
+
 
 //case class EORef(entityName: String, id: Int)
 
@@ -418,7 +413,7 @@ case class Menus(menus: List[MainMenu], showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
-case class EOFault(entityName : String, pk: Int)
+case class EOFault(entityName : String, pk: List[Int])
 
 //case class PreviousTask(task: String, pk: Option[Int])
 

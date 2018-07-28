@@ -77,7 +77,7 @@ object D2WEditPage {
       val eoOpt = d2wContext.eo
       val actionList = eoOpt match {
         case Some(eo) =>
-          if (eo.pk < 0) {
+          if (EOValue.isNew(eo.pk)) {
             List(
               fireDisplayPropertyKeys
             )
@@ -224,7 +224,7 @@ object D2WEditPage {
                                         <.span(displayString)
                                       }),
                                       <.td(^.className := "query d2wAttributeValueCell",
-                                        D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                                        D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
                                       )
                                     )
                                   }

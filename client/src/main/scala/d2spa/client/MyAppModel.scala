@@ -32,7 +32,7 @@ object AppModel {
       Empty,
       Map(),
       //EditEOFault(Empty,0),
-      EOCache(Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
+      EOCache(Empty,Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
       None
     )
   )

@@ -10,7 +10,7 @@ import org.scalajs.dom.ext.KeyCode
 import diode.Action
 import diode.react.ModelProxy
 import d2spa.client.SPAMain.{ListPage, TaskAppPage}
-import d2spa.client.logger.log
+import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.client._
 import d2spa.shared._
 import diode.data.Ready
@@ -42,30 +42,35 @@ object NVListComponent {
 
 
       val anyChange = entityChanged || dataRepChanged || d2wContextChanged
-      log.debug("NVListComponent willReceiveProps | anyChange: " + anyChange)
+      //log.debug("NVListComponent willReceiveProps | anyChange: " + anyChange)
 
       Callback.when(anyChange) {
         willmounted(nextProps)
       }
     }
 
+
+
     def willmounted(p: Props) = {
       val d2wContext = p.d2wContext
       //val destinationEntity = EOModelUtilsdes
-      log.debug("NVListComponent mounted for " + d2wContext.entityName + " task " + d2wContext.task + " page configuration " + d2wContext.pageConfiguration)
-      val eomodel = p.proxy.value.eomodel.get
-      //val d2wContext = p.proxy.value.previousPage.get
+      val pageConfigurationDebug = d2wContext.pageConfiguration match {
+        case PotFiredKey(Right(s)) => s
+        case PotFiredKey(Left(_)) => "toBeFired"
+      }
       val entityName = d2wContext.entityName.get
+
+      D2SpaLogger.logDebug(entityName,"NVListComponent mounted for " + d2wContext.entityName + " task " + d2wContext.task + " page configuration " + pageConfigurationDebug)
+      val eomodel = p.proxy.value.cache.eomodel.get
+      //val d2wContext = p.proxy.value.previousPage.get
       //val propertyName = staleD2WContext.propertyKey.get
       val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
       entityOpt match {
         case Some(entity) =>
           val ruleResultsModel = p.proxy.value.ruleResults
 
-          //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-          //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-          log.debug("NVListComponent mounted: entity: " + entity.name)
+          D2SpaLogger.logDebug(entityName,"NVListComponent mounted: entity: " + entity.name)
           //log.debug("NVListComponent mounted: eomodel: " + eomodel)
 
           // listConfigurationName
@@ -73,7 +78,7 @@ object NVListComponent {
           // - task = 'list'
           // - entity.name = 'Project'
           // - pageConfiguration = <listConfigurationName>
-          log.debug("NVListComponent mounted: d2wContext: " + d2wContext)
+          D2SpaLogger.logDebug(entityName,"NVListComponent mounted: d2wContext: " + d2wContext)
 
           val displayPropertyKeysRuleResultOpt = RuleUtils.ruleResultForContextAndKey(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
           // Fire "displayPropertyKeys" ?
@@ -81,7 +86,7 @@ object NVListComponent {
             case Some(_) => None
             case None => Some(FireRule(d2wContext, RuleKeys.displayPropertyKeys))
           }
-          log.debug("NVListComponent mounted: fireDisplayPropertyKeys: " + displayPropertyKeysRuleResultOpt.isDefined)
+          D2SpaLogger.logDebug(entityName,"NVListComponent mounted: fireDisplayPropertyKeys: " + displayPropertyKeysRuleResultOpt.isDefined)
 
 
           // Fire "isEditAllowed" ?
@@ -104,14 +109,17 @@ object NVListComponent {
           }
 
 
-          // TODO Hydration should be avoided if the objects are already hydrated
           val hydrationOpt = drySubstrateOpt match {
             case Some(drySubstrate) =>
+              D2SpaLogger.logDebug(entityName,"NVListComponent mounted: some drySubstrate")
+
               displayPropertyKeysRuleResultOpt match {
                 case Some(displayPropertyKeysRuleResult) =>
+                  D2SpaLogger.logDebug(entityName,"NVListComponent mounted: some display property keys")
+
                   val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
 
-                  val isHydrated = Hydration.isHydratedForPropertyKeys(p.proxy.value.eomodel.get,p.proxy.value.cache, drySubstrate, displayPropertyKeys)
+                  val isHydrated = Hydration.isHydratedForPropertyKeys(eomodel,p.proxy.value.cache, drySubstrate, displayPropertyKeys)
                   if (isHydrated) {
                       None
                   } else {
@@ -122,7 +130,8 @@ object NVListComponent {
                       )))
                   }
                 case None =>
-                  log.debug("NVListComponent mounted: drySubstrate: " + drySubstrate)
+                  // DisplayPropertyKeys already fetched -> hydrate with displayProperty Keys
+                  D2SpaLogger.logDebug(entityName, "NVListComponent mounted: drySubstrate | displayPropertyKeys is none " + drySubstrate)
                   val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
                   Some(Hydration(
@@ -136,6 +145,7 @@ object NVListComponent {
               None
           }
 
+          D2SpaLogger.logDebug(entityName,"NVListComponent mounted: hydration is defined " + hydrationOpt.isDefined)
 
 
 
@@ -165,7 +175,7 @@ object NVListComponent {
           )
 
 
-          log.debug("NVListComponent mounted: FireActions: " + fireActions.size)
+          D2SpaLogger.logDebug(entityName, "NVListComponent mounted: FireActions: " + fireActions.size)
           val actions = fireActions.flatten
 
           Callback.when(!actions.isEmpty)(p.proxy.dispatchCB(
@@ -175,7 +185,7 @@ object NVListComponent {
             )
           ))
         case _ =>
-          log.debug("NVListComponent mounted: no entity for entity name: " + entityName)
+          D2SpaLogger.logDebug(entityName, "NVListComponent mounted: no entity for entity name: " + entityName)
           Callback.empty
       }
 
@@ -192,8 +202,8 @@ object NVListComponent {
     }
 
     def editEO(eo: EO) = {
-      val pk = EOValue.pk(eo)
-      val d2wContext = D2WContext(entityName = Some(eo.entity.name), task = Some(TaskDefine.edit), eo = Some(eo))
+      //val pk = EOValue.pk(eo)
+      val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
         $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
@@ -206,23 +216,22 @@ object NVListComponent {
 
     def render(p: Props) = {
 
-      log.debug("NVListComponent render ")
       val d2wContext = p.d2wContext
 
       //log.debug("NVListComponent render |  proxy d2wContext: " + d2wContext)
 
       val entityName = d2wContext.entityName.get
-      log.debug("NVListComponent render for entity: " + entityName)
+      D2SpaLogger.logDebug(entityName, "NVListComponent render for entity: " + entityName)
 
       d2wContext.pageConfiguration match {
         case PotFiredKey(Right(_)) =>
           val ruleResultsModel = p.proxy.value.ruleResults
           //log.debug("NVListComponent render ruleResultsModel: " + ruleResultsModel)
-          log.debug("NVListComponent render |  "  + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+          D2SpaLogger.logDebug(entityName, "NVListComponent render |  "  + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
-          log.debug("NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
+          D2SpaLogger.logDebug(entityName, "NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
 
           val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
@@ -230,7 +239,7 @@ object NVListComponent {
           val cloneAllowed = false && isEditAllowed // not yet implemented
           val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
 
-          log.debug("NVListComponent render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
+          D2SpaLogger.logDebug(entityName, "NVListComponent render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
 
           val dataRepOpt = d2wContext.dataRep
 
@@ -242,12 +251,13 @@ object NVListComponent {
                 case DataRep(Some(fs), _) =>
                   //log.debug("NVListCompoennt look for objects in cache with fs " + fs)
                   //log.debug("NVListCompoennt look for objects in cache " + cache)
-                  log.debug("NVListCompoennt look for objects in cache with fs")
-                  EOCacheUtils.objectsWithFetchSpecification(cache, fs)
+                  D2SpaLogger.logDebug(entityName, "NVListCompoennt look for objects in cache with fs")
+                  EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
 
                 case DataRep(_, Some(eosAtKeyPath)) => {
                   //log.debug("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
-                  log.debug("NVListComponent render eosAtKeyPath")
+                  D2SpaLogger.logDebug(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
+                  D2SpaLogger.logDebug(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
                   val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
                   eovalueOpt match {
                     case Some(eovalue) =>
@@ -255,11 +265,12 @@ object NVListComponent {
                       // ObjectsValue(Vector(1))
                       eovalue match {
                         case ObjectsValue(pks) =>
-                          log.debug("NVListComponent render pks " + pks)
+                          D2SpaLogger.logDebug(entityName, "NVListComponent render pks " + pks)
                           EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value.cache, entityName, pks).toList
                         case _ => List.empty[EO]
                       }
                     case _ =>
+                      D2SpaLogger.logDebug(entityName, "NVListComponent render eosAtKeyPath | eo at key path is None")
                       List.empty[EO]
                   }
                 }
@@ -268,7 +279,7 @@ object NVListComponent {
             }
             case _ => List.empty[EO]
           }
-          log.debug("NVListComponent render eos " + eos.size)
+          D2SpaLogger.logDebug(entityName, "NVListComponent render eos " + eos.size)
 
           var dataExist = eos.size > 0
           val countText = (entityDisplayNameOpt match {
@@ -292,7 +303,7 @@ object NVListComponent {
               eoOnErrorOpt match {
                 case Some(eoOnError) =>
                   val validationError = eoOnError.validationError.get
-                  val objUserDescription = eoOnError.entity.name + " " + eoOnError.values + " : "
+                  val objUserDescription = eoOnError.entityName + " " + eoOnError.values + " : "
                   <.div(<.span(^.color := "red", "Validation error with object: " + objUserDescription), <.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
                 case _ => <.div()
               }
@@ -340,9 +351,9 @@ object NVListComponent {
                       ).when(showFirstCell),
                       displayPropertyKeys toTagMod (
                         propertyKey => {
-                          val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                          val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey), eo = Some(eo))
                           <.td(^.className := "",
-                            D2WComponentInstaller(p.router, propertyD2WContext, eo, p.proxy)
+                            D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
                           )
                         }
                         ),

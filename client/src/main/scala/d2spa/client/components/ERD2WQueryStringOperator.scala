@@ -49,7 +49,7 @@ object ERD2WQueryStringOperator  {
           val entityName = d2wContext.entityName.get
           val propertyName = d2wContext.propertyKey.get
 
-          log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
+          //log.debug("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
           val strValue = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
           // set id but make it unique: ^.id := "description",
           <.div(
