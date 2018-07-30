@@ -63,6 +63,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
     case InitAppSpecificClient =>
       noChange
 
+    case ShowResults =>
+      effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(value.get)))
+
+
     case  InspectEO (fromTask, eo, isOneRecord) =>
       log.debug("PreviousPageHandler | InspectEO from: " + fromTask)
       val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
