@@ -1,7 +1,46 @@
 package d2spa.shared
 
-import boopickle.Default.{generatePickler, _}
+import boopickle.Default._
 import boopickle.{MaterializePicklerFallback, TransformPicklers}
+import d2spa.shared.WebSocketMessages._
+
+
+
+
+object WebSocketMessages {
+
+  // Client ---> Server
+  sealed trait WebSocketMsgIn
+  final case class StringMsgIn(string: String) extends WebSocketMsgIn
+  final case object GetDebugConfiguration extends WebSocketMsgIn
+  final case object FetchEOModel extends WebSocketMsgIn
+  final case object FetchMenus extends WebSocketMsgIn
+  final case class GetMetaData(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
+  final case class RuleToFire(rhs: FiringD2WContext, key: String) extends WebSocketMsgIn
+  final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
+  final case class CompleteEO(eo: EOFault, missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class SearchAll(fs: EOFetchAll) extends WebSocketMsgIn
+  final case class Search(fs: EOQualifiedFetch) extends WebSocketMsgIn
+  final case class NewEO(entityName: String, eo: EO) extends WebSocketMsgIn
+  final case class UpdateEO(eo: EO) extends WebSocketMsgIn
+
+  // Server ---> Client
+  sealed trait WebSocketMsgOut
+
+  final case class DebugConfMsg(showD2WDebugButton: Boolean) extends WebSocketMsgOut
+  final case class FetchedEOModel(eomodel: EOModel) extends WebSocketMsgOut
+  final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
+  final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
+  final case class FetchedObjectsMsgOut(eos: Seq[EO]) extends WebSocketMsgOut
+  final case class FetchedObjectsForListMsgOut(entityName: String, eos: Seq[EO]) extends WebSocketMsgOut
+  final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
+  final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
+}
+
+//class RuleResults(ruleResults: List[RuleResult])
+
+
 
 object TaskDefine {
   val edit = "edit"
@@ -29,23 +68,18 @@ object RuleKeys {
   val isDeleteAllowed = "isDeleteAllowed"
 }
 
+
+
+
 //case class DateValue(value: java.util.Date) extends EOValue
 
-case class EO(entityName: String, values: Map[String,EOValue] = Map(), pk: List[Int], validationError: Option[String] = None)
+//case class EO(entityName: String, values: Map[String, EOValue] = Map.empty[String, EOValue], pk: EOPk, validationError: Option[String] = None)
+case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk, validationError: Option[String] = None)
+//case class EO2(entityName: String, values: List[EOValue2], pk: List[Int], validationError: Option[String] = None)
+//case class EO2(entityName: String, values: Map[String,EOValue2] = Map(),  pk: List[Int])
+//case class EOValueMap(values: Map[String,String] = Map())
 
-/*sealed trait PKValue
-case class SinglePK(pk: Int) extends PKValue
-case class SinglePK(pk: Int) extends PKValue*/
-
-
-
-object Test8 extends MaterializePicklerFallback {
-  import boopickle.Default._
-  implicit val eoPicker: Pickler[EO] = generatePickler[EO]
-
-  def serializer(c: ObjectsValue) = Pickle.intoBytes(c)
-}
-
+case class EOPack(eos: List[EO])
 
 object Test3 extends MaterializePicklerFallback {
 
@@ -57,14 +91,25 @@ object Test3 extends MaterializePicklerFallback {
 
   implicit val stringValuePickler: Pickler[StringValue] = generatePickler[StringValue]
   implicit val intValuePickler: Pickler[IntValue] = generatePickler[IntValue]
+  implicit val booleanValuePickler: Pickler[BooleanValue] = generatePickler[BooleanValue]
   implicit val objectValuePicker: Pickler[ObjectValue] = generatePickler[ObjectValue]
   implicit val objectsValuePicker: Pickler[ObjectsValue] = generatePickler[ObjectsValue]
 
-  eoValuePickler.addConcreteType[StringValue].addConcreteType[IntValue].addConcreteType[ObjectValue].addConcreteType[ObjectsValue]
+  eoValuePickler.addConcreteType[StringValue].addConcreteType[IntValue].addConcreteType[BooleanValue].addConcreteType[ObjectValue].addConcreteType[ObjectsValue]
 
   def serializer(c: EO) = Pickle.intoBytes(c)
 }
 
+
+
+
+object Test8 extends MaterializePicklerFallback {
+  import boopickle.Default._
+  implicit val bPickler = generatePickler[EO]
+  def serializer(c: EOPack) = Pickle.intoBytes(c)
+}
+
+// For EOValue and Class extending
 object Test5 extends MaterializePicklerFallback {
 
   import boopickle.Default._
@@ -75,14 +120,36 @@ object Test5 extends MaterializePicklerFallback {
 
   implicit val stringValuePickler: Pickler[StringValue] = generatePickler[StringValue]
   implicit val intValuePickler: Pickler[IntValue] = generatePickler[IntValue]
+  implicit val booleanValuePickler: Pickler[BooleanValue] = generatePickler[BooleanValue]
   implicit val objectValuePicker: Pickler[ObjectValue] = generatePickler[ObjectValue]
   implicit val objectsValuePicker: Pickler[ObjectsValue] = generatePickler[ObjectsValue]
 
-  eoValuePickler.addConcreteType[StringValue].addConcreteType[IntValue].addConcreteType[ObjectValue].addConcreteType[ObjectsValue]
+  eoValuePickler.addConcreteType[StringValue].addConcreteType[IntValue].addConcreteType[BooleanValue].addConcreteType[ObjectValue].addConcreteType[ObjectsValue]
 
   def serializer(c: EOValue) = Pickle.intoBytes(c)
 }
 
+
+
+
+/*object Test12 extends MaterializePicklerFallback {
+
+  import boopickle.Default._
+  implicit val eoPicker: Pickler[EO2] = generatePickler[EO2]
+
+
+  implicit val eoValuePickler = compositePickler[EOValue2]
+
+  implicit val stringValuePickler: Pickler[StringValue2] = generatePickler[StringValue2]
+  implicit val intValuePickler: Pickler[IntValue2] = generatePickler[IntValue2]
+  implicit val booleanValuePickler: Pickler[BooleanValue2] = generatePickler[BooleanValue2]
+  implicit val objectValuePicker: Pickler[ObjectValue2] = generatePickler[ObjectValue2]
+  implicit val objectsValuePicker: Pickler[ObjectsValue2] = generatePickler[ObjectsValue2]
+
+  eoValuePickler.addConcreteType[StringValue2].addConcreteType[IntValue2].addConcreteType[BooleanValue2].addConcreteType[ObjectValue2].addConcreteType[ObjectsValue2]
+
+  def serializer(c: EOValue2) = Pickle.intoBytes(c)
+}*/
 
 
 
@@ -107,25 +174,64 @@ object Test4 extends MaterializePicklerFallback {
 }
 
 
-case class DebugConf(showD2WDebugButton: Boolean)
+object Test10 extends MaterializePicklerFallback {
+  import boopickle.Default._
+
+  implicit val eoPkPicker: Pickler[EOPk] = generatePickler[EOPk]
+  implicit val eoPicker: Pickler[EO] = generatePickler[EO]
+  implicit val eoValuePicker: Pickler[EOValue] = generatePickler[EOValue]
+  //implicit val eo2Picker: Pickler[EO2] = generatePickler[EO2]
+  implicit val eoPackPicker: Pickler[EOPack] = generatePickler[EOPack]
+
+
+
+  implicit val webSocketMsgOutPickler = compositePickler[WebSocketMsgOut]
+
+  implicit val debugConfMsgPicker: Pickler[DebugConfMsg] = generatePickler[DebugConfMsg]
+  implicit val fetchedEOModelPicker: Pickler[FetchedEOModel] = generatePickler[FetchedEOModel]
+  implicit val fetchedMenusPicker: Pickler[FetchedMenus] = generatePickler[FetchedMenus]
+  implicit val ruleResultsPicker: Pickler[RuleResults] = generatePickler[RuleResults]
+  implicit val fetchedObjectsPicker: Pickler[FetchedObjectsMsgOut] = generatePickler[FetchedObjectsMsgOut]
+  implicit val savingResponseMsgOutPicker: Pickler[SavingResponseMsgOut] = generatePickler[SavingResponseMsgOut]
+  implicit val deletingResponseMsgOutPicker: Pickler[DeletingResponseMsgOut] = generatePickler[DeletingResponseMsgOut]
+
+  webSocketMsgOutPickler.addConcreteType[DebugConfMsg]
+    .addConcreteType[FetchedEOModel]
+    .addConcreteType[FetchedMenus]
+    .addConcreteType[RuleResults]
+    .addConcreteType[FetchedObjectsMsgOut]
+    .addConcreteType[SavingResponseMsgOut]
+    .addConcreteType[DeletingResponseMsgOut]
+
+
+  def serializer(c: WebSocketMsgOut) = Pickle.intoBytes(c)
+}
+
 
 sealed trait EOValue
 case class StringValue(value: String) extends EOValue
 case class IntValue(value : Int) extends EOValue
 case class BooleanValue(value : Boolean) extends EOValue
 case class ObjectValue(eo: EO) extends EOValue
-case class ObjectsValue(eos: Seq[List[Int]]) extends EOValue
+case class ObjectsValue(eos: List[EOPk]) extends EOValue
 case object EmptyValue extends  EOValue
 //case object NoneValue extends EOValue
 
+/*sealed trait EOValue2
+case class StringValue2(value: String) extends EOValue2
+case class IntValue2(value : Int) extends EOValue2
+case class BooleanValue2(value : Boolean) extends EOValue2
+case class ObjectValue2(eo: EO2) extends EOValue2
+case class ObjectsValue2(eos: List[EOPk]) extends EOValue2
+case object EmptyValue2 extends  EOValue2*/
 
 
+case class EOPk(pks: List[Int])
 
 object EOValue {
 
 
-  def isNew(pk: List[Int]) = pk.size == 1 && pk.head < 0
-
+  def isNew(pk: EOPk) = pk.pks.size == 1 && pk.pks.head < 0
 
   // When saving an EO, we have to remove any non db attributes
   def purgedEO(eo: EO) = {
@@ -137,7 +243,7 @@ object EOValue {
     case IntValue(i) => i.toString.length
     case BooleanValue(value) => 1
     case ObjectValue(eo) => 0
-    case ObjectsValue(eos: Seq[List[Int]]) => eos.size
+    case ObjectsValue(eos: Seq[EOPk]) => eos.size
     case EmptyValue => 0
   }
 
@@ -151,29 +257,29 @@ object EOValue {
   def stringV(value: String) = StringValue(value)
   def intV(value: Int) = IntValue(value)
   def eoV(value: EO) =  ObjectValue(eo = value)
-  def eosV(value: Seq[List[Int]]) = ObjectsValue(eos = value)
+  def eosV(value: List[EOPk]) = ObjectsValue(eos = value)
 
 
   def eoValueWithString(str: String) = if (str.length == 0) EmptyValue else StringValue(str)
   def eoValueWithInt(str: String) = if (str.length == 0) EmptyValue else IntValue(str.toInt)
 
-
-  def createAndInsertNewObject(insertedEOs: Map[String, Map[List[Int], EO]], entityName: String): (Map[String, Map[List[Int], EO]], EO) = {
+  def createAndInsertNewObject(insertedEOs: Map[String, Map[EOPk, EO]], entityName: String): (Map[String, Map[EOPk, EO]], EO) = {
     //val entityName = entity.name
     val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
     insertedEOsForEntityOpt match {
-        // We have alreaydy existing in memory eo for that entityName
+      // We have alreaydy existing in memory eo for that entityName
       case Some(insertedEOsForEntity) =>
-        val existingPks = insertedEOsForEntity.keySet.map(_.head)
-        val newMemID = existingPks.min - 1
-        val newPk = List(newMemID)
-        val newEO = EO(entityName, Map.empty[String, EOValue], pk = newPk)
+        val existingPks = insertedEOsForEntity.keySet.map(_.pks.head)
+        val newMemID = if (existingPks.isEmpty) -1 else existingPks.min - 1
+
+        val newPk = EOPk(List(newMemID))
+        val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
         val newEntityMap = insertedEOsForEntity + (newPk -> newEO)
         val newInsertedEOs = insertedEOs + (entityName -> newEntityMap)
         (newInsertedEOs, newEO)
       case None =>
-        val newPk = List(-1)
-        val newEO = EO(entityName, Map.empty[String, EOValue], pk = newPk)
+        val newPk = EOPk(List(-1))
+        val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
         val newEntityMap = Map(newPk -> newEO)
         val newInsertedEOs = Map(entityName -> newEntityMap)
         (newInsertedEOs, newEO)
@@ -187,10 +293,10 @@ object EOValue {
 
 
   // For creation of objects only ?
-  def dryEOWithEntity(entity: EOEntity, pk: List[Int]) = {
-        val pkAttributeNames = entity.pkAttributeNames
-        //val valuesMap = pkAttributeNames.zip(pk.map(IntValue(_))).toMap
-        EO(entity.name, Map(), pk)
+  def dryEOWithEntity(entityName: String, pk: EOPk) = {
+    //val pkAttributeNames = entity.pkAttributeNames
+    //val valuesMap = pkAttributeNames.zip(pk.map(IntValue(_))).toMap
+    EO(entityName, List.empty[String], List.empty[EOValue], pk)
   }
 
 
@@ -228,6 +334,18 @@ object EOValue {
       case _ => true
     }
 
+
+  def definedValues(eo: EO): Map[String,EOValue] = {
+    val valueMap = keyValues(eo)
+    valueMap filter (v => {
+      EOValue.isDefined(v._2)
+    })
+  }
+
+  def keyValues(eo: EO) = {
+    eo.keys.zip(eo.values).toMap
+  }
+
   def stringValueForKey(eo: EO, key: String) = {
     valueForKey(eo, key) match {
       case Some(value) => juiceString(value)
@@ -237,36 +355,47 @@ object EOValue {
 
 
   def valueForKey(eo: EO, key: String) = {
-    if (eo.values.contains(key)) {
-      Some(eo.values(key))
+    val valueMap = keyValues(eo)
+    if (valueMap.contains(key)) {
+      Some(valueMap(key))
     } else
       None
   }
 
+  def takeValueForKey(eo: EO, eovalue: EOValue, key: String): EO = {
+    val valueMap = keyValues(eo)
+    val newValueMap = (valueMap - key) + (key -> eovalue)
+    takeValuesForKeys(eo, newValueMap)
+  }
+
+  def takeValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
+    eo.copy(keys = keyValuePairs.keys.toList, values = keyValuePairs.values.toList)
+  }
+
   // case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
   def completeEoWithEo(existingEO: EO, refreshedEO: EO): EO = {
-    val existingValues = existingEO.values
-    val refreshedValues = refreshedEO.values
+    val existingValues = keyValues(existingEO)
+    val refreshedValues = keyValues(refreshedEO)
     val newValues = existingValues ++ refreshedValues
-    existingEO.copy(values = newValues, validationError = refreshedEO.validationError)
+    existingEO.copy(keys = newValues.keys.toList, values = newValues.values.toList, validationError = refreshedEO.validationError)
   }
 
   def isNew(eo: EO) = {
-    eo.pk.head < 0
+    eo.pk.pks.head < 0
     //val pk = EOValue.pk(eo)
     //(pk.isDefined && pk.get < 0) || pk.isEmpty
     //eo.memID.isDefined
   }
 
   // For single pk EO
-  def pk(eoModel: EOModel, eo: EO): Option[List[Int]] = {
+  def pk(eoModel: EOModel, eo: EO): Option[EOPk] = {
     val entityName = eo.entityName
     val entityOpt = EOModelUtils.entityNamed(eoModel,entityName)
     entityOpt match {
       case Some(entity) =>
         val pkAttributeNames = entity.pkAttributeNames
-        if (eo.values.contains(pkAttributeNames.head)) {
-          Some(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(eo.values(pkAttributeName))))
+        if (eo.keys.contains(pkAttributeNames.head)) {
+          Some(EOPk(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(valueForKey(eo,pkAttributeName).get))))
         } else None
       case None => None
     }
@@ -405,17 +534,26 @@ case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attributes: List[String] = List(), relationships: List[EORelationship] = List())
 case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
 
-
-
 //case class EORef(entityName: String, id: Int)
 
-case class Menus(menus: List[MainMenu], showDebugButton: Boolean)
+case class Menus(menus: List[MainMenu]) //, showDebugButton: Boolean)
 case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
-case class EOFault(entityName : String, pk: List[Int])
+case class EOFault(entityName : String, pk: EOPk)
 
 //case class PreviousTask(task: String, pk: Option[Int])
+
+
+case class PotFiringKey (value: Either[RuleToFire, Option[String]])
+
+case class FiringD2WContext(entityName: Option[String],
+                            task: Option[String],
+                            propertyKey:  Option[String] = None,
+                            pageConfiguration: PotFiringKey = PotFiringKey(Right(None))
+                           )
+
+
 
 case class D2WContextFullFledged(entityName: Option[String],
                   task: Option[String],
@@ -424,6 +562,38 @@ case class D2WContextFullFledged(entityName: Option[String],
 
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
+
+object RulesUtilities {
+
+  def convertFullFledgedToFiringD2WContext(d2wContext: D2WContextFullFledged): FiringD2WContext = {
+    FiringD2WContext(
+    d2wContext.entityName,
+    d2wContext.task,
+    d2wContext.propertyKey,
+      PotFiringKey(Right(d2wContext.pageConfiguration))
+    )
+
+  }
+
+  def convertD2WContextToFullFledged(d2wContext: FiringD2WContext): D2WContextFullFledged = {
+    //log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
+    /*if(d2wContext.pageConfiguration.isDefined) {
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
+      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
+
+    }*/
+
+    D2WContextFullFledged(
+      d2wContext.entityName,
+      d2wContext.task,
+      d2wContext.propertyKey,
+      d2wContext.pageConfiguration.value.right.get
+    )
+  }
+
+}
+
 
 // Kind of cache of entity task d2w rules
 // Allows to change the menu without haveing to fetch the display property keys

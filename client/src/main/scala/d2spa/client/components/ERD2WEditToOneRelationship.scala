@@ -30,6 +30,17 @@ object ERD2WEditToOneRelationship {
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
+  def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
+    println("eoWith | entity name " + entity.name + " id " + id + " eos " + eos )
+    //log.debug("id " + id + " class " + id.getClass.getName)
+    if (id.equals("None")) None
+    val pk = EOPk(id.split("_").map(_.toInt).toList)
+
+    val optEO = eos.find(eo => {
+      pk.equals(eo.pk)
+    })
+    optEO
+  }
 
   class Backend($: BackendScope[Props, Unit]) {
     def mounted(p: Props) = {
@@ -94,16 +105,6 @@ object ERD2WEditToOneRelationship {
       }
     }
 
-    def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
-      //log.debug("id " + id + " class " + id.getClass.getName)
-      if (id.equals("None")) None
-      val pk = id.split("_").map(_.toInt).toList
-
-      val optEO = eos.find(eo => {
-        pk.equals(eo.pk)
-      })
-      optEO
-    }
 
     /*def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
       //log.debug("id " + id + " class " + id.getClass.getName)
@@ -193,7 +194,7 @@ object ERD2WEditToOneRelationship {
 
                                         //log.debug("id " + id + " for eo: " + x)
                                         val displayName = EOValue.stringValueForKey(deo, keyWhenRelationship)
-                                        val valueString = deo.pk.mkString("_")
+                                        val valueString = deo.pk.pks.mkString("_")
                                         (valueString, displayName)
                                       })
                                       // remove None

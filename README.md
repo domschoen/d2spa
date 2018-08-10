@@ -2,9 +2,15 @@
 SPA using Scala.js connecting to a D2W WebObjects server.
 
 It uses:
-  - Scala.js
-  - ScalaReact
-  - Diode
+  - Communication Client <-> Server
+    - WebSocket
+    - Boopickle
+  - Client part
+    - Scala.js
+    - ScalaReact
+    - Diode
+  - Server
+    - Akka
 
 ## Current state
 Description above gives the goal of the project. Current state is far from that. It's a working SPA app but with limited features compare to the goal.
@@ -62,6 +68,31 @@ To turn on the log, no need to recompile, you just need to replace the content o
 
 To make it active:
   - restart the application
+
+
+## Technical
+### Actor + WebSocket
+When a react component misses some data, a request for data is sent over the websocket. Later a data will be send from server to client and will update the model.
+But in between and because a react component may be called multiple time, this request may be sent multiple time and may causes error on the client something like "Cannot read when already busy reading". To solve this problem we store the Action already sent in the model and we will not send it again if already sent:
+
+Component:
+```
+...
+      val sendingAction = InitMetaData(entityName)
+      val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
+
+      Callback.when(!alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
+...
+```
+Circuit:
+```
+...
+  override def handle = {
+    case SendingAction(action) =>
+      updated(value + action, Effect.action(action))
+  }
+...
+```
 
 ## Difficulties
 ### No location with Dynamic route

@@ -23,7 +23,7 @@ object D2WEditPage {
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
 
 
-  class Backend($ : BackendScope[Props, Unit]) {
+  class Backend($: BackendScope[Props, Unit]) {
 
 
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
@@ -46,65 +46,74 @@ object D2WEditPage {
       Callback.when(anyChange) {
         willmounted(nextProps)
       }
+      //willmounted(nextProps)
+
     }
+
+
+    val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
 
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
     def willmounted(p: Props) = {
-
       val d2wContext = p.d2wContext
-
       val entityName = d2wContext.entityName.get
-      log.debug("D2WEditPage: will Mount " + entityName)
+      log.debug("D2WEditPage | will Mount " + entityName)
+      log.debug("D2WEditPage | willMount eo " + d2wContext.eo)
+      log.debug("D2WEditPage | willMount d2wContext " + d2wContext)
+      val task = d2wContext.task.get
+      if (!allowedTasks.contains(task))
+        Callback.empty
+      else {
 
-      log.debug("D2WEditPage: willMount eo " + d2wContext.eo)
-
-      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults, d2wContext)
-
-      log.debug("D2WEditPage: willMount entityMetaDataNotFetched " + entityMetaDataNotFetched)
-      //val entity = props.proxy().menuModel.get.menus.flatMap(_.children).find(m => { m.entity.name.equals(props.entity) }).get.entity
-      val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-
-
-      lazy val noneFireActions = List(
-        fireDisplayPropertyKeys,
-        // in order to have an EO completed with all attributes for the task,
-        // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-        CreateMemID(entityName)
-      )
+        val ruleResults = p.proxy.value.ruleResults
+        val socketReady = p.proxy.value.appConfiguration.socketReady
+        val dataNotFetched = socketReady && !RuleUtils.metaDataFetched(ruleResults, d2wContext)
+        val sendingAction = InitMetaData(d2wContext)
+        val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
 
 
-      val eoOpt = d2wContext.eo
-      val actionList = eoOpt match {
-        case Some(eo) =>
-          if (EOValue.isNew(eo.pk)) {
-            List(
-              fireDisplayPropertyKeys
-            )
-          } else {
-            val eoFault = EOFault(entityName, eo.pk)
-            List(
-              fireDisplayPropertyKeys,
-              // in order to have an EO completed with all attributes for the task,
-              // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-              Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
-            )
-          }
-        case None => noneFireActions
+        val previousPage = p.proxy.value.previousPage
+        val previousPageHasBeenSet = previousPage match {
+          case Some(ppD2WContext) => ppD2WContext.equals(d2wContext)
+          case None => false
+        }
+        log.debug("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
+
+
+        val eoOpt = d2wContext.eo
+        val action = eoOpt match {
+          case Some(eo) =>
+            log.debug("D2WEditPage | mounted | some eo")
+
+            if (EOValue.isNew(eo.pk)) {
+              None
+            } else {
+              val eoFault = EOFault(entityName, eo.pk)
+              val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
+              val actionList = List(
+                // in order to have an EO completed with all attributes for the task,
+                // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
+              )
+              log.debug("D2WEditPage: willMount actionList " + actionList)
+              if (actionList.isEmpty)
+                None
+              else
+                Some(FireActions(
+                  d2wContext,
+                  actionList
+                ))
+            }
+          case None =>
+            Some(NewAndRegisteredEO(d2wContext))
+        }
+
+        Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get)) >>
+          Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
       }
-      val actionList2 = if (entityMetaDataNotFetched) FetchMetaData(d2wContext) :: actionList else actionList
-      log.debug("D2WEditPage: willMount actionList " + actionList2)
-      val callIt = !actionList2.isEmpty
-
-      Callback.when(callIt)(p.proxy.dispatchCB(
-        FireActions(
-          d2wContext,
-          actionList2
-        )
-      ))
-
     }
-
 
     def save(router: RouterCtl[TaskAppPage], entityName: String, eo: EO) = {
 
@@ -143,11 +152,14 @@ object D2WEditPage {
       val entityName = staleD2WContext.entityName.get
       log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
 
+      log.debug("D2WEditPage: eocache : " + p.proxy.value.cache)
 
-      val d2wContext = p.d2wContext
-      //log.debug("D2WEditPage: render eo with fresh context : " + d2wContext)
+      val d2wContext = p.proxy.value.previousPage.get
+      log.debug("D2WEditPage: render eo with fresh context : " + d2wContext)
 
       val eoRefOpt = d2wContext.eo
+      log.debug("D2WEditPage: render eo : " + eoRefOpt)
+
       eoRefOpt match {
         case Some(eoRef) =>
           //log.debug("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
@@ -250,7 +262,7 @@ object D2WEditPage {
 
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .renderBackend[Backend]
-    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps,scope.nextProps))
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 

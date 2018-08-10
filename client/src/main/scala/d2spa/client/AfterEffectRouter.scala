@@ -30,9 +30,9 @@ object AfterEffectRouter {
     val taskName = d2WContext.task.get
     d2WContext.eo match {
       case Some(eo) =>
-        val pk = eo.pk.head
+        val pk = eo.pk.pks.head
         if (pk < 0) {
-          val page = NewEOPage(entityName)
+          val page = EditPage(entityName,pk)
           log.debug("Set Router to page " + page)
           setRouterToPage(page)
         } else {
@@ -41,7 +41,7 @@ object AfterEffectRouter {
         }
 
       case _ => {
-        setRouterToPage(QueryPage(entityName))
+        setRouterToPage(NewEOPage(entityName))
       }
     }
   }

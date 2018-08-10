@@ -6,6 +6,7 @@ import diode.util._
 import d2spa.shared.{EntityMetaData, _}
 import boopickle.DefaultBasic._
 import d2spa.client.logger.log
+import d2spa.shared.WebSocketMessages.RuleToFire
 import jdk.nashorn.internal.ir.PropertyKey
 /**
   * Created by dschoen on 01.05.17.
@@ -19,7 +20,7 @@ sealed trait RulesContainer {
   def ruleResults: List[RuleResult]
 }
 
-case class AppConfiguration(serverAppConf: DebugConf = DebugConf(true), isDebugMode: Boolean = false, fetchMenus: Boolean = true)
+case class AppConfiguration(serverAppConf: DebugConf = DebugConf(true), isDebugMode: Boolean = false, fetchMenus: Boolean = true, socketReady: Boolean = false)
 
 case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
 case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), typeV: String = "stringV") extends RulesContainer
@@ -32,18 +33,19 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 
 case class EOCache(eomodel: Pot[EOModel],
-                   eos: Map[String, Map[List[Int],EO]],
-                   insertedEOs: Map[String, Map[List[Int],EO]])
+                   eos: Map[String, Map[EOPk,EO]],
+                   insertedEOs: Map[String, Map[EOPk,EO]])
 
 
-
+case class DebugConf(showD2WDebugButton: Boolean)
+case class SendingAction(action: Action) extends Action
 
 // define actions
 case object ShowBusyIndicator extends Action
 case object HideBusyIndicator extends Action
 case class SearchWithBusyIndicator(entityName: String) extends Action
 
-case object InitClient extends Action
+case object SocketReady extends Action
 case object InitAppSpecificClient extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus) extends Action
@@ -59,10 +61,10 @@ case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 case object FetchMenu extends Action
 
-case class FetchedObjectsForEntity(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class FetchedObjectsForEntity(eos: Seq[EO]) extends Action
 case class RefreshedEOs(eos: Seq[EO])
 
-case class InitMetaData(entityName: String) extends Action
+case class InitMetaData(d2wContext: D2WContext) extends Action
 case class InitMetaDataForList(entityName: String) extends Action
 //case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
@@ -70,18 +72,18 @@ case class CreateEO(entityName:String) extends Action
 case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
-case class NewEOWithEOModel(eomodel: EOModel, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
-case class NewEOWithEOModelForEdit(entity: EOEntity) extends Action
-case class NewEOWithEntityName(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
-case class NewEOWithEntityNameForEdit(entityName: String) extends Action
+case class NewAndRegisteredEO(d2wContext: D2WContext) extends Action
 case class NewEOCreated(eo: EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOCreatedForEdit(eo: EO) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
-case class RegisterPreviousPage(d2WContext: D2WContext) extends Action
+case class RegisterPreviousPage(d2wContext: D2WContext) extends Action
+case class RegisterPreviousPageAndSetPage(d2wContext: D2WContext) extends Action
 
+case class SetPage(d2WContext: D2WContext) extends Action
+case class UpdateCurrentContextWithEO(eo: EO) extends Action
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
@@ -89,13 +91,14 @@ case object ShowResults extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
+case class SavingEO(eo: EO) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
 case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOValue) extends Action
 
-case class Search(entityName: String) extends Action
+case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
 case class SearchResult(entityName: String, eos: Seq[EO]) extends Action
 // similar to:
@@ -103,7 +106,8 @@ case class SearchResult(entityName: String, eos: Seq[EO]) extends Action
 
 case class SavedEO(fromTask: String, eo: EO) extends Action
 case class DeleteEO(fromTask: String, eo: EO) extends Action
-case class DeleteEOFromList(fromTask: String, eo: EO) extends Action
+case class DeleteEOFromList(eo: EO) extends Action
+case class DeletingEO(eo: EO) extends Action
 case class EditEO(fromTask: String, eo: EO) extends Action
 case class InspectEO(fromTask: String, eo: EO, isOneRecord: Boolean = false) extends Action
 
@@ -114,10 +118,15 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 
 trait D2WAction extends diode.Action
 case class FireRule(rhs: D2WContext, key: String) extends D2WAction
-case class FireRules(keysSubstrate: KeysSubstrate, rhs: D2WContext, key: String) extends D2WAction
+
+// Typical case:
+// key : componentName
+// keysSubstrate: displayPropertyKeys either defined by a rule result or a rule to fire
+// In that case the FireRules will trigger RuleToFire action to the server for as many entries in dipslayPropertyKeys
+case class FireRules(propertyKeys: List[String], rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
-case class FetchMetaData(d2wContext: D2WContext) extends D2WAction
+case class FetchMetaData(d2wContext: D2WContext) extends Action
 
 case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
@@ -131,11 +140,11 @@ object Hydration {
     case DrySubstrate(_, _ , Some(fs)) => EOFetchSpecification.entityName(fs)
   }
 
-  def isEOHydrated(cache: EOCache, entityName: String, pk : List[Int], propertyKeys: List[String]) : Boolean = {
+  def isEOHydrated(cache: EOCache, entityName: String, pk : EOPk, propertyKeys: List[String]) : Boolean = {
     val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, entityName, pk)
     eoOpt match {
       case Some(eo) =>
-        val valuesKeys = eo.values.keySet
+        val valuesKeys = eo.values
         val anyMissingPropertyKey = propertyKeys.find(p => !valuesKeys.contains(p))
         anyMissingPropertyKey.isEmpty
       case None => false
@@ -307,12 +316,10 @@ object RuleUtils {
           ruleResultOpt match {
             case Some(_) => None
             case None =>
-              Some(FireRules(KeysSubstrate(ruleResult = PotFiredRuleResult(Right(displayPropertyKeysRuleResult))), d2wContext, key))
+              Some(FireRules(displayPropertyKeys, d2wContext, key))
           }
         }
-      case None =>
-        val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-        Some(FireRules(KeysSubstrate(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))), d2wContext, key))
+      case None => None
     }
   }
 
@@ -386,9 +393,6 @@ object RuleUtils {
 
   def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
     val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
-    /*if (key.equals(RuleKeys.displayPropertyKeys)) {
-      log.debug("Rule result for display property keys " + ruleResult)
-    }*/
     ruleListValueWithRuleResult(ruleResult)
   }
 
@@ -539,6 +543,28 @@ object D2WContextUtils {
     }
   }
 
+  def convertToPotFiringKey(potFiredKey: PotFiredKey): PotFiringKey = {
+    potFiredKey.value match {
+      case Right(b) => PotFiringKey(Right(b))
+      case Left(fireRule) => {
+        val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(fireRule.rhs)
+        PotFiringKey(Left(RuleToFire(newRhs,fireRule.key)))
+      }
+    }
+  }
+
+
+
+
+  def convertFromD2WContextToFiringD2WContext(d2wContext: D2WContext): FiringD2WContext = {
+    FiringD2WContext(
+        d2wContext.entityName,
+        d2wContext.task,
+        d2wContext.propertyKey,
+        convertToPotFiringKey(d2wContext.pageConfiguration)
+    )
+  }
+
   def convertD2WContextToFullFledged(d2wContext: D2WContext): D2WContextFullFledged = {
     //log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
     /*if(d2wContext.pageConfiguration.isDefined) {
@@ -578,9 +604,12 @@ object D2WContextUtils {
 
 }
 
-case class SetMetaDataWithActions(d2WContext: D2WContext, actions: List[D2WAction], metaData: EntityMetaData) extends Action
 
 case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class SetJustRuleResults(ruleResults: List[RuleResult]) extends Action
+
+
+
 case class FireRelationshipData(property: PropertyMetaInfo) extends Action
 
 case class ShowPage(entity: EOEntity, task: String) extends Action
@@ -592,15 +621,24 @@ case class SetDebugConfiguration(debugConf: DebugConf) extends Action
 
 object EOCacheUtils {
 
+  def removeEOFromCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+    val entityName = eo.entityName
+    val id = eo.pk
+    val entityCache = eos(entityName)
+    val updatedEntityCache = entityCache - id
+    val updatedCache = eos + (entityName -> updatedEntityCache)
+    updatedCache
+  }
+
   //EOValueUtils.pk(eo)
-  def newUpdatedCache(eomodel: EOModel, cache: Map[String, Map[List[Int], EO]], eos: Seq[EO]): Map[String, Map[List[Int], EO]] = {
+  def newUpdatedCache(eomodel: EOModel, cache: Map[String, Map[EOPk, EO]], eos: Seq[EO]): Map[String, Map[EOPk, EO]] = {
     val anyHead = eos.headOption
     anyHead match {
       case Some(head) =>
         val entityName = head.entityName
         val entity = EOModelUtils.entityNamed(eomodel,entityName).get
         val pkAttributeNames = entity.pkAttributeNames
-        val entityMap = if (cache.contains(entityName)) cache(entityName) else Map.empty[List[Int], EO]
+        val entityMap = if (cache.contains(entityName)) cache(entityName) else Map.empty[EOPk, EO]
 
         // we create a Map with eo and id
         // From eos to update, we create a map of key ->
@@ -635,19 +673,25 @@ object EOCacheUtils {
         val newEntityMap = entityMap ++ newAndUpdateMap
 
         cache + (entity.name -> newEntityMap)
-      case _ => Map.empty[String, Map[List[Int], EO]]
+      case _ => Map.empty[String, Map[EOPk, EO]]
     }
   }
 
 
 
   // Entity Name is retreived from the eos
-  def updatedModelForEntityNamed(eomodel: EOModel,cache: Map[String, Map[List[Int], EO]], eos: Seq[EO]): Map[String, Map[List[Int], EO]] = {
+  def updatedModelForEntityNamed(eomodel: EOModel,cache: Map[String, Map[EOPk, EO]], eos: Seq[EO]): Map[String, Map[EOPk, EO]] = {
     if (eos.isEmpty) {
       cache
     } else {
+      println("Zcache " + cache)
+      println("Zcache " + eos)
+      println("Zresult before " + cache)
 
-      val result: Map[String, Map[List[Int], EO]] = newUpdatedCache(eomodel, cache, eos)
+
+      val result: Map[String, Map[EOPk, EO]] = newUpdatedCache(eomodel, cache, eos)
+      println("Zresult " + result)
+
       //log.debug("storing result as :" + result)
       result
     }
@@ -665,19 +709,19 @@ object EOCacheUtils {
   }
 
   // Returns None if nothing registered in the cache for that entityName
-  def objectsForEntityNamed(eos: Map[String, Map[List[Int],EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
+  def objectsForEntityNamed(eos: Map[String, Map[EOPk,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
     val entityEOs = eos(entityName).values.toList
     Some(entityEOs)
   } else None
 
-  def objectForEntityNamedAndPk(eos: Map[String, Map[List[Int],EO]], entityName: String, pk: List[Int]): Option[EO] =
+  def objectForEntityNamedAndPk(eos: Map[String, Map[EOPk,EO]], entityName: String, pk: EOPk): Option[EO] =
     if (eos.contains(entityName)) {
       val entityEOById = eos(entityName)
 
       if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
     } else None
 
-  def objectsWithFetchSpecification(eos: Map[String, Map[List[Int],EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
+  def objectsWithFetchSpecification(eos: Map[String, Map[EOPk,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
     //log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
@@ -694,6 +738,7 @@ object EOCacheUtils {
   def objectsFromAllCachesWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
     val eosOpt = objectsWithFetchSpecification(cache.eos,fetchSpecification)
     val insertedEOsOpt = objectsWithFetchSpecification(cache.insertedEOs,fetchSpecification)
+    println("insertedEOsOpt objectsFromAll.. " + insertedEOsOpt)
 
     eosOpt match {
       case Some(eos) =>
@@ -713,11 +758,11 @@ object EOCacheUtils {
     outOfCacheEOUsingPk(cache, entityName, eo.pk)
   }
 
-  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: Seq[List[Int]]): Seq[EO] = {
+  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: List[EOPk]): Seq[EO] = {
     pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
   }
 
-  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: List[Int]): Option[EO] = {
+  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
     val isInMemory = EOValue.isNew(pk)
     if (isInMemory) {
       val memCache = cache.insertedEOs

@@ -42,12 +42,12 @@ object ERD2WDisplayString {
           //D2SpaLogger.logDebug( entityName, "Render ERD2WDisplayString eo: " + eo)
 
           val propertyName = d2wContext.propertyKey.get
-          if (eo.values.contains(propertyName)) {
+          if (eo.keys.contains(propertyName)) {
             // We expect a value for that property. Either:
             // StringValue
             // EmptyValue
 
-            val eoValue = eo.values(propertyName)
+            val eoValue = EOValue.valueForKey(eo,propertyName).get
             val value = EOValue.juiceString(eoValue)
             <.div(
               <.span(^.id := "description", value)

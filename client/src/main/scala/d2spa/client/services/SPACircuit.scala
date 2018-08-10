@@ -7,39 +7,58 @@ import diode.util._
 import diode.react.ReactConnector
 import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
-import d2spa.shared._
+import d2spa.shared.{EO, EOValue, EntityMetaData, Menus, PropertyMetaInfo, _}
 import boopickle.Default._
+import d2spa.client
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client._
 import d2spa.client.logger._
-
-/*import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import japgolly.scalajs.react.extra.router._*/
-
 import d2spa.client.AppModel
+import d2spa.shared.WebSocketMessages._
 
-import d2spa.shared.{Menus, EntityMetaData, PropertyMetaInfo, EO, EOValue, DebugConf}
 
-
+class SendingActionsHandler[M](modelRW: ModelRW[M, Set[Action]]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case SendingAction(action) =>
+      updated(value + action, Effect.action(action))
+  }
+}
 
 class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends ActionHandler(modelRW) {
   override def handle = {
     case FetchShowD2WDebugButton =>
       D2SpaLogger.logDebug(D2SpaLogger.ALL,"DebugHandler | FetchShowD2WDebugButton")
-      effectOnly(Effect(AjaxClient[Api].getDebugConfiguration().call().map(SetDebugConfiguration(_))))
+      SPAMain.socket.send(GetDebugConfiguration)
+      noChange
 
     case SetDebugConfiguration(debugConf) =>
       D2SpaLogger.logDebug(D2SpaLogger.ALL,"DebugHandler | SetShowD2WDebugButton " + debugConf.showD2WDebugButton)
-      val nextAction = if (value.fetchMenus) FetchEOModelAndMenus else FetchEOModel
-      updated(value.copy(serverAppConf = DebugConf(debugConf.showD2WDebugButton)), Effect.action(nextAction))
+      //val nextAction = if (value.fetchMenus) FetchEOModelAndMenus else FetchEOModel
+      updated(value.copy(serverAppConf = DebugConf(debugConf.showD2WDebugButton)), Effect.action(FetchEOModelAndMenus))
+
 
     case SwithDebugMode =>
       D2SpaLogger.logDebug(D2SpaLogger.ALL,"DebugHandler | SwithDebugMode")
       updated(value.copy(isDebugMode = !value.isDebugMode))
+
+    // Action chain:
+    // 1 SocketReady
+    // 2 FetchShowD2WDebugButton
+    // 3 SetDebugConfiguration
+    // 4 FetchEOModelAndMenus or go directly to 8
+    // 5 SetEOModelThenFetchMenu
+    // 6 FetchMenu
+    // 7 SetMenus
+    // 8 FetchEOModel
+    // 9 SetEOModel
+    // 10 InitAppSpecificClient (to be implemented in the app specific part)
+    case SocketReady =>
+      D2SpaLogger.logDebug(D2SpaLogger.ALL,"Socket Ready")
+      updated(value.copy(socketReady = true), Effect.action(FetchShowD2WDebugButton))
+
   }
 }
 
@@ -51,13 +70,21 @@ class BusyIndicatorHandler[M](modelRW: ModelRW[M, Boolean]) extends ActionHandle
       updated(false)
 
     case SearchWithBusyIndicator(entityName) =>
-      updated(true, Effect.action(Search(entityName)))
+      updated(true, Effect.action(SearchAction(entityName)))
   }
 }
 
 
 
 class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[String, PageConfigurationRuleResults]]]]) extends ActionHandler(modelRW) {
+
+  def updatedRuleResults(ruleCache: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], ruleResults: List[RuleResult]) = {
+    var updatedCache = ruleCache
+    for (ruleResult <- ruleResults) {
+      updatedCache = RuleUtils.registerRuleResult(updatedCache, ruleResult)
+    }
+    updatedCache
+  }
 
 
   // case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
@@ -118,11 +145,12 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
     }*/
 
 
-    case SetMetaDataWithActions(d2wContext, actions, entityMetaData) =>
-      //D2SpaLogger.logDebug(entityName,"RuleResultsHandler | SetMetaDataWithActions " + entityMetaData + " actions: " + actions)
-
-      val updatedRuleResults = updatedRuleResultsWithEntityMetaData(d2wContext, entityMetaData)
-      updated(updatedRuleResults, Effect.action(FireActions(d2wContext, actions)))
+    case FetchMetaData(d2wContext) =>
+      log.debug("RuleResultsHandler | FireActions | FetchMetaData: ")
+      //val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
+      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+      noChange
 
     case SetMetaData(d2wContext, entityMetaData) =>
       val entityName = d2wContext.entityName.get
@@ -133,123 +161,18 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
 
 
     case FireActions(d2wContext: D2WContext, actions: List[D2WAction]) =>
-      if (actions.isEmpty) {
-        noChange
-      } else {
-        D2SpaLogger.logDebugWithD2WContext(d2wContext,"RuleResultsHandler | FireActions " + actions.size)
-        //D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions " + actions.size + " actions: " + actions)
-
-
-        // take first actions and call FireActions again with the rest
-        val fireAction = actions.head
-        val remainingActions = actions.tail
-        fireAction match {
+      for (action <- actions) {
+        action match {
           case FireRule(rhs, key) =>
+            val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(rhs)
+            SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, key))
+          case FireRules(propertyKeys, rhs, key) =>
+            for (propertyKey <- propertyKeys) {
+              val firingRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(rhs)
 
-
-            //D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | should Fire Rule ? " + key + " context: " + rhs)
-            D2SpaLogger.logDebugWithD2WContext(d2wContext,"RuleResultsHandler | FireActions | FireRule | should Fire Rule ? " + key)
-            // convert any rhs depending on previous results
-
-            //val newRhs = D2WContextUtils.convertD2WContextToFullFledgedByResolvingRuleFaults(value, rhs)
-            rhs.pageConfiguration match {
-              case PotFiredKey(Right(value)) =>
-                val newRhs = D2WContextUtils.convertD2WContextToFullFledged(rhs)
-
-                //D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Fire Rule | convertD2WContextToFullFledged " + newRhs)
-                D2SpaLogger.logDebugWithD2WContext(d2wContext,"RuleResultsHandler | FireActions | Fire Rule | key " + key)
-
-
-                effectOnly(Effect(AjaxClient[Api].fireRule(newRhs, key).call().map(rr => {
-                  //D2SpaLogger.logDebug(entityName,"rr " + rr)
-                  SetRuleResults(List(rr), d2wContext, remainingActions)
-                })))
-
-
-              case PotFiredKey(Left(ruleToFile)) =>
-
-                //
-                D2SpaLogger.logDebugWithD2WContext(d2wContext,"RuleResultsHandler | FireActions | FireRule | " + key + " page Configuration is Left " + ruleToFile.key)
-                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(value, ruleToFile.rhs, ruleToFile.key)
-                ruleResultOpt match {
-                  case Some(ruleResult) =>
-                    val updatedAction = FireRules(KeysSubstrate(PotFiredRuleResult(Right(ruleResult))), rhs, key)
-                    val updatedActions = updatedAction :: remainingActions
-                    effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
-
-                  case None =>
-                    val fullFledgedRhs = D2WContextUtils.convertD2WContextToFullFledged(ruleToFile.rhs)
-
-
-                    effectOnly(Effect(AjaxClient[Api].fireRule(fullFledgedRhs, ruleToFile.key).call().map(rr => {
-                      //D2SpaLogger.logDebug(entityName,"rr " + rr)
-                      SetRuleResults(List(rr), d2wContext, actions)
-                    })))
-                }
+              val d2wContextProperty = firingRhs.copy(propertyKey = Some(propertyKey))
+              SPAMain.socket.send(WebSocketMessages.RuleToFire(d2wContextProperty, key))
             }
-
-          case CreateMemID(entityName) =>
-            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | CreateMemID: " + entityName)
-            effectOnly(Effect.action(NewEOWithEntityName(d2wContext, remainingActions)))
-
-          case FetchMetaData(d2wContext) =>
-            val entityName = d2wContext.entityName.get
-            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | FetchMetaData: ")
-            //val taskFault: TaskFault = rulesCon match {case taskFault: TaskFault => taskFault}
-            val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-            effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaDataWithActions(d2wContext, remainingActions, _))))
-
-          case FireRules(keysSubstrate, rhs, key) =>
-            // TODO avoid double fetch
-
-            val entityName = rhs.entityName.get
-
-            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | FireRules")
-            //D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | FireRules: " + keysSubstrate)
-            // For the moment, a KeySubstrate can have only a RuleFault
-            // Let's resolve the fault (= firing the fault)
-
-            keysSubstrate match {
-              case KeysSubstrate(PotFiredRuleResult(Right(ruleResult))) =>
-                //val ruleValue = rulesContainer.ruleResults
-                val keys: Set[String] = ruleResult.key match {
-                  case RuleKeys.keyWhenRelationship =>
-                    Set(ruleResult.value.stringV.get)
-                  //Set(value)
-                  case RuleKeys.displayPropertyKeys =>
-                    ruleResult.value.stringsV.toSet
-                  //Set(value)
-                }
-                val dc = D2WContextUtils.convertFullFledgedToD2WContext(ruleResult.rhs)
-                val rulesActions = keys.toList.map(k => {
-                  val d2wContextProperty = dc.copy(propertyKey = Some(k))
-                  FireRule(d2wContextProperty, key)
-                })
-                val updatedActions = remainingActions ::: rulesActions
-                effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
-
-              case KeysSubstrate(PotFiredRuleResult(Left(ruleToFile))) =>
-                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(value, ruleToFile.rhs, ruleToFile.key)
-                ruleResultOpt match {
-                  case Some(ruleResult) =>
-                    val updatedAction = FireRules(KeysSubstrate(PotFiredRuleResult(Right(ruleResult))), rhs, key)
-                    val updatedActions = updatedAction :: remainingActions
-                    effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
-
-                  case None =>
-                    val fullFledgedRhs = D2WContextUtils.convertD2WContextToFullFledged(ruleToFile.rhs)
-
-                    effectOnly(Effect(AjaxClient[Api].fireRule(fullFledgedRhs, ruleToFile.key).call().map(rr => {
-                      //D2SpaLogger.logDebug(entityName,"rr " + rr)
-                      SetRuleResults(List(rr), d2wContext, actions)
-                    })))
-
-                }
-
-            }
-
-
-
           // Hydration(
           //   DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
           //   WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
@@ -266,8 +189,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           // case class RuleFault(rhs: D2WContextFullFledged, key: String)
 
           case Hydration(drySubstrate, wateringScope) =>
-            val entityName = Hydration.entityName(drySubstrate)
-            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration: " +" wateringScope: " + wateringScope)
+            log.debug("RuleResultsHandler | FireActions | Hydration: " + drySubstrate + " wateringScope: " + wateringScope)
             // We handle only RuleFault
             // -> we expect it
 
@@ -277,8 +199,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
             // Using the d2wContext and the key to fire. We look inside the existing rules to get the rule result
             wateringScope match {
               case WateringScope(PotFiredRuleResult(Right(ruleResult))) =>
-                D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration with scope defined by rule " + ruleResult)
-                D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration drySubstrate " + drySubstrate)
+                log.debug("Hydration with scope defined by rule " + ruleResult)
+                log.debug("Hydration drySubstrate " + drySubstrate)
 
                 //ruleResult match {
                 //  case Some(RuleResult(rhs, key, value)) => {
@@ -292,75 +214,64 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                     ruleResult.value.stringsV.toSet
                   //Set(value)
                 }
-                D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration missingKeys " + missingKeys)
+                log.debug("Hydration missingKeys " + missingKeys)
 
                 drySubstrate match {
                   case DrySubstrate(_, Some(eoFault), _) =>
                     // completeEO ends up with a MegaContent eo update
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration Call server with eo " + eoFault.pk + " missingKeys " + missingKeys)
-                    effectOnly(Effect(AjaxClient[Api].completeEO(eoFault, missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
+                    log.debug("Hydration Call server with eo " + eoFault.pk + " missingKeys " + missingKeys)
+                    // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+                    SPAMain.socket.send(WebSocketMessages.CompleteEO(eoFault, missingKeys))
 
                   case DrySubstrate(Some(eoakp), _, _) =>
-                    val eo = eoakp.eo
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration DrySubstrate " + eo.entityName + " for key " + eoakp.keyPath)
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration DrySubstrate values: " + eo.values)
-                    val eovalueOpt = EOValue.valueForKey(eo, eoakp.keyPath)
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration DrySubstrate valueForKey " + eovalueOpt)
+                    log.debug("Hydration DrySubstrate " + eoakp.eo.entityName + " for key " + eoakp.keyPath)
+                    val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
+                    log.debug("Hydration DrySubstrate valueForKey " + eovalueOpt)
 
                     eovalueOpt match {
                       case Some(eovalue) =>
                         eovalue match {
                           case ObjectsValue(pks) =>
-                            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration DrySubstrate render pks " + pks)
-                            effectOnly(Effect(AjaxClient[Api].hydrateEOs(ruleResult.rhs.entityName.get, pks, missingKeys).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
-                          case ObjectValue(EO(de,_,pk,_)) =>
-                            D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration DrySubstrate render pk " + pk)
-                            effectOnly(Effect(AjaxClient[Api].completeEO(EOFault(de,pk), missingKeys).call().map(UpdateRefreshEOInCache(_, d2wContext, remainingActions))))
+                            log.debug("NVListComponent render pks " + pks)
+                            // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+                            SPAMain.socket.send(WebSocketMessages.HydrateEOs(ruleResult.rhs.entityName.get, pks, missingKeys))
 
-                          case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
+                          case _ => // we skip the action ....
                         }
-                      case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
+                      case _ => // we skip the action ....
                     }
                   case DrySubstrate(_, _, Some(fs)) =>
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration with fs " + fs)
+                    log.debug("Hydration with fs " + fs)
                     fs match {
-                      case fa: EOFetchAll => effectOnly(Effect(AjaxClient[Api].searchAll(fa).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
-                      case fq: EOQualifiedFetch => effectOnly(Effect(AjaxClient[Api].search(fq).call().map(FetchedObjectsForEntity(_, d2wContext, remainingActions))))
+                      case fa: EOFetchAll =>
+                        // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+                        SPAMain.socket.send(WebSocketMessages.SearchAll(fa))
+                      case fq: EOQualifiedFetch =>
+                        // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+                        SPAMain.socket.send(WebSocketMessages.Search(fq))
                     }
 
 
-                  case _ => effectOnly(Effect.action(FireActions(d2wContext, remainingActions))) // we skip the action ....
+                  case _ => // we skip the action ....
                 }
               case WateringScope(PotFiredRuleResult(Left(ruleToFile))) =>
-                D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | Hydration Left " + ruleToFile.key)
-                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(value, ruleToFile.rhs,ruleToFile.key)
+                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(value, ruleToFile.rhs, ruleToFile.key)
                 ruleResultOpt match {
                   case Some(ruleResult) =>
-                    D2SpaLogger.logDebug(entityName,"RuleResultsHandler | FireActions | rule to file has result " + ruleResult.value)
-
                     val updatedAction = Hydration(drySubstrate, WateringScope(PotFiredRuleResult(Right(ruleResult))))
-                    val updatedActions = updatedAction :: remainingActions
+                    val updatedActions = List(updatedAction)
                     effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
-                  case None =>
-                    val fullFledgedRhs = D2WContextUtils.convertD2WContextToFullFledged(ruleToFile.rhs)
 
-                    effectOnly(
-                      Effect(
-                        AjaxClient[Api].fireRule(fullFledgedRhs, ruleToFile.key).call().map(
-                          rr => {
-                            //D2SpaLogger.logDebug(entityName,"rr " + rr)
-                            SetRuleResults(List(rr), d2wContext, actions)
-                          }
-                        )
-                      )
-                    )
+                  case None =>
+
+                    val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(ruleToFile.rhs)
+                    SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, ruleToFile.key))
+
                 }
             }
-
-
         }
-
       }
+      noChange
 
 
 
@@ -381,6 +292,12 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         updatedRuleResults = RuleUtils.registerRuleResult(updatedRuleResults, ruleResult)
       }
       updated(updatedRuleResults, Effect.action(FireActions(d2wContext, actions)))
+
+
+    case SetJustRuleResults(ruleResults) =>
+      log.debug("RuleResultsHandler | SetJustRuleResults")
+      val newRuleResults = updatedRuleResults(value,ruleResults)
+      updated(newRuleResults)
 
   }
 
@@ -403,71 +320,44 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   }
 
 
-  def updatedOutOfDBCache(eos: Map[String, Map[List[Int], EO]]): EOCache = {
+  def updatedOutOfDBCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
     val insertedEOs = value.insertedEOs
     EOCache(value.eomodel, eos, insertedEOs)
   }
 
-  def updatedMemCache(eos: Map[String, Map[List[Int], EO]]): EOCache = {
-    val dbEOs = value.eos
-    EOCache(value.eomodel, dbEOs, eos)
+  def updatedMemCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
+    value.copy(insertedEOs = eos)
   }
 
-  def addEOToDBCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
+  def addEOToDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     addEOToCache(eo, eos)
   }
 
-  def addEOToMemCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
+  def addEOToMemCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     addEOToCache(eo, eos)
   }
 
-  def addEOToCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
+  def addEOToCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     EOCacheUtils.updatedModelForEntityNamed(value.eomodel.get, eos, Seq(eo))
   }
 
-  def removeEOFromDBCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
-    removeEOFromCache(eo,  eos)
+  def removeEOFromDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+    EOCacheUtils.removeEOFromCache(eo,  eos)
   }
 
-  def removeEOFromMemCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
-    removeEOFromCache(eo, eos)
+  def removeEOFromMemCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+    EOCacheUtils.removeEOFromCache(eo, eos)
   }
 
-  def removeEOFromCache(eo: EO, eos: Map[String, Map[List[Int], EO]]): Map[String, Map[List[Int], EO]] = {
-    val entityName = eo.entityName
-    val id = eo.pk
-    val entityCache = eos(entityName)
-    val updatedEntityCache = entityCache - id
-    val updatedCache = eos + (entityName -> updatedEntityCache)
-    updatedCache
-  }
 
 
   override def handle = {
-    // Action chain:
-    // 1 InitClient
-    // 2 FetchShowD2WDebugButton
-    // 3 SetDebugConfiguration
-    // 4 FetchEOModelAndMenus or go directly to 8
-    // 5 SetEOModelThenFetchMenu
-    // 6 FetchMenu
-    // 7 SetMenus
-    // 8 FetchEOModel
-    // 9 SetEOModel
-    // 10 InitAppSpecificClient (to be implemented in the app specific part)
-    case InitClient =>
-      D2SpaLogger.logDebug(D2SpaLogger.ALL,"Init Client")
-      effectOnly(Effect.action(FetchShowD2WDebugButton))
 
-
-    case FetchEOModel =>
-      D2SpaLogger.logDebug(D2SpaLogger.ALL,"FetchEOModel")
-
-      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModel(_))))
 
     case FetchEOModelAndMenus =>
-      D2SpaLogger.logDebug(D2SpaLogger.ALL,"FetchEOModel")
-      effectOnly(Effect(AjaxClient[Api].fetchEOModel().call().map(SetEOModelThenFetchMenu(_))))
+      log.debug("FetchEOModel")
+      SPAMain.socket.send(WebSocketMessages.FetchEOModel)
+      noChange
 
     case SetEOModelThenFetchMenu(eomodel) =>
       val updatedModel = value.copy(eomodel = Ready(eomodel))
@@ -480,14 +370,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(updatedModel, Effect.action(InitAppSpecificClient))
 
 
-    // get the eomodel
-    case NewEOWithEntityName(d2wContext, actions) =>
-      val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"NewEOWithEntityName: " + d2wContext)
-      // Create the EO and set it in the cache
-      effectOnly(
-        Effect.action(NewEOWithEOModel(value.eomodel.get, d2wContext, actions)) // from edit ?
-      )
+
 
     /*case NewEOWithEntityNameForEdit(selectedEntityName) =>
       D2SpaLogger.logDebug(entityName,"EOModelHandler | NewEOWithEntityNameForEdit " + selectedEntityName)
@@ -495,19 +378,33 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(NewEOWithEOModelForEdit(value.get, selectedEntityName)) // from edit ?
       )*/
 
+    case EditEO(fromTask, eo) =>
+      val entityName = eo.entityName
+      D2SpaLogger.logDebug(entityName,"CacheHandler | EditEO | register faulty eo  " + eo)
+
+      // Adjust the db cache
+      val newCache = updatedMemCacheWithEOs(Seq(eo))
+      updated(
+        newCache
+      )
 
 
     // EO goes from inserted EO to db eos
     case SavedEO(fromTask, eo) =>
       val entityName = eo.entityName
       val eomodel = value.eomodel.get
-      D2SpaLogger.logDebug(entityName,"CacheHandler | SavedEO " + eo)
+      D2SpaLogger.logDebug(entityName," v " + eo)
       val isNewEO = EOValue.isNew(eo)
       // Adjust the insertedEOs cache
+      println("insertedEOs " + value.insertedEOs)
+      println("insertedEOs remove eo " + eo)
       val insertedEOs = if (isNewEO) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
+      println("insertedEOs updated " + insertedEOs)
       D2SpaLogger.logDebug(entityName,"CacheHandler | SavedEO | removed if new  " + isNewEO)
       val updatedEO = if (isNewEO) {
         val pk = EOValue.pk(eomodel, eo)
+        D2SpaLogger.logDebug(entityName,"CacheHandler | SavedEO | pk out of EO  " + pk)
+
         eo.copy(pk = pk.get)
       } else eo
       D2SpaLogger.logDebug(entityName,"CacheHandler | SavedEO | register eo  " + updatedEO)
@@ -518,7 +415,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       D2SpaLogger.logDebug(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + d2WContext)
       updated(
         EOCache(value.eomodel, eos, insertedEOs),
-        Effect.action(RegisterPreviousPage(d2WContext))
+        Effect.action(RegisterPreviousPageAndSetPage(d2WContext))
       )
 
     case Save(selectedEntityName, eo) =>
@@ -527,14 +424,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val purgedEO = EOValue.purgedEO(eo)
 
       // Update the DB and dispatch the result withing UpdatedEO action
-      effectOnly(Effect(AjaxClient[Api].updateEO(purgedEO).call().map(savingEO => {
-        val onError = savingEO.validationError.isDefined
-        if (onError) {
-          UpdateEOInCache(savingEO)
-        } else {
-          SavedEO("edit", savingEO)
-        }
-      })))
+      //
+      SPAMain.socket.send(WebSocketMessages.UpdateEO(purgedEO))
+      noChange
 
     // 1) NewEO (MenuHandler)
     // 2) Effect: Save DB
@@ -543,19 +435,22 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case SaveNewEO(entityName, eo) =>
       D2SpaLogger.logDebug(entityName,"CacheHandler | SaveNewEO " + eo)
       // Update the DB and dispatch the result withing UpdatedEO action
-      effectOnly(Effect(AjaxClient[Api].newEO(entityName, eo).call().map(newEO => {
-        val onError = newEO.validationError.isDefined
-        if (onError) {
+      // Will get response with SavingEO
+      SPAMain.socket.send(WebSocketMessages.NewEO(entityName, eo))
+      noChange
 
+    case SavingEO(eo) =>
+      D2SpaLogger.logDebug(eo.entityName,"CacheHandler | SavingEO " + eo)
+      // Update the DB and dispatch the result withing UpdatedEO action
+      val onError = eo.validationError.isDefined
+      val action = if (onError) {
           // TODO implement it
-          EditEO("edit", newEO)
+          EditEO("edit", eo)
 
-        } else {
-          SavedEO("edit", newEO)
-        }
+      } else {
+          SavedEO("edit", eo)
       }
-      ))
-      )
+      effectOnly(Effect.action(action))
 
 
     // Update EO, stay on same page
@@ -586,17 +481,17 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eoses)
       )
 
-    case FetchedObjectsForEntity(eoses, d2wContext, actions) =>
-      D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | FetchedObjectsForEntity d2wContext " + d2wContext)
-      D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | FetchedObjectsForEntity eoses " + eoses)
+    case FetchedObjectsForEntity(eos) =>
+      log.debug("CacheHandler | FetchedObjectsForEntity eoses " + eos)
 
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eoses),
-        Effect.action(FireActions(d2wContext, actions))
+        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eos)
       )
+
 
     case SearchResult(entityName, eoses) =>
       D2SpaLogger.logDebug(entityName,"CacheHandler | SearchResult length " + eoses.length)
+      D2SpaLogger.logDebug(entityName,"CacheHandler | SearchResult before cache " + value)
 
       val action = eoses.length match {
         case x if x == 1 => {
@@ -611,25 +506,33 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(action)
       )
 
-    case DeleteEOFromList(fromTask, eo) =>
+
+    case DeleteEOFromList(eo) =>
       val entityName = eo.entityName
       D2SpaLogger.logDebug(entityName,"CacheHandler | DeleteEOFromList " + eo)
+
+      SPAMain.socket.send(WebSocketMessages.DeleteEOMsgIn(eo))
+      noChange
+
+
+    case DeletingEO(deletedEO) =>
+      log.debug("CacheHandler | DeletingEO " + deletedEO)
 
       /*val eos = value.get
       val newEos = eos.filterNot(o => {o.id.equals(eo.id)})
       updated(Ready(newEos))*/
-      effectOnly(Effect(AjaxClient[Api].deleteEO(eo).call().map(deletedEO => {
-        val onError = deletedEO.validationError.isDefined
-        if (onError) {
-          D2SpaLogger.logDebug(entityName,"Deleted EO error " + deletedEO.validationError)
-          UpdateEOsForEOOnError(deletedEO)
+      val onError = deletedEO.validationError.isDefined
+      if (onError) {
+        log.debug("Deleted EO error " + deletedEO.validationError)
+        effectOnly(Effect.action(UpdateEOsForEOOnError(deletedEO)))
 
-        } else {
-          D2SpaLogger.logDebug(entityName,"Deleted EO action ")
+      } else {
+        log.debug("Deleted EO action ")
 
-          DeletedEO(deletedEO)
-        }
-      })))
+        effectOnly(Effect.action(DeletedEO(deletedEO)))
+      }
+
+
     case DeletedEO(deletedEO) =>
       val entityName = deletedEO.entityName
       D2SpaLogger.logDebug(entityName, "CacheHandler | Deleted EO " + deletedEO)
@@ -639,6 +542,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val newEntityMap = entityMap - eoPk
       val newValue = value.eos + (entityName -> newEntityMap)
       updated(updatedOutOfDBCache(newValue))
+
 
 
     // set error on eo
@@ -655,6 +559,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
     case UpdateEOValueForProperty(eo, d2wContext, newEOValue) =>
+      println("UpdateEOValueForProperty")
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
 
@@ -663,7 +568,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
       // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
       D2SpaLogger.logDebug(entityName, "EO: " + eo)
-      val updatedEO = eo.copy(values = (eo.values - propertyName) + (propertyName -> newEOValue))
+      val noValidationErrorEO = eo.copy(validationError = None)
+      val updatedEO = EOValue.takeValueForKey(noValidationErrorEO, newEOValue, propertyName)
+      D2SpaLogger.logDebug(entityName, "CacheHandler | Update EO Property: updatedEO " + updatedEO)
 
       if (EOValue.isNew(updatedEO.pk)) {
         updated(updatedMemCacheWithEOs(Seq(updatedEO)))
@@ -671,33 +578,22 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         updated(EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value, Seq(updatedEO)))
       }
 
-    case NewEOWithEOModel(eomodel, d2wContext, actions: List[D2WAction]) =>
+    case NewAndRegisteredEO(d2wContext) =>
       D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | NewEOWithEOModel: " + d2wContext)
       val entityName = d2wContext.entityName.get
       // Create the EO and set it in the cache
+
+
+      println("value.insertedEOs " + value.insertedEOs)
+      println("entityName " + entityName)
       val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, entityName)
 
       D2SpaLogger.logDebug(entityName, "newValue " + newValue)
       D2SpaLogger.logDebug(entityName, "newEO " + newEO)
+      val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
 
-      //val eo = EOValue.memEOWith(eomodel, entityName, newEO.pk)
-      val newD2WContext = d2wContext.copy(eo = Some(newEO))
-      updated(updatedMemCache(newValue),
-        Effect.action(FireActions(newD2WContext, actions)))
+      updated(updatedMemCache(newValue),Effect.action(RegisterPreviousPageAndSetPage(updatedD2WContext)))
 
-    case NewEOWithEOModelForEdit(entity) =>
-      val entityName = entity.name
-      D2SpaLogger.logDebug(entityName, "CacheHandler | NewEOWithEOModelForEdit " + entityName)
-      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, entityName)
-
-      D2SpaLogger.logDebug(entityName, "newValue " + newValue)
-      D2SpaLogger.logDebug(entityName, "newEO " + newEO)
-      //val eo = EOValue.memEOWith(eomodel, entityName, newEO.memID)
-
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.edit), eo = Some(newEO))
-
-      updated(updatedMemCache(newValue),
-        Effect.action(RegisterPreviousPage(d2wContext)))
 
 
   }
@@ -705,26 +601,23 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 }
 
 
-
 class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(modelRW) {
 
   override def handle = {
-    case FetchMenu =>
-       D2SpaLogger.logDebug(D2SpaLogger.ALL,"Init Client")
-       if (value.isEmpty) {
-         D2SpaLogger.logDebug(D2SpaLogger.ALL,"Api get Menus")
-         effectOnly(Effect(AjaxClient[Api].getMenus().call().map(SetMenus)))
-       } else
-         noChange
 
-    case InitMenuAndEO(eo, missingKeys) =>
-      effectOnly(Effect(AjaxClient[Api].getMenus().call().map(menus => {
-        SetMenusAndEO(menus, eo, missingKeys)
-      })))
+    // server response will come with SetMenus
+    case FetchMenu =>
+      log.debug("Init Client")
+      if (value.isEmpty) {
+        log.debug("Api get Menus")
+        SPAMain.socket.send(FetchMenus)
+      }
+      noChange
+
 
     case SetMenus(menus) =>
-      D2SpaLogger.logDebug(D2SpaLogger.ALL,"Set Menus " + menus)
-      updated(Ready(menus), Effect.action(FetchEOModel))
+      log.debug("Set Menus " + menus)
+      updated(Ready(menus), Effect.action(InitAppSpecificClient))
 
 
   }

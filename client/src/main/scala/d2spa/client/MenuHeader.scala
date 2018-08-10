@@ -7,13 +7,12 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import d2spa.client.components.GlobalStyles
-
 import scalacss.ScalaCssReact._
 import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
 import d2spa.client.components.Icon
 import d2spa.client.logger.log
-import d2spa.shared.EOEntity
+import d2spa.shared.{EOEntity, TaskDefine}
 
 
 
@@ -36,14 +35,15 @@ object MenuHeader {
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some("query"))
 
       Callback.log(s"Menu selected: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
+        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPageAndSetPage(d2wContext)))
     }
 
     def newEO(entity: EOEntity) = {
       //log.debug("new EO for entity " + entity)
+      val d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit), eo = None)
 
       Callback.log(s"New EO for: $entity") >>
-        $.props >>= (_.proxy.dispatchCB(NewEOWithEOModelForEdit(entity)))
+        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPageAndSetPage(d2wContext)))
     }
 
 
@@ -69,7 +69,7 @@ object MenuHeader {
               )
             ),
             {
-              if (p.proxy.value.menuModel.get.showDebugButton) {
+              if (p.proxy.value.appConfiguration.serverAppConf.showD2WDebugButton) {
                 Button(Button.Props(p.proxy.dispatchCB(SwithDebugMode), CommonStyle.danger), Icon.bug, debugButtonText)
               } else <.span("")
             }

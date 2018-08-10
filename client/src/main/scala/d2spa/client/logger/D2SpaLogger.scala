@@ -5,8 +5,8 @@ import d2spa.client.logger._
 object D2SpaLogger {
 
     val ALL = "ALL"
-    //val EntityFocus = List("CustomerBusiness","Customer")
-    val EntityFocus = List()
+    val EntityFocus = List("Project","Customer")
+    //val EntityFocus = List()
 
 
     def logDebug(entityName: String, text: String) = {

@@ -37,6 +37,7 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
 
   override val actionHandler = composeHandlers(
+    new SendingActionsHandler(zoomTo(_.content.sendingActions)),
     new AppConfigurationHandler(zoomTo(_.content.appConfiguration)),
     new BusyIndicatorHandler(zoomTo(_.content.showBusyIndicator)),
     new MenuHandler(zoomTo(_.content.menuModel)),
@@ -70,7 +71,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
     case  InspectEO (fromTask, eo, isOneRecord) =>
       log.debug("PreviousPageHandler | InspectEO from: " + fromTask)
       val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
-      effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
+      effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
     case  InitMetaDataForList (entityName) =>
@@ -78,25 +79,41 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      effectOnly(Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
+      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+      noChange
 
-    case InitMetaData(entityName) =>
-      log.debug("PreviousPageHandler | InitMetaData for Query page: " + entityName)
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.query))
+    case InitMetaData(d2wContext) =>
+      log.debug("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-      updated(
-        // change context to inspect
-        Some(d2wContext),
-        Effect(AjaxClient[Api].getMetaData(fullFledged).call().map(SetMetaData(d2wContext,_))))
+
+      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+      noChange
+
+    case UpdateCurrentContextWithEO(eo) =>
+      val newContext = value.get.copy(eo = Some(eo))
+      updated(Some(newContext))
+
+
+    case RegisterPreviousPageAndSetPage(d2wContext) =>
+      val  stack = stackD2WContext(d2wContext)
+      log.debug("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
+
+      updated(Some(stack),Effect.action(SetPage(stack)))
+
+
 
     case RegisterPreviousPage(d2WContext) =>
       val  stack = stackD2WContext(d2WContext)
       log.debug("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
-      updated(
-        // change context to inspect
-        Some(stack),
+
+      updated(Some(stack))
+
+
+    case SetPage(d2WContext) =>
+      effectOnly(
         Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext))
       )
+
 
     case SetPreviousPage =>
       log.debug("PreviousPageHandler | SetPreviousPage to: " + value)
@@ -130,7 +147,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
-    case Search(entityName) =>
+    case SearchAction(entityName) =>
       log.debug("PreviousPageHandler | Search | " + entityName + " | value: " + value)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
@@ -152,14 +169,17 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.debug("PreviousPageHandler | Search | Register Previous " + stack)
 
       val effect = fs match {
-        case fa: EOFetchAll => Effect(AjaxClient[Api].searchAll(fa).call().map(SearchResult(entityName, _)))
-        case fq: EOQualifiedFetch => Effect(AjaxClient[Api].search(fq).call().map(SearchResult(entityName, _)))
+        case fa: EOFetchAll =>
+          // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+          SPAMain.socket.send(WebSocketMessages.SearchAll(fa))
+        case fq: EOQualifiedFetch =>
+          // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
+          SPAMain.socket.send(WebSocketMessages.Search(fq))
       }
 
       updated(
         // change context to inspect
-        Some(stack),
-        effect
+        Some(stack)
       )
 
   }

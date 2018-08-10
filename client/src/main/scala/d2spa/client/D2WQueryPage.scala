@@ -24,7 +24,7 @@ object D2WQueryPage {
 
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      val cEntityName = currentProps.d2wContext.entityName
+      /*val cEntityName = currentProps.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.entityName
       val entityNameChanged = !cEntityName.equals(nEntityName)
 
@@ -36,11 +36,13 @@ object D2WQueryPage {
 
       log.debug("cEntityName " + cEntityName + " nEntityName " + nEntityName)
 
-      val anyChange = entityNameChanged || isDebugModeChanged
+      val anyChange = entityNameChanged || isDebugModeChanged*/
 
-      Callback.when(anyChange) {
-        mounted(nextProps)
-      }
+      //Callback.when(anyChange) {
+      //  mounted(nextProps)
+      //}
+      mounted(nextProps)
+
     }
 
 
@@ -48,18 +50,30 @@ object D2WQueryPage {
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      log.debug("D2WQueryPage " + entityName)
+      log.debug("D2WQueryPage | mounted " + entityName)
 
       val ruleResults = p.proxy.value.ruleResults
-      val dataNotFetched = !RuleUtils.metaDataFetched(ruleResults, d2wContext)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName)))
+      val socketReady = p.proxy.value.appConfiguration.socketReady
+      val dataNotFetched = socketReady && !RuleUtils.metaDataFetched(ruleResults, d2wContext)
+      log.debug("D2WQueryPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched)
+      val sendingAction = InitMetaData(d2wContext)
+      val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
+
+      val previousPage = p.proxy.value.previousPage
+      val previousPageHasBeenSet = previousPage match {
+        case Some(ppD2WContext) => ppD2WContext.equals(d2wContext)
+        case None => false
+      }
+
+      Callback.when(!previousPageHasBeenSet)(p.proxy.dispatchCB(RegisterPreviousPage(d2wContext))) >>
+        Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
     }
 
 
 
     def search(router: RouterCtl[TaskAppPage],entityName: String) = {
       Callback.log(s"Search: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(Search(entityName)))
+        $.props >>= (_.proxy.dispatchCB(SearchAction(entityName)))
     }
 
 
@@ -122,7 +136,7 @@ object D2WQueryPage {
                                       )
                                     )
                                   }
-                                )
+                                  )
                               )
                             )
                           )

@@ -199,7 +199,7 @@ object ERD2WInspect {
 
     def deleteEO(eo: EO) = {
       Callback.log(s"Delete: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list", eo)))
+        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList(eo)))
     }
 
     def render(p: Props) = {

@@ -13,8 +13,10 @@ import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import CssSettings._
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
-import d2spa.shared.{EOValue, TaskDefine, EO, EOEntity}
+import d2spa.client.services.WebSocketClient.{Socket, websocketUrl}
+import d2spa.shared.{EO, EOEntity, EOValue, TaskDefine}
 import diode.react.ModelProxy
+import org.scalajs.dom.{Blob, MessageEvent}
 import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
 
 @JSExportTopLevel("SPAMain")
@@ -32,7 +34,7 @@ object SPAMain extends js.JSApp {
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
   case class EditPage(entity: String,  pk: Int) extends TaskAppPage
-  case class NewEOPage(entity: String) extends TaskAppPage
+  case class NewEOPage(entityName: String) extends TaskAppPage
   case class InspectPage(entity: String, pk: Int) extends TaskAppPage
 
   object TaskAppPage {
@@ -54,9 +56,13 @@ object SPAMain extends js.JSApp {
               menusConnection(p => {
                 val d2wContext = p.value.previousPage match {
                   case Some(previousPage) =>
+                    println("SPAMain | Router previous page " + previousPage)
                     previousPage
                   case None =>
-                    D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.query))
+                    println("SPAMain | Router no previous Page")
+                    val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.query))
+                    //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
+                    firstD2WContext
 
                 }
                 D2WQueryPage(ctl, d2wContext, p)
@@ -72,7 +78,9 @@ object SPAMain extends js.JSApp {
                   case Some(previousPage) =>
                     previousPage
                   case None =>
-                    D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.list))
+                    val firstD2WContext =D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.list))
+                    //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
+                    firstD2WContext
 
                 }
                 D2WListPage(ctl, d2wContext, p)
@@ -87,7 +95,10 @@ object SPAMain extends js.JSApp {
                    case Some(previousPage) =>
                      previousPage
                    case None =>
-                     D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), pk = Some(m.pk))
+                     val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), pk = Some(m.pk))
+                     //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
+                     firstD2WContext
+
 
                  }
                  D2WEditPage(ctl, d2wContext, p)
@@ -103,18 +114,28 @@ object SPAMain extends js.JSApp {
                   case Some(previousPage) =>
                     previousPage
                   case None =>
-                    D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), pk = Some(m.pk))
+                    val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), pk = Some(m.pk))
+                    //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
+                    firstD2WContext
 
                 }
                 D2WEditPage(ctl, d2wContext, p)
               })
             }
           )
+
+        // To use only to enter the app
         | dynamicRouteCT(("#task/new/entity" / string(".*")).caseClass[NewEOPage]) ~> dynRenderR(
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
-              val d2wContext = p.value.previousPage.get
+              val d2wContext = p.value.previousPage match {
+                case Some(previousPage) =>
+                  previousPage
+                case None =>
+                  D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit))
+              }
+
               D2WEditPage(ctl, d2wContext, p)
             })
           }
@@ -146,6 +167,13 @@ object SPAMain extends js.JSApp {
 
   val router = Router(baseUrl, config)
 
+  val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
+    case blob: Blob =>
+      println("Will read socket")
+      Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
+      //Socket.blobReader.abort()
+    case _ => dom.console.log("Error on receive, should be a blob.")
+  })
 
   @JSExport
   def main(): Unit = {
@@ -154,11 +182,11 @@ object SPAMain extends js.JSApp {
     //log.enableServerLogging("/logging")
     log.info("This message goes to server as well")
 
+
     // create stylesheet
     GlobalStyles.addToDocument()
 
-    //WebSocketClient.init()
-    MyCircuit.dispatch(InitClient)
+
 
     // create the router
     val router = Router(BaseUrl.until_#, config)

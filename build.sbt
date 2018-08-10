@@ -27,11 +27,13 @@ lazy val client: Project = (project in file("client"))
     libraryDependencies ++= Settings.scalajsDependencies.value,
     // by default we do development build, no eliding
     //elideOptions := Seq("-Xelide-below", "WARNING"),
-    elideOptions := Seq(),
+    //elideOptions := Seq(),
+    elideOptions := Seq("-Xelide-below", sys.props.getOrElse("elide.below", "0")),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // RuntimeDOM is needed for tests
-    // yes, we want to package JS dependencies
+     jsDependencies += RuntimeDOM % "test",
+   // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
     scalaJSUseMainModuleInitializer := true,

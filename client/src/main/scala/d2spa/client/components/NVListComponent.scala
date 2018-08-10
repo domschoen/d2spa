@@ -178,6 +178,9 @@ object NVListComponent {
           D2SpaLogger.logDebug(entityName, "NVListComponent mounted: FireActions: " + fireActions.size)
           val actions = fireActions.flatten
 
+          D2SpaLogger.logDebug(entityName, "NVListComponent mounted: actions: " + actions)
+
+
           Callback.when(!actions.isEmpty)(p.proxy.dispatchCB(
             FireActions(
               d2wContext,
@@ -206,12 +209,12 @@ object NVListComponent {
       val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
+        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPageAndSetPage(d2wContext)))
     }
 
     def deleteEO(eo: EO) = {
       Callback.log(s"Delete: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList("list", eo)))
+        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList(eo)))
     }
 
     def render(p: Props) = {
@@ -251,7 +254,7 @@ object NVListComponent {
                 case DataRep(Some(fs), _) =>
                   //log.debug("NVListCompoennt look for objects in cache with fs " + fs)
                   //log.debug("NVListCompoennt look for objects in cache " + cache)
-                  D2SpaLogger.logDebug(entityName, "NVListCompoennt look for objects in cache with fs")
+                  D2SpaLogger.logDebug(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
                   EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
 
                 case DataRep(_, Some(eosAtKeyPath)) => {
@@ -279,7 +282,7 @@ object NVListComponent {
             }
             case _ => List.empty[EO]
           }
-          D2SpaLogger.logDebug(entityName, "NVListComponent render eos " + eos.size)
+          D2SpaLogger.logDebug(entityName, "NVListComponent render eos " + eos)
 
           var dataExist = eos.size > 0
           val countText = (entityDisplayNameOpt match {

@@ -14,6 +14,8 @@ import d2spa.client.MegaContent
 import d2spa.client.SPAMain.TaskAppPage
 import d2spa.shared.TaskDefine
 
+
+// Component not used
 object ERDQuery {
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
@@ -56,7 +58,7 @@ object ERDQuery {
 
       val ruleResults = p.proxy.value.ruleResults
       val dataNotFetched = !RuleUtils.metaDataFetched(ruleResults, d2wContext)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(entityName)))
+      Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(d2wContext)))
     }
 
     def render(p: Props) = {

@@ -33,7 +33,7 @@ object DisplayBoolean {
             // We expect a value for that property. Either:
             // StringValue
             // EmptyValue
-            val eoValue = eo.values(propertyName)
+            val eoValue = EOValue.valueForKey(eo,propertyName).get
             val value = EOValue.juiceBoolean(eoValue)
             <.div(
               (<.i(^.className := "glyphicon glyphicon-ok")).when(value)
