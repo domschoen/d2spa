@@ -115,6 +115,7 @@ object D2WEditPage {
       }
     }
 
+
     def save(router: RouterCtl[TaskAppPage], entityName: String, eo: EO) = {
 
       val isNewEO = EOValue.isNew(eo)
@@ -202,6 +203,11 @@ object D2WEditPage {
                     <.div(^.className := "buttonsbar d2wPage",
                       <.span(^.className := "buttonsbar attribute beforeFirstButton", displayName),
                       <.span(^.className := "buttonsbar",
+                        if (isEdit(p)) {
+                          <.img(^.paddingRight := 11.px ,^.src := "/assets/images/ButtonCancel.gif", ^.onClick --> returnAction(p.router, entityName))
+                        } else {
+                          " "
+                        },
                         if (isEdit(p)) {
                           <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eo))
                         } else {
