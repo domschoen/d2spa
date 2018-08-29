@@ -255,9 +255,13 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                   case _ => // we skip the action ....
                 }
               case WateringScope(PotFiredRuleResult(Left(ruleToFile))) =>
+                log.debug("RuleResultsHandler | FireActions | Hydration:  wateringScope with rule To File: ")
+
                 val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(value, ruleToFile.rhs, ruleToFile.key)
                 ruleResultOpt match {
                   case Some(ruleResult) =>
+                    log.debug("RuleResultsHandler | FireActions | Hydration:  wateringScope with rule To File: existing rule result: " + ruleResult)
+
                     val updatedAction = Hydration(drySubstrate, WateringScope(PotFiredRuleResult(Right(ruleResult))))
                     val updatedActions = List(updatedAction)
                     effectOnly(Effect.action(FireActions(d2wContext, updatedActions)))
@@ -265,6 +269,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                   case None =>
 
                     val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(ruleToFile.rhs)
+                    log.debug("RuleResultsHandler | FireActions | Hydration: wateringScope with rule To File: firing | rhs " + newRhs)
+                    log.debug("RuleResultsHandler | FireActions | Hydration: wateringScope with rule To File: firing | key " + ruleToFile.key)
                     SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, ruleToFile.key))
 
                 }

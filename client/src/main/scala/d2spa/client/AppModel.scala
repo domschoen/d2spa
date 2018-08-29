@@ -31,6 +31,29 @@ object PageConfiguration {
 case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 
+// cache could be filled with an FS which could fill it partially
+// how to know if it is filled for the FS we want ?
+// store qualifier -> eos
+// if if contains an entry for the qualifier or if partial a full exists
+
+// data structure
+// Map: entity --> EntityCache( full : Some(Map[EOPk,EO]]), partials : Map[EOQualifier, Map[EOPk,EO]])
+// or
+// Map: entity --> Map[EOQualifier, Map[EOPk,EO]])
+// if only 1 qualifier and is EmptyQualifier
+// EmptyQualifier has to be used also for search in that way we can merge fetch and fetch all
+
+// server knows also qualifier --> eos
+// if new eo or eo updated -> if validate for qualifier -> send update of qualifier --> eos
+
+// mechanism for qualifier inclusion i.e if FetchAll not need to store something else
+// not storing a partial if an all (at client and server) Note: if a partial is executed on the client and an full exists, it will not go to the server
+
+// the server could decide to:
+// return an all for a partial if not so many rows
+// return a batch of a partial or full if too many rows
+
+// concept of qualifier / Batch number --> eos
 
 case class EOCache(eomodel: Pot[EOModel],
                    eos: Map[String, Map[EOPk,EO]],
@@ -269,7 +292,11 @@ object EOQualifierType {
 case class KeysSubstrate(ruleResult: PotFiredRuleResult)
 
 
-case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
+case class DrySubstrate(
+                          eosAtKeyPath: Option[EOsAtKeyPath] = None,
+                          eo: Option[EOFault] = None,
+                          fetchSpecification: Option[EOFetchSpecification] = None
+                       )
 case class WateringScope(ruleResult: PotFiredRuleResult)
 //case class EORefsDefinition()
 case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)

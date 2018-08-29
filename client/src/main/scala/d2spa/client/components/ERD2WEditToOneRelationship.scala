@@ -43,15 +43,58 @@ object ERD2WEditToOneRelationship {
   }
 
   class Backend($: BackendScope[Props, Unit]) {
+
+    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+      log.debug("ERD2WEditToOneRelationship | willReceiveProps")
+
+      val p = nextProps
+      val d2wContext = p.d2wContext
+      val eomodel = p.proxy.value.cache.eomodel.get
+      val cache = p.proxy.value.cache
+
+      val ruleResults = currentProps.proxy.value.ruleResults
+      val keyWhenRelationshipRuleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+      val continueMount = keyWhenRelationshipRuleResultOpt match {
+        case Some(keyWhenRelationshipRuleResult) =>
+          log.debug("ERD2WEditToOneRelationship | willReceiveProps | Key when relathionship: YES ")
+          val keyWhenRelationshipOpt = RuleUtils.ruleStringValueWithRuleResult(keyWhenRelationshipRuleResultOpt)
+          val keyWhenRelahionship = keyWhenRelationshipOpt.get
+          val propertyName = d2wContext.propertyKey.get
+          val entityName = p.d2wContext.entityName.get
+
+          val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+
+          val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+          val destinationEntity = destinationEntityOpt.get
+
+          val isHydrated = Hydration.isHydratedForPropertyKeys(
+            eomodel,
+            cache,
+            DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
+            List(keyWhenRelahionship))
+          log.debug("ERD2WEditToOneRelationship | willReceiveProps | key when relathionship but isHydrated " + isHydrated)
+
+          !isHydrated
+        case None =>
+          log.debug("ERD2WEditToOneRelationship | willReceiveProps | no key when relathionship")
+          true
+      }
+
+      Callback.when(continueMount) {
+        mounted(nextProps)
+      }
+      //mounted(nextProps)
+
+    }
+
+
+
     def mounted(p: Props) = {
       log.debug("ERD2WEditToOneRelationship mounted")
 
       val d2wContext = p.d2wContext
       val propertyName = d2wContext.propertyKey.get
-      val ruleResults = p.proxy.value.ruleResults
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
 
-      log.debug("ERD2WEditToOneRelationship mounted: dataNotFetched " + dataNotFetched)
 
       val entityName = p.d2wContext.entityName.get
       val eomodel = p.proxy.value.cache.eomodel.get
@@ -64,30 +107,38 @@ object ERD2WEditToOneRelationship {
       log.debug("ERD2WEditToOneRelationship mounted: destinationEntity " + destinationEntityOpt)
       destinationEntityOpt match {
         case Some(destinationEntity) =>
-          val keyWhenRelationshipFireRule = FireRule(d2wContext, RuleKeys.keyWhenRelationship)
+          val ruleResults = p.proxy.value.ruleResults
+          val keyWhenRelationshipRuleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
 
-          Callback.when(dataNotFetched)(p.proxy.dispatchCB(
-            FireActions(
-              d2wContext, // rule Container
+          log.debug("ERD2WEditToOneRelationship mounted | keyWhenRelationshipRuleResultOpt is defined " + keyWhenRelationshipRuleResultOpt.isDefined)
 
-              List[D2WAction](
-                // Fire keyWhenRelationship for D2WContext
-                keyWhenRelationshipFireRule,
-
-                // Already done at Page level
-                // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
-
-                // Substrate defined by objects to fetch for destination entity name
-                // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
-                // Example:
-                //    Hydration(
-                //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
-                //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
-
-                Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(PotFiredRuleResult(Left(keyWhenRelationshipFireRule))))
+          Callback.when(!keyWhenRelationshipRuleResultOpt.isDefined)(p.proxy.dispatchCB(
+              FireActions(
+                d2wContext, // rule Container
+                List[D2WAction](
+                  FireRule(d2wContext, RuleKeys.keyWhenRelationship)
+                )
               )
-            )
-          ))
+            )) >>
+            Callback.when(keyWhenRelationshipRuleResultOpt.isDefined)(p.proxy.dispatchCB(
+              FireActions(
+                d2wContext, // rule Container
+                List[D2WAction](
+                  // Already done at Page level
+                  // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+
+                  // Substrate defined by objects to fetch for destination entity name
+                  // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
+                  // Example:
+                  //    Hydration(
+                  //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
+                  //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
+
+                  Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(PotFiredRuleResult(Right(keyWhenRelationshipRuleResultOpt.get))))
+
+                )
+              )
+            ))
 
         case None =>
           Callback.empty
@@ -231,6 +282,7 @@ object ERD2WEditToOneRelationship {
 
   private val component = ScalaComponent.builder[Props]("ERD2WEditToOneRelationship")
     .renderBackend[Backend]
+    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
