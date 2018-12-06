@@ -38,7 +38,7 @@ case class MenuItem(
                    )
 
 object MenusActor {
-  def props(eomodelActor: ActorRef): Props = Props(new MenusActor(eomodelActor))
+  def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new MenusActor(eomodelActor, ws))
 
   case class MenusResponse(menus: Menus)
 
@@ -46,7 +46,7 @@ object MenusActor {
 
 }
 
-class MenusActor(eomodelActor: ActorRef) extends Actor with ActorLogging {
+class MenusActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
   val timeout = 10.seconds
   val configuration = ConfigFactory.load()
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
@@ -72,7 +72,7 @@ class MenusActor(eomodelActor: ActorRef) extends Actor with ActorLogging {
 
     val fetchedEOModel = eomodel
     val url = d2spaServerBaseUrl + "/Menu.json";
-    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
+    val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
       val resultBody = response.json
@@ -86,7 +86,7 @@ class MenusActor(eomodelActor: ActorRef) extends Actor with ActorLogging {
             val wiObj = s.get
             menus = wiObj :: menus
           }
-          case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
+          case e: JsError => Logger.error("Errors: " + JsError.toJson(e).toString())
         }
       }
       val children = menus.filter(_.parent.isDefined)

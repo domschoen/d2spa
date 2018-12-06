@@ -11,10 +11,12 @@ import d2spa.shared.WebSocketMessages.FetchedEOModel
 import scala.xml.Utility
 import play.api.Logger
 import play.api.libs.ws._
+import play.api.libs.ws
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 import d2spa.shared._
+import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
@@ -22,6 +24,7 @@ import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import play.api.Play.current
+import play.api.libs.concurrent.InjectedActorSupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -29,7 +32,7 @@ import scala.util.{Failure, Success}
 
 
 object RulesActor {
-  def props(eomodelActor: ActorRef): Props = Props(new RulesActor(eomodelActor))
+  def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new RulesActor(eomodelActor, ws))
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
 
@@ -39,7 +42,7 @@ object RulesActor {
 
 }
 
-class RulesActor(eomodelActor: ActorRef) extends Actor with ActorLogging {
+class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
   val timeout = 10.seconds
   val configuration = ConfigFactory.load()
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
@@ -95,7 +98,7 @@ class RulesActor(eomodelActor: ActorRef) extends Actor with ActorLogging {
     Logger.debug("Fire Rule with url: " + url)
     Logger.debug("Fire Rule with arguments: " + arguments)
 
-    val request: WSRequest = WS.url(url)
+    val request: WSRequest = ws.url(url)
       .withQueryString(arguments.toArray: _*)
       .withRequestTimeout(10000.millis)
 

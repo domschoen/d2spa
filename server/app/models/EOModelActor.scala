@@ -24,6 +24,8 @@ import play.api.Configuration
 import play.api.libs.concurrent.InjectedActorSupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.ws.ahc._
+import play.shaded.ahc.org.asynchttpclient.AsyncHttpClient
 
 
 case class FetchedEOEntity(
@@ -41,7 +43,7 @@ case class FetchedEOAttribute(`type`: String, name: String)
 
 
 object EOModelActor {
-  def props(): Props = Props(new EOModelActor())
+  def props(ws: WSClient): Props = Props(new EOModelActor(ws))
 
   case class EOModelResponse(eomodel: EOModel)
   case class GetEOModel(requester: ActorRef)
@@ -49,7 +51,7 @@ object EOModelActor {
 }
 
 
-class EOModelActor   extends Actor with ActorLogging with InjectedActorSupport {
+class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
   val timeout = 10.seconds
   val configuration = ConfigFactory.load()
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
@@ -91,7 +93,7 @@ class EOModelActor   extends Actor with ActorLogging with InjectedActorSupport {
   def executeEOModelWS(): Future[EOModel] = {
     val url = d2spaServerBaseUrl + "/EOModel.json";
     Logger.debug("WS " + url)
-    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
+    val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
@@ -123,7 +125,7 @@ class EOModelActor   extends Actor with ActorLogging with InjectedActorSupport {
               }.toList
               entities = EOEntity(fetchedEOEntity.name, fetchedEOEntity.primaryKeyAttributeNames.toList, attributes, relationships) :: entities
             }
-            case e: JsError => Logger.error("Errors: " + JsError.toFlatJson(e).toString())
+            case e: JsError => Logger.error("Errors: " + JsError.toJson(e).toString())
           }
         }
       }

@@ -65,7 +65,7 @@ class Application @Inject()(@Named("node-actor") nodeActor: ActorRef)
 
 
   def ws = WebSocket.accept[WebSocketMsgIn, WebSocketMsgOut] { request =>
-    ActorFlow.actorRef(out => WebSocketActor.props(out,nodeActor))
+    ActorFlow.actorRef(out => WebSocketActor.props(out, nodeActor))
   }
 
 

@@ -12,6 +12,7 @@ import models.EORepoActor._
 import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
 import play.api.{Configuration, Logger}
 import play.api.Play.current
+import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.libs.ws._
@@ -25,7 +26,7 @@ import scala.util.{Failure, Success}
 
 object EORepoActor {
 
-  def props(eomodelActor: ActorRef): Props = Props(new EORepoActor(eomodelActor))
+  def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new EORepoActor(eomodelActor, ws))
 
 
   case class SearchAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
@@ -223,7 +224,7 @@ object EORepoActor {
 
 }
 
-class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
+class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
   val timeout = 10.seconds
   val configuration = ConfigFactory.load()
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
@@ -261,7 +262,7 @@ class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
     }
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
     Logger.debug("Search URL:" + url)
-    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
+    val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
 
@@ -371,7 +372,7 @@ class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
   }
 
   def completeEOWithUrl(eo: EO, url: String, unwrapper: JsValue => JsValue): Future[List[EO]] = {
-    val request: WSRequest = WS.url(url).withRequestTimeout(timeout)
+    val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     Logger.debug("Complete EO: request : " + request)
 
     val futureResponse: Future[WSResponse] = request.get
@@ -413,7 +414,7 @@ class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
 
     val url = d2spaServerBaseUrl + "/" + entityName + ".json"
 
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = ws.url(url).withRequestTimeout(10000.millis)
 
     // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = EOValue.definedValues(eo)
@@ -478,7 +479,7 @@ class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
     val entityName = eo.entityName
     val url = d2spaServerBaseUrl + "/" + entityName + "/" + pk + ".json"
 
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = ws.url(url).withRequestTimeout(10000.millis)
     /*val eoDefinedValues = eo.values filter (v => {
       Logger.debug("v._2" + v._2)
       EOValueUtils.isDefined(v._2) })*/
@@ -520,7 +521,7 @@ class EORepoActor (eomodelActor: ActorRef) extends Actor with ActorLogging {
     Logger.debug("Delete EO: " + eo)
     Logger.debug("Delete WS: " + url)
 
-    val request: WSRequest = WS.url(url).withRequestTimeout(10000.millis)
+    val request: WSRequest = ws.url(url).withRequestTimeout(10000.millis)
     val futureResponse: Future[WSResponse] = request.delete()
     futureResponse.map { response =>
       try {

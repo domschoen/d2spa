@@ -32,7 +32,7 @@ object NodeActor {
 }
 
 
-class NodeActor  @Inject() (configuration: Configuration) extends Actor with ActorLogging with InjectedActorSupport {
+class NodeActor  @Inject() (configuration: Configuration, ws: WSClient) extends Actor with ActorLogging with InjectedActorSupport {
   val timeout = 10.seconds
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
 
@@ -46,19 +46,19 @@ class NodeActor  @Inject() (configuration: Configuration) extends Actor with Act
     case SetItUp => {
       println("Set it up")
       if (eomodelActor.isEmpty) {
-        eomodelActor = Some(context.actorOf(EOModelActor.props(), "eomodelFetcher"))
+        eomodelActor = Some(context.actorOf(EOModelActor.props(ws), "eomodelFetcher"))
         println("EOModel actor path " + eomodelActor.get.path)
       }
       if (menusActor.isEmpty) {
-        menusActor = Some(context.actorOf(MenusActor.props(eomodelActor.get), "menusFetcher"))
+        menusActor = Some(context.actorOf(MenusActor.props(eomodelActor.get,ws), "menusFetcher"))
         println("Menu actor path " + menusActor.get.path)
       }
       if (rulesActor.isEmpty) {
-        rulesActor = Some(context.actorOf(RulesActor.props(eomodelActor.get), "rulesFetcher"))
+        rulesActor = Some(context.actorOf(RulesActor.props(eomodelActor.get, ws), "rulesFetcher"))
         println("Rule actor path " + rulesActor.get.path)
       }
       if (eoRepoActor.isEmpty) {
-        eoRepoActor = Some(context.actorOf(EORepoActor.props(eomodelActor.get), "eoRepo"))
+        eoRepoActor = Some(context.actorOf(EORepoActor.props(eomodelActor.get ,ws), "eoRepo"))
         println("EO Repo actor path " + eoRepoActor.get.path)
       }
     }

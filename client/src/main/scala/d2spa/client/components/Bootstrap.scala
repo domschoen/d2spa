@@ -67,7 +67,10 @@ object Bootstrap {
     class Backend(t: BackendScope[Props, Unit]) {
       def hide =
         // instruct Bootstrap to hide the modal
-        t.getDOMNode.map(jQuery(_).modal("hide")).void
+        // Disabled because of compilation error: [error]  found   : japgolly.scalajs.react.ComponentDom
+      //[error]  required: org.scalajs.dom.Element
+      // t.getDOMNode.map(jQuery(_).modal("hide")).void
+      Callback.empty
 
       // jQuery event handler to be fired when the modal has been hidden
       def hidden(e: JQueryEventObject): js.Any = {
@@ -94,9 +97,10 @@ object Bootstrap {
       .componentDidMount(scope => Callback {
         val p = scope.props
         // instruct Bootstrap to show the modal
-        jQuery(scope.getDOMNode).modal(js.Dynamic.literal("backdrop" -> p.backdrop, "keyboard" -> p.keyboard, "show" -> true))
+        // DISABLED Because of error while migrating to new version
+        // jQuery(scope.getDOMNode).modal(js.Dynamic.literal("backdrop" -> p.backdrop, "keyboard" -> p.keyboard, "show" -> true))
         // register event listener to be notified when the modal is closed
-        jQuery(scope.getDOMNode).on("hidden.bs.modal", null, null, scope.backend.hidden _)
+        // DISABLED Because of error while migrating to new version jQuery(scope.getDOMNode).on("hidden.bs.modal", null, null, scope.backend.hidden _)
       })
       .build
 
