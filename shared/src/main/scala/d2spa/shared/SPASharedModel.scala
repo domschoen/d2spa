@@ -22,8 +22,7 @@ object WebSocketMessages {
   final case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class SearchAll(fs: EOFetchAll) extends WebSocketMsgIn
-  final case class Search(fs: EOQualifiedFetch) extends WebSocketMsgIn
+  final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
   final case class NewEO(entityName: String, eo: EO) extends WebSocketMsgIn
   final case class UpdateEO(eo: EO) extends WebSocketMsgIn
 
@@ -35,7 +34,7 @@ object WebSocketMessages {
   final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(eos: Seq[EO]) extends WebSocketMsgOut
-  final case class FetchedObjectsForListMsgOut(entityName: String, eos: Seq[EO]) extends WebSocketMsgOut
+  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }

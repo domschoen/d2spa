@@ -110,7 +110,7 @@ case class UpdateCurrentContextWithEO(eo: EO) extends Action
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
-case object ShowResults extends Action
+case class ShowResults(fs: EOFetchSpecification) extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
@@ -123,7 +123,7 @@ case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOVal
 
 case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult(entityName: String, eos: Seq[EO]) extends Action
+case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 

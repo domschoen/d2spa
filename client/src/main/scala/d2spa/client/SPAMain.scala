@@ -110,15 +110,7 @@ object SPAMain extends js.JSApp {
               AfterEffectRouter.setCtl(ctl)
 
               menusConnection(p => {
-                val d2wContext = p.value.previousPage match {
-                  case Some(previousPage) =>
-                    previousPage
-                  case None =>
-                    val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), pk = Some(m.pk))
-                    //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
-                    firstD2WContext
-
-                }
+                val d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), pk = Some(m.pk))
                 D2WEditPage(ctl, d2wContext, p)
               })
             }

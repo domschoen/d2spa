@@ -55,10 +55,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! FetchedObjectsMsgOut(eos)
 
 
-    case FetchedObjectsForList(entityName, eos) =>
+    case FetchedObjectsForList(fs, eos) =>
       println("Receive FetchedObjectsForList ---> sending FetchedObjectsForListMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsForListMsgOut(entityName, eos)
+      out ! FetchedObjectsForListMsgOut(fs, eos)
 
 
     case SavingResponse(eo) =>
@@ -81,13 +81,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case UpdateEO(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.UpdateEO(eo, self)
 
-      case SearchAll(fs) =>
-        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.SearchAll(fs, self)
-
       case HydrateAll(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
 
       case Search(fs) =>
+        println("Receive Search")
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
 
       case GetDebugConfiguration =>

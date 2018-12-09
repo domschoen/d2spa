@@ -54,7 +54,7 @@ object WebSocketClient {
               case FetchedMenus(menus) => MyCircuit.dispatch(SetMenus(menus))
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
               case FetchedObjectsMsgOut(eos) => MyCircuit.dispatch(client.FetchedObjectsForEntity(eos))
-              case FetchedObjectsForListMsgOut(entityName, eos) => MyCircuit.dispatch(client.SearchResult(entityName, eos))
+              case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
               case DebugConfMsg(showDebugButton) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton)))

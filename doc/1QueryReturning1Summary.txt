@@ -1,0 +1,9 @@
+2: PreviousPageHandler | Search 
+30: PreviousPageHandler | InspectEO
+31: PreviousPageHandler | RegisterPreviousPageAndSetPage for d2wContext: D2WContext(Some(Project),Some(inspect),Some(D2WContext(Some(Project),Some(list),Some(D2WContext(Some(Project),Some(query),None,None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),Some(DataRep(Some(EOFetchAll(Project,List())),None)),None,PotFiredKey(Right(None)),None)),Some(EO(Project,List(descr, id, customer, projectNumber, type),List(StringValue(1), IntValue(1), ObjectValue(EO(Customer,List(),List(),EOPk(List(1)),None)), IntValue(1), 
+
+32: (Render query)
+
+40: PreviousPageHandler | SetPage for d2wContext: D2WContext(Some(Project),Some(inspect),Some(D2WContext(Some(Project),Some(list),Some(D2WContext(Some(Project),Some(query),None,None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),Some(DataRep(Some(EOFetchAll(Project,List())),None)),None,PotFiredKey(Right(None)),None)),Some(EO(Project,List(descr, id, customer, projectNumber, type),List(StringValue(1), IntValue(1), ObjectValue(EO(Customer,List(),List(),EOPk(List(1)),None)), IntValue(1), StringValue(Project)),EOPk(List(1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)
+
+AfterEffectRouter

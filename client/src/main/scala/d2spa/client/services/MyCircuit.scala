@@ -64,8 +64,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
     case InitAppSpecificClient =>
       noChange
 
-    case ShowResults =>
-      effectOnly(Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(value.get)))
+    case ShowResults(fs) =>
+      val entityName = EOFetchSpecification.entityName(fs)
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
+      effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
     case  InspectEO (fromTask, eo, isOneRecord) =>
@@ -165,23 +167,17 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.debug("PreviousPageHandler | Search | " + entityName + " query with fs " + fs)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
-      val  stack = stackD2WContext(d2wContext)
-      log.debug("PreviousPageHandler | Search | Register Previous " + stack)
+      //val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
+      //val  stack = stackD2WContext(d2wContext)
+      //log.debug("PreviousPageHandler | Search | Register Previous " + stack)
 
-      val effect = fs match {
-        case fa: EOFetchAll =>
-          // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-          SPAMain.socket.send(WebSocketMessages.SearchAll(fa))
-        case fq: EOQualifiedFetch =>
-          // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-          SPAMain.socket.send(WebSocketMessages.Search(fq))
-      }
+      SPAMain.socket.send(WebSocketMessages.Search(fs))
+      noChange
 
-      updated(
+      //updated(
         // change context to inspect
-        Some(stack)
-      )
+      //  Some(stack)
+      //)
 
   }
 }

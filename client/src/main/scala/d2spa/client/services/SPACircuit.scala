@@ -497,7 +497,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
 
-    case SearchResult(entityName, eoses) =>
+    case SearchResult(fs, eoses) =>
+      val entityName = EOFetchSpecification.entityName(fs)
       D2SpaLogger.logDebug(entityName,"CacheHandler | SearchResult length " + eoses.length)
       D2SpaLogger.logDebug(entityName,"CacheHandler | SearchResult before cache " + value)
 
@@ -506,7 +507,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
           val eo = eoses.head
           InspectEO(TaskDefine.query,eo,true)
         }
-        case _ => ShowResults
+        case _ => ShowResults(fs)
       }
 
       updated(

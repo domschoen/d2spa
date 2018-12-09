@@ -33,7 +33,7 @@ object EORepoActor {
   case class HydrateAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
 
 
-  case class Search(fs: EOQualifiedFetch, requester: ActorRef) //: Future[Seq[EO]]
+  case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
   case class CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[List[Int]], missingKeys: Set[String], requester: ActorRef) //: Future[Seq[EO]]
 
@@ -44,7 +44,7 @@ object EORepoActor {
 
   // Responses
   case class FetchedObjects(eos: List[EO])
-  case class FetchedObjectsForList(entityName: String, eos: List[EO])
+  case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(eo: EO)
   case class DeletingResponse(eo: EO)
@@ -594,13 +594,6 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
      // - displayNameForProperty
      // - componentName
      // - attributeType
-    case SearchAll(fs: EOFetchAll, requester: ActorRef) =>
-      log.debug("SearchAll")
-      val entityName = EOFetchSpecification.entityName(fs)
-
-      searchOnWORepository(entityName, None).map(rrs =>
-        requester ! FetchedObjectsForList(entityName,rrs)
-      )
 
     case HydrateAll(fs: EOFetchAll, requester: ActorRef) =>
       log.debug("SearchAll")
@@ -610,12 +603,16 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(rrs)
       )
 
-    case Search(fs: EOQualifiedFetch, requester: ActorRef) =>
+    case Search(fs: EOFetchSpecification, requester: ActorRef) =>
       log.debug("Search")
 
       val entityName = EOFetchSpecification.entityName(fs)
-      searchOnWORepository(entityName, Some(fs.qualifier)).map(rrs =>
-        requester ! FetchedObjectsForList(entityName,rrs)
+      val qualifier = fs match {
+        case fa: EOFetchAll => None
+        case fq: EOQualifiedFetch => Some(fq.qualifier)
+      }
+      searchOnWORepository(entityName, qualifier).map(rrs =>
+        requester ! FetchedObjectsForList(fs,rrs)
       )
 
     case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>
