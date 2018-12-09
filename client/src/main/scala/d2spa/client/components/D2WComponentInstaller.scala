@@ -43,6 +43,7 @@ object D2WComponentInstaller  {
               case "ERD2WEditString" => <.span(ERD2WEditString(p.router, d2wContext, p.proxy), displayedComponentName)
               case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, d2wContext, p.proxy), displayedComponentName)
               case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, d2wContext, p.proxy), displayedComponentName)
+
               case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayStringWithLineBreaks" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayDateOrNull" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
@@ -53,6 +54,9 @@ object D2WComponentInstaller  {
               case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, d2wContext, p.proxy), displayedComponentName)
               case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, d2wContext, p.proxy), displayedComponentName)
               case "NVQueryBoolean" => <.span(NVQueryBoolean (p.router, d2wContext, p.proxy), displayedComponentName)
+
+              // Custom Component
+              case "DisplayProjectPotentialCustomers" => <.span(DisplayProjectPotentialCustomers(p.router, d2wContext, p.proxy), displayedComponentName)
 
               // application specific components
               case _ => <.span("Component not found: " + componentName)

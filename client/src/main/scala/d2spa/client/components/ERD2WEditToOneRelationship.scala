@@ -80,9 +80,9 @@ object ERD2WEditToOneRelationship {
           true
       }
 
-      Callback.when(continueMount) {
+      //Callback.when(continueMount) {
         mounted(nextProps)
-      }
+      //}
       //mounted(nextProps)
 
     }
@@ -112,33 +112,46 @@ object ERD2WEditToOneRelationship {
 
           log.debug("ERD2WEditToOneRelationship mounted | keyWhenRelationshipRuleResultOpt is defined " + keyWhenRelationshipRuleResultOpt.isDefined)
 
-          Callback.when(!keyWhenRelationshipRuleResultOpt.isDefined)(p.proxy.dispatchCB(
+          var actions = List()
+          if (!keyWhenRelationshipRuleResultOpt.isDefined) {
+            p.proxy.dispatchCB(
               FireActions(
                 d2wContext, // rule Container
                 List[D2WAction](
                   FireRule(d2wContext, RuleKeys.keyWhenRelationship)
                 )
               )
-            )) >>
-            Callback.when(keyWhenRelationshipRuleResultOpt.isDefined)(p.proxy.dispatchCB(
-              FireActions(
-                d2wContext, // rule Container
-                List[D2WAction](
-                  // Already done at Page level
-                  // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+            )
+          } else {
+            val eoCache = p.proxy.value.cache.eos
 
-                  // Substrate defined by objects to fetch for destination entity name
-                  // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
-                  // Example:
-                  //    Hydration(
-                  //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
-                  //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
+            log.debug("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
+            log.debug("ERD2WEditToOneRelationship render eoCache " + eoCache)
+            val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
 
-                  Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(PotFiredRuleResult(Right(keyWhenRelationshipRuleResultOpt.get))))
+            destinationEOs match {
+              case Some(eos) => Callback.empty
+              case None => p.proxy.dispatchCB(
+                FireActions(
+                  d2wContext, // rule Container
+                  List[D2WAction](
+                    // Already done at Page level
+                    // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
 
+                    // Substrate defined by objects to fetch for destination entity name
+                    // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
+                    // Example:
+                    //    Hydration(
+                    //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
+                    //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
+
+                    Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(PotFiredRuleResult(Right(keyWhenRelationshipRuleResultOpt.get))))
+
+                  )
                 )
               )
-            ))
+            }
+          }
 
         case None =>
           Callback.empty
@@ -231,11 +244,13 @@ object ERD2WEditToOneRelationship {
                                 log.debug("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
                                 val defaultValue = destinationEO match {
                                   case Some(ObjectValue(eoV)) => EOValue.pk(eomodel,eoV) match {
-                                    case Some(pk) => pk.toString
+                                    case Some(pk) => EOValue.juiceEOPkString(pk)
                                     case None => "None"
                                   }
                                   case _ => "None"
                                 }
+                                log.debug("ERD2WEditToOneRelationship render defaultValue " + defaultValue)
+
                                 <.div(
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
                                     p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
@@ -245,7 +260,7 @@ object ERD2WEditToOneRelationship {
 
                                         //log.debug("id " + id + " for eo: " + x)
                                         val displayName = EOValue.stringValueForKey(deo, keyWhenRelationship)
-                                        val valueString = deo.pk.pks.mkString("_")
+                                        val valueString =  EOValue.juiceEOPkString(deo.pk)
                                         (valueString, displayName)
                                       })
                                       // remove None

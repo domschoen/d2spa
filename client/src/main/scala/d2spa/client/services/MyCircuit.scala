@@ -96,7 +96,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case RegisterPreviousPageAndSetPage(d2wContext) =>
       val  stack = stackD2WContext(d2wContext)
-      log.debug("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
+      log.debug("PreviousPageHandler | RegisterPreviousPageAndSetPage for d2wContext: " + stack)
 
       updated(Some(stack),Effect.action(SetPage(stack)))
 
@@ -110,6 +110,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
     case SetPage(d2WContext) =>
+      log.debug("PreviousPageHandler | SetPage for d2wContext: " + d2WContext)
       effectOnly(
         Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext))
       )

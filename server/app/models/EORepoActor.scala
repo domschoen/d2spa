@@ -30,6 +30,9 @@ object EORepoActor {
 
 
   case class SearchAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
+  case class HydrateAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
+
+
   case class Search(fs: EOQualifiedFetch, requester: ActorRef) //: Future[Seq[EO]]
   case class CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[List[Int]], missingKeys: Set[String], requester: ActorRef) //: Future[Seq[EO]]
@@ -598,6 +601,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       searchOnWORepository(entityName, None).map(rrs =>
         requester ! FetchedObjectsForList(entityName,rrs)
       )
+
+    case HydrateAll(fs: EOFetchAll, requester: ActorRef) =>
+      log.debug("SearchAll")
+      val entityName = EOFetchSpecification.entityName(fs)
+
+      searchOnWORepository(entityName, None).map(rrs =>
+        requester ! FetchedObjects(rrs)
+      )
+
     case Search(fs: EOQualifiedFetch, requester: ActorRef) =>
       log.debug("Search")
 
@@ -612,7 +624,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(rrs)
       )
     case HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], requester: ActorRef) =>
-      log.debug("Get GetRulesForMetaData")
+      log.debug("Get HydrateEOs")
       hydrateEOs(entityName, pks, missingKeys).map(rrs =>
         requester ! FetchedObjects(rrs)
       )

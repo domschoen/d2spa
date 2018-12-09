@@ -1,0 +1,75 @@
+Go to inspect directly...
+
+10: CacheHandler | NewEOWithEOModel
+
+
+
+
+---------------
+ERD2WEditToOneRelationship No destination objects
+
+1) 80: ERD2WEditToOneRelationship render
+2) 88: ERD2WEditToOneRelationship mounted
+   DestinationEntity ok
+   keyWhenRelationship nok
+
+3) 99:  RuleResultsHandler | SetJustRuleResults | ruleResults List(RuleResult(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship,RuleValue(Some(name),List())))
+   
+   
+   
+3) 125: render
+
+------------------------
+Escamoted (fixed)
+
+1) Register Edit Project
+client-jsdeps.js:33270 PreviousPageHandler | RegisterPreviousPage for d2wContext: D2WContext(Some(Project),Some(edit),Some(D2WContext(Some(Customer),Some(inspect),Some(D2WContext(Some(Customer),Some(edit),Some(D2WContext(Some(Customer),Some(edit),Some(D2WContext(Some(Project),Some(query),None,None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)),Some(EO(Customer,List(),List(),EOPk(List(-1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),Some(EO(Customer,List(acronym, address, name, id),List(StringValue(1), StringValue(1), StringValue(1), IntValue(1)),EOPk(List(1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)
+
+2) 25: Set Page
+client-jsdeps.js:33270 PreviousPageHandler | SetPage for d2wContext: D2WContext(Some(Project),Some(edit),Some(D2WContext(Some(Customer),Some(inspect),Some(D2WContext(Some(Customer),Some(edit),Some(D2WContext(Some(Customer),Some(edit),Some(D2WContext(Some(Project),Some(query),None,None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)),Some(EO(Customer,List(),List(),EOPk(List(-1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),Some(EO(Customer,List(acronym, address, name, id),List(StringValue(1), StringValue(1), StringValue(1), IntValue(1)),EOPk(List(1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)
+
+3) 26: AfterEffectRouter
+
+4) 27: set NewEOPage
+
+5) 28: Register Edit Project
+
+6) 56: Set Page
+
+---------
+1) RegisterPreviousPage
+2) SetPage
+3) 29: AfterEffectRouter.setPageForTaskAndEOAndEntity
+4) 30: setRouterToPage NewEOPage(Project)
+5) 34: D2WEditPage: render eo for entity Name:
+
+client-jsdeps.js:33270 D2WEditPage: render eo for entity Name: D2WContext(
+    Some(Project),Some(edit), Some(D2WContext(Some(Project),Some(edit),Some(D2WContext(Some(Customer),Some(inspect),Some(D2WContext(Some(Customer),Some(list),Some(D2WContext(Some(Customer),Some(query),Some(D2WContext(Some(Project),Some(edit),Some(D2WContext(Some(Project),Some(edit),Some(D2WContext(Some(Customer),Some(query),None,None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)),Some(EO(Project,List(),List(),EOPk(List(-1)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),Some(DataRep(Some(EOFetchAll(Customer,List())),None)),None,PotFiredKey(Right(None)),None)),Some(EO(Customer,List(acronym, name, id, address, type),List(StringValue(1), StringValue(1), IntValue(2), StringValue(1), StringValue(Customer)),EOPk(List(2)),None)),Map(),None,None,PotFiredKey(Right(None)),None)),None,Map(),None,None,PotFiredKey(Right(None)),None)
+    ),
+    Some(EO(Project,List(),List(),EOPk(List(-2)),None)),
+    Map(),None,None,PotFiredKey(Right(None)),None)
+
+
+6) 98: ERD2WEditToOneRelationship list of customer
+    - DrySubstrate: Fetch all customer
+    - WateringScope: 
+      Context: Project, edit, customer
+      keyWhenRelationship: name
+RuleResultsHandler | FireActions | Hydration: DrySubstrate(None,None,Some(EOFetchAll(Customer,List()))) wateringScope: WateringScope(PotFiredRuleResult(Right(RuleResult(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship,RuleValue(Some(name),List())))))
+
+
+7) 111: List possible  page create its context with a data rep
+DataRep(eosAtKeyPath = Some(EOsAtKeyPath(EO(Project,List(),List(),EOPk(List(-2)),None),potentialCustomers,Customer)))
+
+added to a D2WContext 
+                            entityName = Some(destinationEntityName),
+                            task = Some(TaskDefine.list),
+                            dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
+                            pageConfiguration = potPageConf
+which is passed to NVListComponent
+
+
+
+RuleResultsHandler | FireActions | Hydration: DrySubstrate(Some(EOsAtKeyPath(EO(Project,List(),List(),EOPk(List(-2)),None),potentialCustomers,Customer)),None,None) wateringScope: WateringScope(PotFiredRuleResult(Right(RuleResult(D2WContextFullFledged(Some(Customer),Some(list),None,Some(ListEmbeddedCustomer)),displayPropertyKeys,RuleValue(None,List(acronym, address, name))))))
+
+6) D2WEditPage: render eo for entity Name

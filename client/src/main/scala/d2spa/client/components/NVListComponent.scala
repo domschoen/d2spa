@@ -200,6 +200,7 @@ object NVListComponent {
     }
 
     def inspectEO(eo: EO) = {
+      println("NVListCompoennt InspectEO")
       Callback.log(s"Inspect: $eo") >>
         $.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
     }

@@ -161,9 +161,11 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
 
 
     case FireActions(d2wContext: D2WContext, actions: List[D2WAction]) =>
+      log.debug("RuleResultsHandler | FireActions | count: " + actions.size)
       for (action <- actions) {
         action match {
           case FireRule(rhs, key) =>
+            log.debug("RuleResultsHandler | FireActions | FireRule")
             val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(rhs)
             SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, key))
           case FireRules(propertyKeys, rhs, key) =>
@@ -245,10 +247,10 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                     fs match {
                       case fa: EOFetchAll =>
                         // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                        SPAMain.socket.send(WebSocketMessages.SearchAll(fa))
+                        SPAMain.socket.send(WebSocketMessages.HydrateAll(fa))
                       case fq: EOQualifiedFetch =>
                         // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                        SPAMain.socket.send(WebSocketMessages.Search(fq))
+                        SPAMain.socket.send(WebSocketMessages.Hydrate(fq))
                     }
 
 
@@ -301,7 +303,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
 
 
     case SetJustRuleResults(ruleResults) =>
-      log.debug("RuleResultsHandler | SetJustRuleResults")
+      log.debug("RuleResultsHandler | SetJustRuleResults | ruleResults " + ruleResults)
       val newRuleResults = updatedRuleResults(value,ruleResults)
       updated(newRuleResults)
 
@@ -579,8 +581,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       D2SpaLogger.logDebug(entityName, "CacheHandler | Update EO Property: updatedEO " + updatedEO)
 
       if (EOValue.isNew(updatedEO.pk)) {
+        D2SpaLogger.logDebug(entityName, "CacheHandler | Update EO Property: updatedMemCacheWithEOs " + updatedEO)
         updated(updatedMemCacheWithEOs(Seq(updatedEO)))
       } else {
+        D2SpaLogger.logDebug(entityName, "CacheHandler | Update EO Property: updatedOutOfDBCacheWithEOs " + updatedEO)
         updated(EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value, Seq(updatedEO)))
       }
 
@@ -598,7 +602,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       D2SpaLogger.logDebug(entityName, "newEO " + newEO)
       val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
 
-      updated(updatedMemCache(newValue),Effect.action(RegisterPreviousPageAndSetPage(updatedD2WContext)))
+      updated(updatedMemCache(newValue),Effect.action(RegisterPreviousPage(updatedD2WContext)))
 
 
 

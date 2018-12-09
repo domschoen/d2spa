@@ -20,6 +20,8 @@ object WebSocketMessages {
   final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
   final case class CompleteEO(eo: EOFault, missingKeys: Set[String]) extends WebSocketMsgIn
   final case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
+  final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class SearchAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Search(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class NewEO(entityName: String, eo: EO) extends WebSocketMsgIn
@@ -299,6 +301,9 @@ object EOValue {
     EO(entityName, List.empty[String], List.empty[EOValue], pk)
   }
 
+  def juiceEOPkString(eoPk: EOPk) = {
+    eoPk.pks.mkString("_")
+  }
 
   def juiceString(value: EOValue): String =
     value match {

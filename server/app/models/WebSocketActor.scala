@@ -84,6 +84,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case SearchAll(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.SearchAll(fs, self)
 
+      case HydrateAll(fs) =>
+        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
+
       case Search(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
 
