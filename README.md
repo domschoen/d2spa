@@ -37,7 +37,7 @@ open you browser with this url: http://localhost:9000/#task/query/entity/Project
 ### Client
 If you want to have less log, you have to change the elideOptions in the build.sbt file. For example, if you want to remove everything below WARNING:
 ```
-elideOptions := Seq("-Xelide-below", "WARNING"),
+elideOptions := Seq("-Xelide-below", 100),
 ```
 
 This will remove INFO, DEBUG, TRACE, ALL from your the log. You need to reload and recompile to have it:
@@ -45,13 +45,17 @@ This will remove INFO, DEBUG, TRACE, ALL from your the log. You need to reload a
   - compile
 
 Note: here the list of logging levels:
-  - FATAL
-  - ERROR
-  - WARN
-  - INFO
-  - DEBUG
-  - TRACE
-  - ALL
+
+Level        | Int Level
+------------ | -------------
+OFF          | 0 
+FATAL        | 100 
+ERROR        | 200
+WARN         | 300
+INFO         | 400
+DEBUG        | 500
+TRACE        | 600
+ALL          | Integer.MAX_VALUE
 
 #### Client server log
 
