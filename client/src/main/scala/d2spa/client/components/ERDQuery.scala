@@ -40,7 +40,7 @@ object ERDQuery {
 
 
 
-      log.debug("cEntityName " + cEntityName + " nEntityName " + nEntityName)
+      log.finest("cEntityName " + cEntityName + " nEntityName " + nEntityName)
 
       val anyChange = entityNameChanged || isDebugModeChanged
 
@@ -54,7 +54,7 @@ object ERDQuery {
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      log.debug("PageRepetition | mounted | entityName " + entityName)
+      log.finest("PageRepetition | mounted | entityName " + entityName)
 
       val ruleResults = p.proxy.value.ruleResults
       val dataNotFetched = !RuleUtils.metaDataFetched(ruleResults, d2wContext)
@@ -63,7 +63,7 @@ object ERDQuery {
 
     def render(p: Props) = {
       val d2wContext = p.d2wContext
-      log.debug("ERDQuery render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      log.finest("ERDQuery render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
       PageRepetition(p.router,d2wContext, p.proxy)
 

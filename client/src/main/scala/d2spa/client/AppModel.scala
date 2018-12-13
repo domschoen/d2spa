@@ -180,18 +180,18 @@ object Hydration {
       case DrySubstrate(_, Some(eoFault), _) =>
         isEOHydrated(cache,eoFault.entityName, eoFault.pk, propertyKeys)
       case DrySubstrate(Some(eoakp), _, _) =>
-        //log.debug("Hydration DrySubstrate " + eoakp.eo.entity.name + " for key " + eoakp.keyPath)
+        //log.finest("Hydration DrySubstrate " + eoakp.eo.entity.name + " for key " + eoakp.keyPath)
         val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
-        //log.debug("Hydration DrySubstrate valueForKey " + eovalueOpt)
+        //log.finest("Hydration DrySubstrate valueForKey " + eovalueOpt)
 
         eovalueOpt match {
           case Some(eovalue) =>
             eovalue match {
               case ObjectsValue(pks) =>
-                //log.debug("NVListComponent render pks " + pks)
+                //log.finest("NVListComponent render pks " + pks)
                 val destinationEntityName = eoakp.destinationEntityName
                 val nonHydrated = pks.find(pk => !isEOHydrated(cache, destinationEntityName, pk, propertyKeys))
-                log.debug("AppModel | Hydration | isHydratedForPropertyKeys " + destinationEntityName + " at path: " + eoakp.keyPath + " any non hydrated " + nonHydrated)
+                log.finest("AppModel | Hydration | isHydratedForPropertyKeys " + destinationEntityName + " at path: " + eoakp.keyPath + " any non hydrated " + nonHydrated)
                 nonHydrated.isEmpty
 
               case _ => false
@@ -230,8 +230,8 @@ object QueryValue {
 
   def qualifierFromQueryValues(queryValues: List[QueryValue]) : Option[EOQualifier] = {
     val qualifiers = queryValues.map(qv => {
-      log.debug("QueryValue " + qv)
-      log.debug("QueryValue operatorByQueryOperator(qv.operator): " + operatorByQueryOperator(qv.operator))
+      log.finest("QueryValue " + qv)
+      log.finest("QueryValue operatorByQueryOperator(qv.operator): " + operatorByQueryOperator(qv.operator))
       EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),qv.value)
     })
     if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
@@ -593,11 +593,11 @@ object D2WContextUtils {
   }
 
   def convertD2WContextToFullFledged(d2wContext: D2WContext): D2WContextFullFledged = {
-    //log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
+    //log.finest("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
     /*if(d2wContext.pageConfiguration.isDefined) {
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
+      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
+      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
+      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
 
     }*/
 
@@ -682,9 +682,9 @@ object EOCacheUtils {
 
         // Iterate on eos
         val newAndUpdateMap = refreshedPks.map(id => {
-          //log.debug("Refresh " + entityName + "[" + id + "]")
+          //log.finest("Refresh " + entityName + "[" + id + "]")
           val refreshedEO = refreshedEOs(id)
-          //log.debug("Refreshed " + refreshedEO)
+          //log.finest("Refreshed " + refreshedEO)
 
           // 2 cases:
           // new
@@ -719,7 +719,7 @@ object EOCacheUtils {
       val result: Map[String, Map[EOPk, EO]] = newUpdatedCache(eomodel, cache, eos)
       println("Zresult " + result)
 
-      //log.debug("storing result as :" + result)
+      //log.finest("storing result as :" + result)
       result
     }
   }
@@ -727,11 +727,11 @@ object EOCacheUtils {
 
 
   def updatedOutOfDBCacheWithEOs(eomodel: EOModel, cache: EOCache, eos: Seq[EO]): EOCache = {
-    //log.debug("Cache before update " + cache)
+    //log.finest("Cache before update " + cache)
     val insertedEOs = cache.insertedEOs
     val outOfDBEOs = updatedModelForEntityNamed(eomodel, cache.eos, eos)
     val newCache = EOCache(Ready(eomodel), outOfDBEOs, insertedEOs)
-    //log.debug("New cache " + newCache)
+    //log.finest("New cache " + newCache)
     newCache
   }
 
@@ -750,7 +750,7 @@ object EOCacheUtils {
 
   def objectsWithFetchSpecification(eos: Map[String, Map[EOPk,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
-    //log.debug("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
+    //log.finest("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
       case Some(eos) =>
         Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fs))
@@ -793,13 +793,13 @@ object EOCacheUtils {
     val isInMemory = EOValue.isNew(pk)
     if (isInMemory) {
       val memCache = cache.insertedEOs
-      log.debug("Out of cache " + pk)
-      log.debug("Cache " + memCache)
-      log.debug("e name " + entityName)
+      log.finest("Out of cache " + pk)
+      log.finest("Cache " + memCache)
+      log.finest("e name " + entityName)
       EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, pk)
     } else {
       val dbCache = cache.eos
-      //log.debug("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
+      //log.finest("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
       EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, pk)
     }
   }

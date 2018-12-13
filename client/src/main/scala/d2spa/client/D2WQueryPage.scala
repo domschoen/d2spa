@@ -34,7 +34,7 @@ object D2WQueryPage {
 
 
 
-      log.debug("cEntityName " + cEntityName + " nEntityName " + nEntityName)
+      log.finest("cEntityName " + cEntityName + " nEntityName " + nEntityName)
 
       val anyChange = entityNameChanged || isDebugModeChanged*/
 
@@ -50,12 +50,12 @@ object D2WQueryPage {
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      log.debug("D2WQueryPage | mounted " + entityName)
+      log.finest("D2WQueryPage | mounted " + entityName)
 
       val ruleResults = p.proxy.value.ruleResults
       val socketReady = p.proxy.value.appConfiguration.socketReady
       val dataNotFetched = socketReady && !RuleUtils.metaDataFetched(ruleResults, d2wContext)
-      log.debug("D2WQueryPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched)
+      log.finest("D2WQueryPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched)
       val sendingAction = InitMetaData(d2wContext)
       val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
 
@@ -80,18 +80,18 @@ object D2WQueryPage {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      log.debug("Render Query page for entity: " + entityName)
+      log.finest("Render Query page for entity: " + entityName)
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)
 
       ruleContainerOpt match {
         case Some(ruleContainer) => {
-          log.debug("Render Query ruleContainer: " + ruleContainer)
+          log.finest("Render Query ruleContainer: " + ruleContainer)
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
-          log.debug("Render Query displayPropertyKeys: " + displayPropertyKeys)
+          log.finest("Render Query displayPropertyKeys: " + displayPropertyKeys)
 
           entityDisplayNameOpt match {
             case Some(entityDisplayName) =>

@@ -28,14 +28,14 @@ object ERDInspect {
   class Backend($: BackendScope[Props, Unit]) {
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      //log.debug("ERDInspect willReceiveProps | currentProps: " + currentProps)
-      //log.debug("ERDInspect willReceiveProps | nextProps: " + nextProps)
+      //log.finest("ERDInspect willReceiveProps | currentProps: " + currentProps)
+      //log.finest("ERDInspect willReceiveProps | nextProps: " + nextProps)
 
       val cEO = currentProps.d2wContext.eo
       val nEO = nextProps.d2wContext.eo
       val eoChanged = !cEO.equals(nEO)
 
-      //log.debug("ERDInspect willReceiveProps | eoChanged: " + eoChanged)
+      //log.finest("ERDInspect willReceiveProps | eoChanged: " + eoChanged)
 
 
       Callback.when(eoChanged) {
@@ -49,7 +49,7 @@ object ERDInspect {
     def mounted(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"ERDInspect mounted " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName,"ERDInspect mounted " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val embeddedConfigurationNameOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.inspectConfigurationName)
@@ -73,13 +73,13 @@ object ERDInspect {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"ERDInspect render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName,"ERDInspect render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
-      //log.debug("ERDInspect render with D2WContext: " + d2wContext)
+      //log.finest("ERDInspect render with D2WContext: " + d2wContext)
 
       // to get access to the latest version of the eo we use the previous page context
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
-      D2SpaLogger.logDebug(entityName,"ERDInspect render eoOpt " + eoOpt)
+      D2SpaLogger.logfinest(entityName,"ERDInspect render eoOpt " + eoOpt)
 
       eoOpt match {
         case Some(eo) =>
@@ -96,7 +96,7 @@ object ERDInspect {
                       val ruleResultsModel = p.proxy.value.ruleResults
 
                       val destinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
-                      D2SpaLogger.logDebug(entityName,"ERDInspect destination entity: " + destinationEntityOpt)
+                      D2SpaLogger.logfinest(entityName,"ERDInspect destination entity: " + destinationEntityOpt)
 
                       val destinationEntityNameOpt = destinationEntityOpt match {
                         case Some(aDestinationEntityName) => Some(aDestinationEntityName)
@@ -113,7 +113,7 @@ object ERDInspect {
                       destinationEntityNameOpt match {
                         case Some(destinationEntityName) =>
                           val configurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.inspectConfigurationName)
-                          D2SpaLogger.logDebug(entityName,"ERDInspect render | ConfigurationNameOpt " + configurationNameOpt)
+                          D2SpaLogger.logfinest(entityName,"ERDInspect render | ConfigurationNameOpt " + configurationNameOpt)
 
                           val potPageConf = configurationNameOpt match {
                             case Some(_) =>
@@ -144,7 +144,7 @@ object ERDInspect {
                             dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
                             pageConfiguration = potPageConf
                           )
-                          //log.debug("ERDInspect render embedded list with context " + embeddedListD2WContext)
+                          //log.finest("ERDInspect render embedded list with context " + embeddedListD2WContext)
                           <.div(ERD2WInspect(p.router, embeddedD2WContext, p.proxy))
                           //<.div("Let's wait until we can " + embeddedD2WContext)
                         case None => <.div("No destinaton Entity name")

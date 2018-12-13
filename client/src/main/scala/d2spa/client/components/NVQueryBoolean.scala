@@ -49,10 +49,10 @@ object NVQueryBoolean {
       val entityName = propertyD2WContext.entityName.get
       val propertyName = propertyD2WContext.propertyKey.get
 
-      log.debug("NVQueryBoolean " + propertyName + " query values " + d2wContext.queryValues)
+      log.finest("NVQueryBoolean " + propertyName + " query values " + d2wContext.queryValues)
       val (dontCare, isYes, isNo) = D2WContextUtils.queryValueForKey(d2wContext, propertyName) match {
         case Some(BooleanValue(value)) =>
-          log.debug("NVQueryBoolean value " + value)
+          log.finest("NVQueryBoolean value " + value)
           if (value) (false, true, false) else (false, false, true)
         case _ => (true, false, false)
       }

@@ -48,7 +48,15 @@ object SPAMain extends js.JSApp {
 
 
       (emptyRule
-        | staticRoute(root, TaskRoot) ~> renderR(ctl => MyCircuit.wrap(_.content)(proxy => D2WQueryPage(ctl, D2WContext(entityName = Some("Project"), task = Some(TaskDefine.query)), proxy)))
+
+        | staticRedirect(root) ~> redirectToPage(QueryPage("Project"))(Redirect.Replace)
+        /*| staticRoute(root, TaskRoot) ~> renderR(ctl => {
+            AfterEffectRouter.setCtl(ctl)
+            menusConnection(p => {
+              val d2wContext = D2WContext(entityName = Some("Project"), task =  Some(TaskDefine.query))
+              D2WQueryPage(ctl, d2wContext, p)
+            })
+          })*/
 
         | dynamicRouteCT("#task/query/entity" / string(".*").caseClass[QueryPage]) ~> dynRenderR(
             (m, ctl) => {
@@ -56,10 +64,10 @@ object SPAMain extends js.JSApp {
               menusConnection(p => {
                 val d2wContext = p.value.previousPage match {
                   case Some(previousPage) =>
-                    println("SPAMain | Router previous page " + previousPage)
+                    //println("SPAMain | Router previous page " + previousPage)
                     previousPage
                   case None =>
-                    println("SPAMain | Router no previous Page")
+                    //println("SPAMain | Router no previous Page")
                     val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.query))
                     //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
                     firstD2WContext
@@ -155,7 +163,7 @@ object SPAMain extends js.JSApp {
 
   val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
     case blob: Blob =>
-      println("Will read socket")
+      //println("Will read socket")
       Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
       //Socket.blobReader.abort()
     case _ => dom.console.log("Error on receive, should be a blob.")
@@ -163,7 +171,16 @@ object SPAMain extends js.JSApp {
 
   @JSExport
   def main(): Unit = {
-    log.warn("Application starting")
+    // FINE level -> severe, warning, info
+
+    //log.severe("Severe")
+    //log.warning("warning")
+    //log.info("info")
+    //log.config("config")
+    //log.fine("fine")
+    //log.finer("finer")
+    //log.finest("finest")
+
     // send log messages also to the server
     //log.enableServerLogging("/logging")
     log.info("This message goes to server as well")

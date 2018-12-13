@@ -14,6 +14,7 @@ import d2spa.shared.{Test3,Test4,Test5,Test10}
 import scala.scalajs.js.typedarray.{ArrayBuffer, TypedArrayBuffer}
 import scala.scalajs.js.timers._
 
+import d2spa.client.logger._
 
 // google: scala.js websocket send java.nio.ByteBuffer
 // ->
@@ -30,8 +31,8 @@ object WebSocketClient {
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
       val bytes = Pickle.intoBytes(msg).arrayBuffer()
-      println("Send " + msg)
-      println("Send " + bytes.byteLength + " bytes")
+      log.finest("Send " + msg)
+      log.finest("Send " + bytes.byteLength + " bytes")
       socket.send(bytes)
     }
 

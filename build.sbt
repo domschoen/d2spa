@@ -20,7 +20,8 @@ lazy val server = (project in file("server"))
         guice,
         specs2 % Test
     ) ++ Settings.jvmDependencies.value,
-     EclipseKeys.preTasks := Seq(compile in Compile)
+     EclipseKeys.preTasks := Seq(compile in Compile),
+     LessKeys.compress in Assets := true
   )
   .enablePlugins(PlayScala)
   .aggregate(clients.map(projectToRef): _*) // This allow to run all tests (frontend and backend with "test"
@@ -56,7 +57,8 @@ lazy val client = (project in file("client")).settings(commonSettings)
         "com.zoepepper" %%% "scalajs-jsjoda-as-java-time" % "1.1.1",
         "com.lihaoyi" %%% "utest" % "0.6.5" % Test,
         "com.lihaoyi" %%% "autowire" % Settings.versions.autowire,
-        "io.suzaku" %%% "boopickle" % Settings.versions.booPickle
+        "io.suzaku" %%% "boopickle" % Settings.versions.booPickle,
+        "org.scala-js" %%% "scalajs-java-logging" % "0.1.5"
     ),
     dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2",
     jsDependencies ++= Seq(
@@ -101,7 +103,8 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
         "com.zoepepper" %%% "scalajs-jsjoda" % "1.1.1",
         "com.zoepepper" %%% "scalajs-jsjoda-as-java-time" % "1.1.1",
         "com.lihaoyi" %%% "autowire" % Settings.versions.autowire,
-        "io.suzaku" %%% "boopickle" % Settings.versions.booPickle
+        "io.suzaku" %%% "boopickle" % Settings.versions.booPickle,
+        "org.scala-js" %%% "scalajs-java-logging" % "0.1.5"
     )
   )
 

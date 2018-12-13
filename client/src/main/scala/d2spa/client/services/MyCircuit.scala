@@ -71,13 +71,13 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
     case  InspectEO (fromTask, eo, isOneRecord) =>
-      log.debug("PreviousPageHandler | InspectEO from: " + fromTask)
+      log.finest("PreviousPageHandler | InspectEO from: " + fromTask)
       val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
       effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
     case  InitMetaDataForList (entityName) =>
-      log.debug("PreviousPageHandler | InitMetaDataForList for: " + entityName)
+      log.finest("PreviousPageHandler | InitMetaDataForList for: " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
@@ -85,7 +85,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       noChange
 
     case InitMetaData(d2wContext) =>
-      log.debug("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
+      log.finest("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
       SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
@@ -98,7 +98,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case RegisterPreviousPageAndSetPage(d2wContext) =>
       val  stack = stackD2WContext(d2wContext)
-      log.debug("PreviousPageHandler | RegisterPreviousPageAndSetPage for d2wContext: " + stack)
+      log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage for d2wContext: " + stack)
 
       updated(Some(stack),Effect.action(SetPage(stack)))
 
@@ -106,20 +106,20 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case RegisterPreviousPage(d2WContext) =>
       val  stack = stackD2WContext(d2WContext)
-      log.debug("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
+      log.finest("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
 
       updated(Some(stack))
 
 
     case SetPage(d2WContext) =>
-      log.debug("PreviousPageHandler | SetPage for d2wContext: " + d2WContext)
+      log.finest("PreviousPageHandler | SetPage for d2wContext: " + d2WContext)
       effectOnly(
         Effect(AfterEffectRouter.setPageForTaskAndEOAndEntity(d2WContext))
       )
 
 
     case SetPreviousPage =>
-      log.debug("PreviousPageHandler | SetPreviousPage to: " + value)
+      log.finest("PreviousPageHandler | SetPreviousPage to: " + value)
       value match {
         case Some(currentPage) => {
           currentPage.previousTask match {
@@ -135,7 +135,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       }
 
     case UpdateQueryProperty(entityName, queryValue) =>
-      log.debug("PreviousPageHandler | UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
+      log.finest("PreviousPageHandler | UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
       val d2wContext = value.get
       val currentQueryValues = d2wContext.queryValues
       val newQueryValues = currentQueryValues + (queryValue.key -> queryValue)
@@ -143,7 +143,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(Some(newD2wContext))
 
     case ClearQueryProperty(entityName, propertyName) =>
-      log.debug("PreviousPageHandler | ClearQueryProperty: for entity " + entityName + " and property " + propertyName)
+      log.finest("PreviousPageHandler | ClearQueryProperty: for entity " + entityName + " and property " + propertyName)
       val d2wContext = value.get
       val currentQueryValues = d2wContext.queryValues
       val newQueryValues = currentQueryValues - propertyName
@@ -151,11 +151,11 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       updated(Some(newD2wContext))
 
     case SearchAction(entityName) =>
-      log.debug("PreviousPageHandler | Search | " + entityName + " | value: " + value)
+      log.finest("PreviousPageHandler | Search | " + entityName + " | value: " + value)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
           val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)
-          log.debug("SPACircuit | Search(" + entityName + ") | qualifierOpt: " + qualifierOpt)
+          log.finest("SPACircuit | Search(" + entityName + ") | qualifierOpt: " + qualifierOpt)
 
           qualifierOpt match {
             // TODO manage sort ordering
@@ -164,12 +164,12 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
           }
         case _ => EOFetchAll(entityName)  // shouldn't come here because the query page initialized it
       }
-      log.debug("PreviousPageHandler | Search | " + entityName + " query with fs " + fs)
+      log.finest("PreviousPageHandler | Search | " + entityName + " query with fs " + fs)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
       //val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       //val  stack = stackD2WContext(d2wContext)
-      //log.debug("PreviousPageHandler | Search | Register Previous " + stack)
+      //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
       SPAMain.socket.send(WebSocketMessages.Search(fs))
       noChange

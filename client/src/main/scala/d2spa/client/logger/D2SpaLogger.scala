@@ -1,6 +1,7 @@
 package d2spa.client.logger
 import d2spa.client.D2WContext
 import d2spa.client.logger._
+import java.util.logging._
 
 object D2SpaLogger {
 
@@ -9,9 +10,9 @@ object D2SpaLogger {
     //val EntityFocus = List()
 
 
-    def logDebug(entityName: String, text: String) = {
+    def logfinest(entityName: String, text: String) = {
       if (entityName.equals(ALL) || EntityFocus.contains(entityName))
-        log.debug(entityName + " -> " + text)
+        log.finest(entityName + " -> " + text)
     }
 
     def logDebugWithD2WContext(d2WContext: D2WContext, text: String) = {
@@ -19,7 +20,7 @@ object D2SpaLogger {
             case Some(entityName) => entityName
             case None => ALL
         }
-        D2SpaLogger.logDebug(entityFilter,text)
+        D2SpaLogger.logfinest(entityFilter,text)
     }
 
 }

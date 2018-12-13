@@ -36,10 +36,10 @@ object ERD2WDisplayString {
       val entityName = d2wContext.entityName.get
 
       val eoOpt = d2wContext.eo
-      //D2SpaLogger.logDebug( entityName, "Render ERD2WDisplayString eoOpt: " + eoOpt)
+      //D2SpaLogger.logfinest( entityName, "Render ERD2WDisplayString eoOpt: " + eoOpt)
       eoOpt match {
         case Some(eo) =>
-          //D2SpaLogger.logDebug( entityName, "Render ERD2WDisplayString eo: " + eo)
+          //D2SpaLogger.logfinest( entityName, "Render ERD2WDisplayString eo: " + eo)
 
           val propertyName = d2wContext.propertyKey.get
           if (eo.keys.contains(propertyName)) {

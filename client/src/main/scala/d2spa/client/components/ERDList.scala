@@ -35,14 +35,14 @@ object ERDList {
   class Backend($: BackendScope[Props, Unit]) {
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      //log.debug("ERDList willReceiveProps | currentProps: " + currentProps)
-      //log.debug("ERDList willReceiveProps | nextProps: " + nextProps)
+      //log.finest("ERDList willReceiveProps | currentProps: " + currentProps)
+      //log.finest("ERDList willReceiveProps | nextProps: " + nextProps)
 
       val cEO = currentProps.d2wContext
       val nEO = nextProps.d2wContext
       val eoChanged = !cEO.equals(nEO)
 
-      //D2SpaLogger.logDebug(D2SpaLogger.ALL, "ERDList willReceiveProps | eoChanged: " + eoChanged)
+      //D2SpaLogger.logfinest(D2SpaLogger.ALL, "ERDList willReceiveProps | eoChanged: " + eoChanged)
 
 
       Callback.when(eoChanged) {
@@ -57,7 +57,7 @@ object ERDList {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
 
-      D2SpaLogger.logDebug(entityName, "ERDList mounted " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName, "ERDList mounted " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val listConfigurationNameOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
@@ -81,9 +81,9 @@ object ERDList {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"ERDList render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName,"ERDList render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
-      //log.debug("ERDList render with D2WContext: " + d2wContext)
+      //log.finest("ERDList render with D2WContext: " + d2wContext)
 
       // to get access to the latest version of the eo we use the previous page context
       val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
@@ -103,7 +103,7 @@ object ERDList {
                       val ruleResultsModel = p.proxy.value.ruleResults
 
                       val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
-                      D2SpaLogger.logDebug(entityName,": " + listDestinationEntityOpt)
+                      D2SpaLogger.logfinest(entityName,": " + listDestinationEntityOpt)
 
                       val destinationEntityNameOpt = listDestinationEntityOpt match {
                         case Some(aDestinationEntityName) => Some(aDestinationEntityName)
@@ -120,7 +120,7 @@ object ERDList {
                       destinationEntityNameOpt match {
                         case Some(destinationEntityName) =>
                           val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
-                          D2SpaLogger.logDebug(entityName,"ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
+                          D2SpaLogger.logfinest(entityName,"ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
                           val potPageConf = listConfigurationNameOpt match {
                             case Some(_) =>
@@ -145,7 +145,7 @@ object ERDList {
                           // - task = list
                           // - DataRep
                           // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
-                          D2SpaLogger.logDebug(entityName,"ERDList render | dataRep " + eo.entityName + " propertyName: " + propertyName + " destinationEntityName: " + destinationEntityName)
+                          D2SpaLogger.logfinest(entityName,"ERDList render | dataRep " + eo.entityName + " propertyName: " + propertyName + " destinationEntityName: " + destinationEntityName)
 
                           val embeddedListD2WContext = D2WContext(
                             entityName = Some(destinationEntityName),
@@ -153,7 +153,7 @@ object ERDList {
                             dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
                             pageConfiguration = potPageConf
                           )
-                          //log.debug("ERDList render embedded list with context " + embeddedListD2WContext)
+                          //log.finest("ERDList render embedded list with context " + embeddedListD2WContext)
                           <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
 
                         case None => <.div("No destinaton Entity name")

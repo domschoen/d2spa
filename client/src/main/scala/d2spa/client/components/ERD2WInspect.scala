@@ -20,8 +20,8 @@ object ERD2WInspect {
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      //log.debug("ERD2WInspect willReceiveProps | currentProps: " + currentProps)
-      //log.debug("ERD2WInspect willReceiveProps | nextProps: " + nextProps)
+      //log.finest("ERD2WInspect willReceiveProps | currentProps: " + currentProps)
+      //log.finest("ERD2WInspect willReceiveProps | nextProps: " + nextProps)
       val cEntityName = currentProps.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.entityName
       val entityChanged = !cEntityName.equals(nEntityName)
@@ -36,7 +36,7 @@ object ERD2WInspect {
 
 
       val anyChange = entityChanged || dataRepChanged || d2wContextChanged
-      //log.debug("ERD2WInspect willReceiveProps | anyChange: " + anyChange)
+      //log.finest("ERD2WInspect willReceiveProps | anyChange: " + anyChange)
 
       Callback.when(anyChange) {
         willmounted(nextProps)
@@ -51,7 +51,7 @@ object ERD2WInspect {
         case PotFiredKey(Right(s)) => s
         case PotFiredKey(Left(_)) => "toBeFired"
       }
-      D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted for " + d2wContext.entityName + " task " + d2wContext.task + " page configuration " + pageConfigurationDebug)
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted for " + d2wContext.entityName + " task " + d2wContext.task + " page configuration " + pageConfigurationDebug)
       val eomodel = p.proxy.value.cache.eomodel.get
       //val d2wContext = p.proxy.value.previousPage.get
       //val propertyName = staleD2WContext.propertyKey.get
@@ -61,17 +61,17 @@ object ERD2WInspect {
           val ruleResultsModel = p.proxy.value.ruleResults
 
           //val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-          //log.debug("ERDList mounted: dataNotFetched" + dataNotFetched)
+          //log.finest("ERDList mounted: dataNotFetched" + dataNotFetched)
 
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: entity: " + entity.name)
-          //log.debug("NVListComponent mounted: eomodel: " + eomodel)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: entity: " + entity.name)
+          //log.finest("NVListComponent mounted: eomodel: " + eomodel)
 
           // listConfigurationName
           // Then with D2WContext:
           // - task = 'list'
           // - entity.name = 'Project'
           // - pageConfiguration = <listConfigurationName>
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: d2wContext: " + d2wContext)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: d2wContext: " + d2wContext)
 
           val displayPropertyKeysRuleResultOpt = RuleUtils.ruleResultForContextAndKey(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
           // Fire "displayPropertyKeys" ?
@@ -79,7 +79,7 @@ object ERD2WInspect {
             case Some(_) => None
             case None => Some(FireRule(d2wContext, RuleKeys.displayPropertyKeys))
           }
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: fireDisplayPropertyKeys: " + displayPropertyKeysRuleResultOpt.isDefined)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: fireDisplayPropertyKeys: " + displayPropertyKeysRuleResultOpt.isDefined)
 
 
           // Fire "isEditAllowed" ?
@@ -100,7 +100,7 @@ object ERD2WInspect {
             }
             case _ => None
           }
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: drySubstrateOpt: " + drySubstrateOpt)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: drySubstrateOpt: " + drySubstrateOpt)
 
 
           // TODO Hydration should be avoided if the objects are already hydrated
@@ -122,7 +122,7 @@ object ERD2WInspect {
                       )))
                   }
                 case None =>
-                  D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: drySubstrate: " + drySubstrate)
+                  D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: drySubstrate: " + drySubstrate)
                   val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
                   Some(Hydration(
@@ -164,7 +164,7 @@ object ERD2WInspect {
 
 
           val actions = fireActions.flatten
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: FireActions: " + actions.size)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: FireActions: " + actions.size)
 
           Callback.when(!actions.isEmpty)(p.proxy.dispatchCB(
             FireActions(
@@ -173,7 +173,7 @@ object ERD2WInspect {
             )
           ))
         case _ =>
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect mounted: no entity for entity name: " + entityName)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect mounted: no entity for entity name: " + entityName)
           Callback.empty
       }
 
@@ -205,17 +205,17 @@ object ERD2WInspect {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"ERD2WInspect render for entity: " + entityName)
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect render for entity: " + entityName)
 
       d2wContext.pageConfiguration match {
         case PotFiredKey(Right(_)) =>
           val ruleResultsModel = p.proxy.value.ruleResults
-          //log.debug("ERD2WInspect render ruleResultsModel: " + ruleResultsModel)
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect render |  " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+          //log.finest("ERD2WInspect render ruleResultsModel: " + ruleResultsModel)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect render |  " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect render task displayPropertyKeys " + displayPropertyKeys)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect render task displayPropertyKeys " + displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
 
           val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
@@ -223,27 +223,27 @@ object ERD2WInspect {
           val cloneAllowed = false && isEditAllowed // not yet implemented
           val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
 
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
 
           val dataRepOpt = d2wContext.dataRep
 
-          D2SpaLogger.logDebug(entityName,"dataRepOpt " + dataRepOpt)
+          D2SpaLogger.logfinest(entityName,"dataRepOpt " + dataRepOpt)
           val eoOpt: Option[EO] = dataRepOpt match {
             case Some(dataRep) => {
               val cache = p.proxy.value.cache
               dataRep match {
                 case DataRep(Some(fs), _) =>
-                  //log.debug("NVListCompoennt look for objects in cache with fs " + fs)
-                  //log.debug("NVListCompoennt look for objects in cache " + cache)
-                  //D2SpaLogger.logDebug(entityName,"ERD2WInspect look for objects in cache with fs")
+                  //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
+                  //log.finest("NVListCompoennt look for objects in cache " + cache)
+                  //D2SpaLogger.logfinest(entityName,"ERD2WInspect look for objects in cache with fs")
                   //EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
                   None
 
                 case DataRep(_, Some(eosAtKeyPath)) => {
-                  //log.debug("ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
-                  D2SpaLogger.logDebug(entityName,"ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
+                  //log.finest("ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
+                  D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
                   val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
-                  D2SpaLogger.logDebug(entityName,"ERD2WInspect render eosAtKeyPath eovalueOpt: " + eovalueOpt)
+                  D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath eovalueOpt: " + eovalueOpt)
 
                   eovalueOpt match {
                     case Some(eovalue) =>
@@ -251,7 +251,7 @@ object ERD2WInspect {
                       // ObjectsValue(Vector(1))
                       eovalue match {
                         case ObjectValue(eo) =>
-                          D2SpaLogger.logDebug(entityName,"ERD2WInspect render eo found")
+                          D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo found")
                           EOCacheUtils.outOfCacheEOUsingPk(p.proxy.value.cache, entityName, eo.pk)
                         case _ => None
                       }
@@ -264,12 +264,12 @@ object ERD2WInspect {
             }
             case _ => None
           }
-          D2SpaLogger.logDebug(entityName,"ERD2WInspect render eo foudn " + eoOpt.isDefined)
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo foudn " + eoOpt.isDefined)
 
           eoOpt match {
             case Some(eo) =>
               val eoRighD2WContext = d2wContext.copy(eo = eoOpt)
-              D2SpaLogger.logDebug(entityName,"ERD2WInspect render | d2w context for repetition: " + eoRighD2WContext.entityName + " task " + eoRighD2WContext.task + " propertyKey " + eoRighD2WContext.propertyKey + " page configuration " + eoRighD2WContext.pageConfiguration)
+              D2SpaLogger.logfinest(entityName,"ERD2WInspect render | d2w context for repetition: " + eoRighD2WContext.entityName + " task " + eoRighD2WContext.task + " propertyKey " + eoRighD2WContext.propertyKey + " page configuration " + eoRighD2WContext.pageConfiguration)
 
               <.div(PageRepetition(p.router, eoRighD2WContext, p.proxy))
 

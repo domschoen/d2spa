@@ -30,19 +30,19 @@ object PageRepetition {
     def render(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logDebug(entityName,"Render PageRepetition for entity: " + d2wContext)
-      D2SpaLogger.logDebug(entityName,"Render PageRepetition for entity | object exists: " + d2wContext.eo.isDefined)
+      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity: " + d2wContext)
+      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity | object exists: " + d2wContext.eo.isDefined)
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)
 
       ruleContainerOpt match {
         case Some(ruleContainer) => {
-          D2SpaLogger.logDebug(entityName,"Render PageRepetition ruleContainer: " + ruleContainer)
+          D2SpaLogger.logfinest(entityName,"Render PageRepetition ruleContainer: " + ruleContainer)
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
-          D2SpaLogger.logDebug(entityName,"Render PageRepetition displayPropertyKeys: " + displayPropertyKeys)
+          D2SpaLogger.logfinest(entityName,"Render PageRepetition displayPropertyKeys: " + displayPropertyKeys)
           val taskName = d2wContext.task.get
 
           entityDisplayNameOpt match {

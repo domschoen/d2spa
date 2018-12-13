@@ -31,7 +31,7 @@ object MenuHeader {
     }*/
 
     def selectMenu(entityName: String) = {
-      //log.debug("selectMenu")
+      //log.finest("selectMenu")
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some("query"))
 
       Callback.log(s"Menu selected: $entityName") >>
@@ -39,7 +39,7 @@ object MenuHeader {
     }
 
     def newEO(entity: EOEntity) = {
-      log.debug("new EO for entity " + entity)
+      log.finest("new EO for entity " + entity)
       val d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit), eo = None)
 
       Callback.log(s"New EO for: $entity") >>
@@ -52,7 +52,7 @@ object MenuHeader {
       val debugButtonText = if (p.proxy.value.appConfiguration.isDebugMode) "Turn off D2W Debug" else "Turn on D2W Debug"
       <.div(
         if (!p.proxy.value.menuModel.isEmpty) {
-          log.debug("MenuHeader, render, Menu not empty")
+          log.finest("MenuHeader, render, Menu not empty")
           <.div(
             <.ul(style.listGroup, ^.className := "menu",
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>

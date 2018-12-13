@@ -32,7 +32,7 @@ object ERD2WEditString  {
 
 
     def render(p: Props) = {
-      //log.debug("eo: " + p.eo)
+      //log.finest("eo: " + p.eo)
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get

@@ -24,10 +24,10 @@ object D2WComponentInstaller  {
 
     def render(p: Props) = {
       val d2wContext = p.d2wContext
-      //log.debug("D2WComponentInstaller | Render with d2wContext: " + d2wContext)
-      //log.debug("D2WComponentInstaller | Render")
+      //log.finest("D2WComponentInstaller | Render with d2wContext: " + d2wContext)
+      //log.finest("D2WComponentInstaller | Render")
 
-      //log.debug("Render D2WComponentInstaller " + p.proxy.value.isDebugMode)
+      //log.finest("Render D2WComponentInstaller " + p.proxy.value.isDebugMode)
       <.div({
         val propertyName = d2wContext.propertyKey.get
         val ruleResults = p.proxy.value.ruleResults

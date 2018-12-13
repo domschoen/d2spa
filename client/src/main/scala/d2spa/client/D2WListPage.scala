@@ -27,12 +27,12 @@ object D2WListPage {
       val entityName = d2wContext.entityName.get
 
       val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults, d2wContext)
-      log.debug("entityMetaDataNotFetched " + entityMetaDataNotFetched)
+      log.finest("entityMetaDataNotFetched " + entityMetaDataNotFetched)
       Callback.when(entityMetaDataNotFetched)(p.proxy.dispatchCB(InitMetaDataForList(entityName)))
     }
 
     def render(p: Props) = {
-      log.debug("D2WListPage render " + p.proxy.value)
+      log.finest("D2WListPage render " + p.proxy.value)
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       <.div(

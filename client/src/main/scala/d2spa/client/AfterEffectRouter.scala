@@ -14,7 +14,7 @@ object AfterEffectRouter {
   def setPageForTaskAndEOAndEntity(d2WContext: D2WContext): Future[diode.NoAction.type] = {
 
 
-    log.debug("AfterEffectRouter " + d2WContext)
+    log.finest("AfterEffectRouter " + d2WContext)
     val entityName = d2WContext.entityName.get
     d2WContext.task.get match {
       case "query" => setRouterToPage(QueryPage(entityName))
@@ -33,7 +33,7 @@ object AfterEffectRouter {
         val pk = eo.pk.pks.head
         if (pk < 0) {
           val page = EditPage(entityName,pk)
-          log.debug("Set Router to page " + page)
+          log.finest("Set Router to page " + page)
           setRouterToPage(page)
         } else {
           val page = if (taskName.equals(TaskDefine.edit)) EditPage(entityName, pk) else InspectPage(entityName, pk)
@@ -53,7 +53,7 @@ object AfterEffectRouter {
 
 
   def setRouterToPage(page: TaskAppPage): Future[diode.NoAction.type] = {
-    log.debug("AfterEffectRouter | setRouterToPage " + page)
+    log.finest("AfterEffectRouter | setRouterToPage " + page)
     // RouterCtl.set returns a Callback[Unit]
     // Callback implemented as functions that return a CallbackTo[Unit]
     Future {

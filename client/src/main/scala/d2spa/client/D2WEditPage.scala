@@ -29,8 +29,8 @@ object D2WEditPage {
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      log.debug("D2WEditPage | willReceiveProps | currentProps: " + currentProps)
-      log.debug("D2WEditPage | willReceiveProps | nextProps: " + nextProps)
+      log.finest("D2WEditPage | willReceiveProps | currentProps: " + currentProps)
+      log.finest("D2WEditPage | willReceiveProps | nextProps: " + nextProps)
 
       val cTask = currentProps.d2wContext.task
       val nTask = nextProps.d2wContext.task
@@ -58,9 +58,9 @@ object D2WEditPage {
     def willmounted(p: Props) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
-      log.debug("D2WEditPage | will Mount " + entityName)
-      log.debug("D2WEditPage | willMount eo " + d2wContext.eo)
-      log.debug("D2WEditPage | willMount d2wContext " + d2wContext)
+      log.finest("D2WEditPage | will Mount " + entityName)
+      log.finest("D2WEditPage | willMount eo " + d2wContext.eo)
+      log.finest("D2WEditPage | willMount d2wContext " + d2wContext)
       val task = d2wContext.task.get
       if (!allowedTasks.contains(task))
         Callback.empty
@@ -78,13 +78,13 @@ object D2WEditPage {
           case Some(ppD2WContext) => ppD2WContext.equals(d2wContext)
           case None => false
         }
-        log.debug("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
+        log.finest("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
 
 
         val eoOpt = d2wContext.eo
         val action = eoOpt match {
           case Some(eo) =>
-            log.debug("D2WEditPage | mounted | some eo")
+            log.finest("D2WEditPage | mounted | some eo")
 
             if (EOValue.isNew(eo.pk)) {
               None
@@ -97,7 +97,7 @@ object D2WEditPage {
                 // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
                 Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
               )
-              log.debug("D2WEditPage: willMount actionList " + actionList)
+              log.finest("D2WEditPage: willMount actionList " + actionList)
               if (actionList.isEmpty)
                 None
               else
@@ -151,43 +151,43 @@ object D2WEditPage {
 
       val staleD2WContext = p.d2wContext
       val entityName = staleD2WContext.entityName.get
-      log.debug("D2WEditPage: render eo for entity Name: " + staleD2WContext)
+      log.finest("D2WEditPage: render eo for entity Name: " + staleD2WContext)
 
-      log.debug("D2WEditPage: eocache : " + p.proxy.value.cache)
+      log.finest("D2WEditPage: eocache : " + p.proxy.value.cache)
 
       val d2wContext = p.proxy.value.previousPage.get
-      log.debug("D2WEditPage: render eo with fresh context : " + d2wContext)
+      log.finest("D2WEditPage: render eo with fresh context : " + d2wContext)
 
       val eoRefOpt = d2wContext.eo
-      log.debug("D2WEditPage: render eo : " + eoRefOpt)
+      log.finest("D2WEditPage: render eo : " + eoRefOpt)
 
       eoRefOpt match {
         case Some(eoRef) =>
-          //log.debug("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
-          //log.debug("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
+          //log.finest("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
+          //log.finest("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
 
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, d2wContext.entityName.get, eoRef)
-          log.debug("D2WEditPage: render eo out of cache: " + eoOpt)
+          log.finest("D2WEditPage: render eo out of cache: " + eoOpt)
 
           eoOpt match {
             case Some(eo) =>
               val entityName = p.d2wContext.entityName.get
               val ruleResults = p.proxy.value.ruleResults
 
-              log.debug("D2WEditPage: render check meta data fetched with d2wContext " + d2wContext)
-              log.debug("D2WEditPage: render check meta data fetched in rules " + ruleResults)
+              log.finest("D2WEditPage: render check meta data fetched with d2wContext " + d2wContext)
+              log.finest("D2WEditPage: render check meta data fetched in rules " + ruleResults)
               val metaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
 
               if (metaDataPresent) {
-                log.debug("entityMetaDatas not empty")
+                log.finest("entityMetaDatas not empty")
 
-                //log.debug("Entity meta Data " + metaDatas)
+                //log.finest("Entity meta Data " + metaDatas)
                 val displayPropertyKeys = displayPropertyKeysFromProps(p, d2wContext)
                 val banImage = if (isEdit(p)) "/assets/images/EditBan.gif" else "/assets/images/InspectBan.gif"
                 val displayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
                 val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
 
-                log.debug("Edit page EO " + eo)
+                log.finest("Edit page EO " + eo)
                 <.div(
                   <.div(^.id := "b", MenuHeader(p.router, p.d2wContext.entityName.get, p.proxy)),
                   <.div(^.id := "a",
