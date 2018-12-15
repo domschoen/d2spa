@@ -81,37 +81,43 @@ object D2WEditPage {
         log.finest("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
 
 
-        val eoOpt = d2wContext.eo
-        val action = eoOpt match {
-          case Some(eo) =>
-            log.finest("D2WEditPage | mounted | some eo")
+          val eoOpt = d2wContext.eo
+          val action = eoOpt match {
+            case Some(eo) =>
+              if (previousPageHasBeenSet) {
+                if (EOValue.isNew(eo.pk)) {
+                  None
+                } else {
+                  val eoFault = EOFault(entityName, eo.pk)
+                  val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
-            if (EOValue.isNew(eo.pk)) {
-              None
-            } else {
-              val eoFault = EOFault(entityName, eo.pk)
-              val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+                  val actionList = List(
+                    // in order to have an EO completed with all attributes for the task,
+                    // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                    Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
+                  )
+                  log.finest("D2WEditPage: willMount actionList " + actionList)
+                  if (actionList.isEmpty)
+                    None
+                  else
+                    Some(FireActions(
+                      d2wContext,
+                      actionList
+                    ))
+                }
 
-              val actionList = List(
-                // in order to have an EO completed with all attributes for the task,
-                // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-                Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
-              )
-              log.finest("D2WEditPage: willMount actionList " + actionList)
-              if (actionList.isEmpty)
-                None
-              else
-                Some(FireActions(
-                  d2wContext,
-                  actionList
-                ))
-            }
-          case None =>
-            Some(NewAndRegisteredEO(d2wContext))
-        }
+              }else {
+                Some(RegisterPreviousPage(d2wContext))
 
-        Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get)) >>
-          Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
+              }
+
+            case None =>
+              Some(NewAndRegisteredEO(d2wContext))
+          }
+
+          Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get)) >>
+            Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
+
       }
     }
 

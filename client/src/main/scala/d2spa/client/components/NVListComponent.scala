@@ -200,9 +200,12 @@ object NVListComponent {
     }
 
     def inspectEO(eo: EO) = {
-      println("NVListCompoennt InspectEO")
+      //println("NVListCompoennt InspectEO")
+      val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
+
       Callback.log(s"Inspect: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
+        //$.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
+        $.props >>= (_.proxy.dispatchCB(SetPage(d2wContext)))
     }
 
     def editEO(eo: EO) = {
