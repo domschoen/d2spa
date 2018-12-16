@@ -1,4 +1,4 @@
-package d2spa.client
+package d2spa.shared
 
 object Utils {
 

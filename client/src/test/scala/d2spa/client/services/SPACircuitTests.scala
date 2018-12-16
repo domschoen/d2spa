@@ -38,11 +38,27 @@ object SPACircuitTests extends TestSuite {
 
   def tests = TestSuite {
     'Cache - {
-        val eosForUpdating = List(EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None))
-        val updatedCache = EOCacheUtils.updatedModelForEntityNamed(SharedTestData.eomodel,cacheBefore,eosForUpdating)
-        assert(updatedCache.equals(Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None)))))
+      val entity = d2spa.shared.SharedTestData.projectEntity
+
+      val eosForUpdating = List(EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None))
+      val updatedCache = EOCacheUtils.updatedModelForEntityNamed(entity,cacheBefore,eosForUpdating)
+      assert(updatedCache.equals(Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None)))))
+    }
+    'CachePutNothingShouldReturnSome  - {
+      val entity = d2spa.shared.SharedTestData.projectEntity
+
+      // Empty cache
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+      // Register an empty list for Project entity
+      val newCache = EOCacheUtils.updatedCacheWithDBEOs(entity, cache, Vector())
+
+      // Ask the cache for entity Project return a Pot which is Ready but with empty content
+      val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(newCache.eos, entity.name)
+
+      assert(destinationEOs.equals(Some(List())))
     }
     'Cache2 - {
+      val entity = d2spa.shared.SharedTestData.projectEntity
       val eosForUpdating = List(EO("Project",List("descr","projectNumber"),List(StringValue("8"),IntValue(8)),EOPk(List(-1)),None))
       val entityMap = cacheBefore2("Project")
 
@@ -60,7 +76,7 @@ object SPACircuitTests extends TestSuite {
       assert(existingPks.equals(Set(EOPk(List(-1)))))
 
 
-      val updatedCache = EOCacheUtils.updatedModelForEntityNamed(SharedTestData.eomodel,cacheBefore2,eosForUpdating)
+      val updatedCache = EOCacheUtils.updatedModelForEntityNamed(entity,cacheBefore2,eosForUpdating)
       println("updatedCache " + updatedCache)
       assert(updatedCache.equals(Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr","projectNumber"),List(StringValue("8"),IntValue(8)),EOPk(List(-1)),None)))))
     }

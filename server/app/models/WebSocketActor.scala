@@ -49,10 +49,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-    case FetchedObjects(eos) =>
+    case FetchedObjects(entityName, eos) =>
       println("Receive FetchedObjects ---> sending FetchedObjectsMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsMsgOut(eos)
+      out ! FetchedObjectsMsgOut(entityName, eos)
 
 
     case FetchedObjectsForList(fs, eos) =>

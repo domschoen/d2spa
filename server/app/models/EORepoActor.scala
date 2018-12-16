@@ -43,7 +43,7 @@ object EORepoActor {
   case class DeleteEO(eo: EO, requester: ActorRef) // : Future[EO]
 
   // Responses
-  case class FetchedObjects(eos: List[EO])
+  case class FetchedObjects(entityName: String, eos: List[EO])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(eo: EO)
@@ -600,7 +600,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       val entityName = EOFetchSpecification.entityName(fs)
 
       searchOnWORepository(entityName, None).map(rrs =>
-        requester ! FetchedObjects(rrs)
+        requester ! FetchedObjects(entityName, rrs)
       )
 
     case Search(fs: EOFetchSpecification, requester: ActorRef) =>
@@ -618,12 +618,12 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
       completeEO(eo,missingKeys).map(rrs =>
-        requester ! FetchedObjects(rrs)
+        requester ! FetchedObjects(eo.entityName, rrs)
       )
     case HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], requester: ActorRef) =>
       log.debug("Get HydrateEOs")
       hydrateEOs(entityName, pks, missingKeys).map(rrs =>
-        requester ! FetchedObjects(rrs)
+        requester ! FetchedObjects(entityName, rrs)
       )
 
 

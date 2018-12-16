@@ -25,6 +25,7 @@ object WebSocketClient {
   val websocketUrl = s"ws://${dom.document.location.host}/ws"
 
   case class Socket(url: String)(onMessage: (MessageEvent) => _) {
+    println("  SOCKETE SOCKETE SOCKETE")
     private val socket: WebSocket = new dom.WebSocket(url = url)
 
     def send(msg: WebSocketMsgIn): Unit = {
@@ -54,7 +55,7 @@ object WebSocketClient {
               case FetchedEOModel(eomodel) => MyCircuit.dispatch(SetEOModelThenFetchMenu(eomodel))
               case FetchedMenus(menus) => MyCircuit.dispatch(SetMenus(menus))
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
-              case FetchedObjectsMsgOut(eos) => MyCircuit.dispatch(client.FetchedObjectsForEntity(eos))
+              case FetchedObjectsMsgOut(entityName, eos) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos))
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))

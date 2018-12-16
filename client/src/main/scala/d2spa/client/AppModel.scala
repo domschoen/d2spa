@@ -1,11 +1,12 @@
 package d2spa.client
 
 import diode._
-import diode.data._
+import diode.data.{Pot, _}
 import diode.util._
 import d2spa.shared.{EntityMetaData, _}
 import boopickle.DefaultBasic._
-import d2spa.client.logger.log
+import d2spa.client.EOCacheUtils.eoEntityMapOpt
+import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared.WebSocketMessages.RuleToFire
 import jdk.nashorn.internal.ir.PropertyKey
 /**
@@ -55,9 +56,14 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 
 // concept of qualifier / Batch number --> eos
 
+sealed trait EOCacheEntityElement
+case class EODBCacheEntityElement(data : Pot[Map[EOPk,EO]]) extends EOCacheEntityElement
+case class EOMemCacheEntityElement(data : Map[EOPk,EO]) extends EOCacheEntityElement
+
+
 case class EOCache(eomodel: Pot[EOModel],
-                   eos: Map[String, Map[EOPk,EO]],
-                   insertedEOs: Map[String, Map[EOPk,EO]])
+                   eos: Map[String, EOCacheEntityElement],
+                   insertedEOs: Map[String,EOCacheEntityElement])
 
 
 case class DebugConf(showD2WDebugButton: Boolean)
@@ -84,7 +90,7 @@ case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 case object FetchMenu extends Action
 
-case class FetchedObjectsForEntity(eos: Seq[EO]) extends Action
+case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO]) extends Action
 case class RefreshedEOs(eos: Seq[EO])
 
 case class InitMetaData(d2wContext: D2WContext) extends Action
@@ -175,6 +181,7 @@ object Hydration {
 
   }
 
+  // EOs are supposed to exists in cache but not hydrated correctly in scope
   def isHydratedForPropertyKeys(eomodel: EOModel, cache: EOCache, drySubstrate: DrySubstrate, propertyKeys: List[String]): Boolean = {
     drySubstrate match {
       case DrySubstrate(_, Some(eoFault), _) =>
@@ -657,127 +664,129 @@ object EOCacheUtils {
     updatedCache
   }
 
+  def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
+    val pk = eo.pk
+    Some((pk, eo))
+  }).flatten.toMap
+
+
+  def readyEODBCacheEntityElement(eos: List[EO]): EODBCacheEntityElement = {
+    // we create a Map with eo and id
+    // From eos to update, we create a map of key ->
+    val refreshedEOs = refreshedEOMap(eos)
+    EODBCacheEntityElement(Ready(refreshedEOs))
+  }
+
+  /*def memCacheEntityElement(eos: List[EO]): EOMemCacheEntityElement = {
+    val refreshedEOs = refreshedEOMap(eos)
+    EOMemCacheEntityElement(refreshedEOs)
+  }*/
+
+
+  def updatedEOMap(entityMap: Map[EOPk, EO], updatedEOSubset: List[EO]): Map[EOPk, EO] = {
+    val refreshedEOs = refreshedEOMap(updatedEOSubset)
+    // work with new and eo to be updated
+    val refreshedPks = refreshedEOs.keySet
+    val existingPks = entityMap.keySet
+
+    val newPks = refreshedPks -- existingPks
+
+    // Iterate on eos
+    val newAndUpdateMap = refreshedPks.map(id => {
+      //log.finest("Refresh " + entityName + "[" + id + "]")
+      val refreshedEO = refreshedEOs(id)
+      //log.finest("Refreshed " + refreshedEO)
+
+      // 2 cases:
+      // new
+      if (newPks.contains(id)) {
+        (id, refreshedEO)
+      } else {
+        // existing -> to be updated
+        // Complete EOs !
+        val existingEO = entityMap(id)
+        (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
+      }
+    }).toMap
+    entityMap ++ newAndUpdateMap
+  }
+
+
   //EOValueUtils.pk(eo)
-  def newUpdatedCache(eomodel: EOModel, cache: Map[String, Map[EOPk, EO]], eos: Seq[EO]): Map[String, Map[EOPk, EO]] = {
-    val anyHead = eos.headOption
-    anyHead match {
-      case Some(head) =>
-        val entityName = head.entityName
-        val entity = EOModelUtils.entityNamed(eomodel,entityName).get
-        val pkAttributeNames = entity.pkAttributeNames
-        val entityMap = if (cache.contains(entityName)) cache(entityName) else Map.empty[EOPk, EO]
-
-        // we create a Map with eo and id
-        // From eos to update, we create a map of key ->
-        val refreshedEOs = eos.map(eo => {
-          val pk = eo.pk
-          Some((pk, eo))
-        }).flatten.toMap
-
-        // work with new and eo to be updated
-        val refreshedPks = refreshedEOs.keySet
-        val existingPks = entityMap.keySet
-
-        val newPks = refreshedPks -- existingPks
-
-        // Iterate on eos
-        val newAndUpdateMap = refreshedPks.map(id => {
-          //log.finest("Refresh " + entityName + "[" + id + "]")
-          val refreshedEO = refreshedEOs(id)
-          //log.finest("Refreshed " + refreshedEO)
-
-          // 2 cases:
-          // new
-          if (newPks.contains(id)) {
-            (id, refreshedEO)
-          } else {
-            // existing -> to be updated
-            // Complete EOs !
-            val existingEO = entityMap(id)
-            (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
-          }
-        }).toMap
-        val newEntityMap = entityMap ++ newAndUpdateMap
-
-        cache + (entity.name -> newEntityMap)
-      case _ => Map.empty[String, Map[EOPk, EO]]
-    }
+  def newUpdatedEntityCache(entityName: String, cache: Map[String, EOCacheEntityElement], entityCacheElement: EOCacheEntityElement): Map[String, EOCacheEntityElement] = {
+    cache + (entityName -> entityCacheElement)
   }
 
-
-
-  // Entity Name is retreived from the eos
-  def updatedModelForEntityNamed(eomodel: EOModel,cache: Map[String, Map[EOPk, EO]], eos: Seq[EO]): Map[String, Map[EOPk, EO]] = {
-    if (eos.isEmpty) {
-      cache
-    } else {
-      println("Zcache " + cache)
-      println("Zcache " + eos)
-      println("Zresult before " + cache)
-
-
-      val result: Map[String, Map[EOPk, EO]] = newUpdatedCache(eomodel, cache, eos)
-      println("Zresult " + result)
-
-      //log.finest("storing result as :" + result)
-      result
-    }
-  }
-
-
-
-  def updatedOutOfDBCacheWithEOs(eomodel: EOModel, cache: EOCache, eos: Seq[EO]): EOCache = {
-    //log.finest("Cache before update " + cache)
-    val insertedEOs = cache.insertedEOs
-    val outOfDBEOs = updatedModelForEntityNamed(eomodel, cache.eos, eos)
-    val newCache = EOCache(Ready(eomodel), outOfDBEOs, insertedEOs)
-    //log.finest("New cache " + newCache)
-    newCache
-  }
 
   // Returns None if nothing registered in the cache for that entityName
-  def objectsForEntityNamed(eos: Map[String, Map[EOPk,EO]], entityName: String): Option[List[EO]] = if (eos.contains(entityName)) {
-    val entityEOs = eos(entityName).values.toList
-    Some(entityEOs)
-  } else None
+  def dbEOsForEntityNamed(cache: EOCache, entityName: String): Option[List[EO]] = {
+    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache.eos, entityName)
+    eoCacheEntityElementOpt match {
+      case Some(eoCacheEntityElement) =>
+        eoEntityMapOpt(eoCacheEntityElement) match {
+          case Some(entityMap) =>
+            Some(entityMap.values.toList)
+          case None =>
+            None
+        }
+    }
+  }
 
-  def objectForEntityNamedAndPk(eos: Map[String, Map[EOPk,EO]], entityName: String, pk: EOPk): Option[EO] =
-    if (eos.contains(entityName)) {
-      val entityEOById = eos(entityName)
 
-      if (entityEOById.contains(pk)) Some(entityEOById(pk)) else None
-    } else None
+  def eoCacheEntityElementEos(eoCacheEntityElement: EOCacheEntityElement): List[EO] =
+    eoEntityMap(eoCacheEntityElement).values.toList
 
-  def objectsWithFetchSpecification(eos: Map[String, Map[EOPk,EO]],fs: EOFetchSpecification) : Option[List[EO]] = {
-    val entityNameEOs = objectsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
+  def eoEntityMap(eoCacheEntityElement: EOCacheEntityElement): Map[EOPk, EO] =
+    eoEntityMapOpt(eoCacheEntityElement) match {
+      case Some(entityMap) =>
+        entityMap
+      case None =>
+        Map()
+    }
+
+
+  def eoEntityMapOpt(eoCacheEntityElement: EOCacheEntityElement): Option[Map[EOPk, EO]] =
+    eoCacheEntityElement match {
+      case EODBCacheEntityElement(data) =>
+        if (data.isEmpty) None else Some(data.get)
+      case EOMemCacheEntityElement(data) =>
+        Some(data)
+    }
+
+
+
+  def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) None else Some(cache(entityName))
+
+  def allEOsForEntityNamed(cache: EOCache, entityName: String) : List[EO] = {
+    val entityElements = List(
+      eoCacheEntityElementForEntityNamed(cache.insertedEOs,entityName),
+      eoCacheEntityElementForEntityNamed(cache.eos,entityName)
+    )
+    entityElements.flatten.flatMap(eoCacheEntityElementEos(_))
+  }
+
+/*
+  def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetchSpecification) : Option[List[EO]] = {
+    val entityNameEOs = dbEOsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
     //log.finest("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
     entityNameEOs match {
       case Some(eos) =>
         Some(EOFetchSpecification.objectsWithFetchSpecification(eos,fs))
       case _ => None
     }
-  }
+  }*/
 
   def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
     eos.map(eo => outOfCacheEOUsingPkFromD2WContextEO(cache,entityName,eo)).flatten
   }
 
-  def objectsFromAllCachesWithFetchSpecification(cache: EOCache,fetchSpecification: EOFetchSpecification): List[EO] = {
-    val eosOpt = objectsWithFetchSpecification(cache.eos,fetchSpecification)
-    val insertedEOsOpt = objectsWithFetchSpecification(cache.insertedEOs,fetchSpecification)
-    println("insertedEOsOpt objectsFromAll.. " + insertedEOsOpt)
 
-    eosOpt match {
-      case Some(eos) =>
-        insertedEOsOpt match {
-          case Some(insertedEOs) =>
-            // TODO sorting
-            eos ++ insertedEOs
-          case _ => eos
-        }
-      case _ => List.empty[EO]
-    }
 
+
+  def objectsFromAllCachesWithFetchSpecification(cache: EOCache, fs: EOFetchSpecification): List[EO] = {
+    val entityName = EOFetchSpecification.entityName(fs)
+    val eos = allEOsForEntityNamed(cache,entityName)
+    EOFetchSpecification.objectsWithFetchSpecification(eos,fs)
   }
 
 
@@ -789,19 +798,143 @@ object EOCacheUtils {
     pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
   }
 
-  def outOfCacheEOUsingPk(cache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
+  def outOfCacheEOUsingPk(eoCache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
     val isInMemory = EOValue.isNew(pk)
-    if (isInMemory) {
-      val memCache = cache.insertedEOs
-      log.finest("Out of cache " + pk)
-      log.finest("Cache " + memCache)
-      log.finest("e name " + entityName)
-      EOCacheUtils.objectForEntityNamedAndPk(memCache, entityName, pk)
-    } else {
-      val dbCache = cache.eos
-      //log.finest("DB Cache " + dbCache + " entityName " + entityName + " pk " + pk)
-      EOCacheUtils.objectForEntityNamedAndPk(dbCache, entityName, pk)
+    val cache = if (isInMemory) eoCache.insertedEOs else eoCache.eos
+    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
+    eoCacheEntityElementOpt match {
+      case Some(eoCacheEntityElement) =>
+        val entityMap = eoEntityMap(eoCacheEntityElement)
+        if (entityMap.contains(pk)) Some(entityMap(pk)) else None
+
+      case None =>
+        None
     }
   }
+
+
+  def dbEntityMapForEntityNamed(eoCache : EOCache, entityName: String) : Option[Map[EOPk, EO]] = {
+    entityMapForEntityNamed(eoCache.eos, entityName)
+  }
+
+  def memEntityMapForEntityNamed(eoCache : EOCache, entityName: String) : Option[Map[EOPk, EO]] = {
+    entityMapForEntityNamed(eoCache.insertedEOs, entityName)
+  }
+
+  def entityMapForEntityNamed(cache : Map[String, EOCacheEntityElement], entityName: String) : Option[Map[EOPk, EO]] = {
+    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
+    eoCacheEntityElementOpt match {
+      case Some(eoCacheEntityElement) =>
+        Some(EOCacheUtils.eoEntityMap(eoCacheEntityElement))
+      case None => None
+    }
+  }
+
+  // We speak DB Cache here
+  def updatedDBCacheByDeletingEO(eoCache : EOCache, deletedEO: EO) : EOCache = {
+    val entityName = deletedEO.entityName
+    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, deletedEO.entityName)
+    entitMapOpt match {
+      case Some(entityMap) =>
+        //val eoPk = EOValue.pk(value.eomodel.get, deletedEO).get
+        val eoPk = deletedEO.pk
+        val newEntityMap = entityMap - eoPk
+        updatedCacheForDb(eoCache,entityName,newEntityMap)
+      case None =>
+        // should never happen
+        eoCache
+    }
+  }
+
+  def updatedCacheForDb(eoCache : EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+    val newCache = newUpdatedEntityCache(entityName, eoCache.eos, EODBCacheEntityElement(Ready(entityMap)))
+    eoCache.copy(eos = newCache)
+  }
+
+  def updatedCacheForMem(eoCache : EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+    val newCache = newUpdatedEntityCache(entityName, eoCache.insertedEOs, EOMemCacheEntityElement(entityMap))
+    eoCache.copy(insertedEOs = newCache)
+  }
+
+
+  def updatedDBCacheWithEO(eoCache : EOCache, eo: EO) : EOCache = {
+    val entityName = eo.entityName
+    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, eo.entityName)
+    entitMapOpt match {
+      case Some(entityMap) =>
+
+        //val eoPk = EOValue.pk(value.eomodel.get, eoWithDisplayableError).get
+        val eoPk = eo.pk
+        val newEntityMap = entityMap + (eoPk -> eo)
+        updatedCacheForDb(eoCache,entityName,newEntityMap)
+      case None =>
+        // should never happen
+        eoCache
+    }
+  }
+
+
+
+  def updatedMemCacheWithEOsForEntityNamed(eoCache : EOCache, eos: List[EO], entityName: String): EOCache = {
+    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+    val newEntityMap = entitMapOpt match {
+      case Some(entityMap) =>
+        EOCacheUtils.updatedEOMap(entityMap, eos)
+      case None =>
+        refreshedEOMap(eos)
+    }
+    updatedCacheForMem(eoCache,entityName,newEntityMap)
+  }
+
+  def updatedDBCacheWithEOsForEntityNamed(eoCache : EOCache, eos: List[EO], entityName: String): EOCache = {
+    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, entityName)
+    val newEntityMap = entitMapOpt match {
+      case Some(entityMap) =>
+        EOCacheUtils.updatedEOMap(entityMap, eos)
+      case None =>
+        refreshedEOMap(eos)
+    }
+    updatedCacheForDb(eoCache,entityName,newEntityMap)
+  }
+
+
+
+
+  def updatedCachesForSavedEO(eoCache : EOCache, eo: EO, isNewEO: Boolean) : EOCache = {
+    // Adjust the insertedEOs cache
+    val entityName = eo.entityName
+    val newCache = if (isNewEO) updatedMemCacheWithEO(eoCache, eo) else eoCache
+    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | removed if new  " + isNewEO)
+    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | register eo  " + eo)
+
+    // Adjust the db cache
+    updatedDBCacheWithEO(newCache, eo)
+  }
+
+  def updatedMemCacheWithEO(eoCache : EOCache, eo: EO) : EOCache = {
+    val entityName = eo.entityName
+    updatedMemCacheWithEOsForEntityNamed(eoCache, List(eo), entityName)
+  }
+
+
+  def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache : EOCache, entityName: String): (EOCache, EO) = {
+    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+    val entityMap = entitMapOpt match {
+      case Some(entityMap) => entityMap
+      case None => Map.empty[EOPk, EO]
+    }
+    val existingPks = entityMap.keySet.map(_.pks.head)
+    val newMemID = if (existingPks.isEmpty) -1 else existingPks.min - 1
+    val newPk = EOPk(List(newMemID))
+    val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
+    val newEntityMap = entityMap + (newPk -> newEO)
+
+    (updatedCacheForMem(eoCache,entityName,newEntityMap), newEO)
+  }
+
+
+
+
+
 }
 

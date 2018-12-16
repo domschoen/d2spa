@@ -123,11 +123,12 @@ object ERD2WEditToOneRelationship {
               )
             )
           } else {
-            val eoCache = p.proxy.value.cache.eos
+            val eoCache = p.proxy.value.cache
 
             log.finest("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
             log.finest("ERD2WEditToOneRelationship render eoCache " + eoCache)
-            val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
+            val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
+            log.finest("ERD2WEditToOneRelationship render destinationEOs " + destinationEOs)
 
             destinationEOs match {
               case Some(eos) => Callback.empty
@@ -223,11 +224,11 @@ object ERD2WEditToOneRelationship {
                       val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
                       destinationEntityOpt match {
                         case Some(destinationEntity) =>
-                          val eoCache = p.proxy.value.cache.eos
+                          val eoCache = p.proxy.value.cache
 
                           log.finest("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
                           log.finest("ERD2WEditToOneRelationship render eoCache " + eoCache)
-                          val destinationEOs = EOCacheUtils.objectsForEntityNamed(eoCache, destinationEntity.name)
+                          val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
 
                           <.div(
                             //{

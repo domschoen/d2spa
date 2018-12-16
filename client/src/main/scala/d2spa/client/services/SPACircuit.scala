@@ -322,32 +322,31 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
 
-  def updatedMemCacheWithEOs(eos: Seq[EO]): EOCache = {
-    val newCache = EOCacheUtils.updatedModelForEntityNamed(value.eomodel.get,value.insertedEOs, eos)
-    EOCache(value.eomodel, value.eos, newCache)
+  def updatedMemCacheWithEOs(entityName: String, eos: Seq[EO]): EOCache = {
+    EOCacheUtils.updatedMemCacheWithEOsForEntityNamed(value, eos.toList, entityName)
   }
 
 
-  def updatedOutOfDBCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
+  /*def updatedOutOfDBCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
     val insertedEOs = value.insertedEOs
     EOCache(value.eomodel, eos, insertedEOs)
-  }
+  }*/
 
-  def updatedMemCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
+  /*def updatedMemCache(eos: Map[String, Map[EOPk, EO]]): EOCache = {
     value.copy(insertedEOs = eos)
-  }
+  }*/
 
-  def addEOToDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+  /*def addEOToDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     addEOToCache(eo, eos)
   }
 
   def addEOToMemCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     addEOToCache(eo, eos)
-  }
+  }*/
 
-  def addEOToCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+  /*def addEOToCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     EOCacheUtils.updatedModelForEntityNamed(value.eomodel.get, eos, Seq(eo))
-  }
+  }*/
 
   def removeEOFromDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     EOCacheUtils.removeEOFromCache(eo,  eos)
@@ -391,7 +390,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       D2SpaLogger.logfinest(entityName,"CacheHandler | EditEO | register faulty eo  " + eo)
 
       // Adjust the db cache
-      val newCache = updatedMemCacheWithEOs(Seq(eo))
+      val newCache = updatedMemCacheWithEOs(entityName, Seq(eo))
       updated(
         newCache
       )
@@ -403,26 +402,18 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val eomodel = value.eomodel.get
       D2SpaLogger.logfinest(entityName," v " + eo)
       val isNewEO = EOValue.isNew(eo)
-      // Adjust the insertedEOs cache
-      println("insertedEOs " + value.insertedEOs)
-      println("insertedEOs remove eo " + eo)
-      val insertedEOs = if (isNewEO) removeEOFromMemCache(eo, value.insertedEOs) else value.insertedEOs
-      println("insertedEOs updated " + insertedEOs)
-      D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | removed if new  " + isNewEO)
       val updatedEO = if (isNewEO) {
         val pk = EOValue.pk(eomodel, eo)
         D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | pk out of EO  " + pk)
 
         eo.copy(pk = pk.get)
       } else eo
-      D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | register eo  " + updatedEO)
 
-      // Adjust the db cache
-      val eos = addEOToDBCache(updatedEO, value.eos)
+      val newCache = EOCacheUtils.updatedCachesForSavedEO(value, updatedEO, isNewEO)
       val d2WContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
       D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + d2WContext)
       updated(
-        EOCache(value.eomodel, eos, insertedEOs),
+        newCache,
         Effect.action(RegisterPreviousPageAndSetPage(d2WContext))
       )
 
@@ -465,11 +456,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // Examples:
     //   - Save error -> update error in EO
     //   - New eo from server
-    case UpdateEOInCache(eo) =>
+    /*case UpdateEOInCache(eo) =>
       val entityName = eo.entityName
       D2SpaLogger.logfinest(entityName,"CacheHandler | UpdateEOInCache " + eo.entityName)
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,Seq(eo))
+        EOCacheUtils.updatedCacheWithDBEOs(value.eomodel.get, value,Seq(eo))
       )
 
     case UpdateRefreshEOInCache(eos, property, actions) =>
@@ -479,22 +470,25 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         D2SpaLogger.logfinest(entityName,"CacheHandler | Refreshed EO " + eo.values)
       })
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eos),
+        EOCacheUtils.updatedCacheWithDBEOs(value.eomodel.get, value,eos),
         Effect.action(FireActions(property, actions))
       )
 
 
     case RefreshedEOs(eoses) =>
+      val entity = EOModelUtils.entityNamed(eomodel,entityName).get
+
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eoses)
+        EOCacheUtils.updatedCacheWithDBEOs(value.eomodel.get, value,eoses)
       )
 
-    case FetchedObjectsForEntity(eos) =>
+    case FetchedObjectsForEntity(entityName, eos) =>
       log.finest("CacheHandler | FetchedObjectsForEntity eoses " + eos)
+      val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
 
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value,eos)
-      )
+        EOCacheUtils.updatedCacheWithDBEOs(entity, value, eos)
+      )*/
 
 
     case SearchResult(fs, eoses) =>
@@ -511,7 +505,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       }
 
       updated(
-        EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value, eoses),
+        EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eoses.toList, entityName),
         Effect.action(action)
       )
 
@@ -545,12 +539,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case DeletedEO(deletedEO) =>
       val entityName = deletedEO.entityName
       D2SpaLogger.logfinest(entityName, "CacheHandler | Deleted EO " + deletedEO)
-      val eoPk = EOValue.pk(value.eomodel.get, deletedEO).get
 
-      val entityMap = value.eos(entityName)
-      val newEntityMap = entityMap - eoPk
-      val newValue = value.eos + (entityName -> newEntityMap)
-      updated(updatedOutOfDBCache(newValue))
+      val newValue = EOCacheUtils.updatedDBCacheByDeletingEO(value,deletedEO)
+      updated(newValue)
 
 
 
@@ -558,13 +549,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case UpdateEOsForEOOnError(eoOnError) =>
       val entityName = eoOnError.entityName
       D2SpaLogger.logfinest(entityName, "CacheHandler | UpdateEOsForEOOnError " + eoOnError)
-      val escapedHtml = Utils.escapeHtml(eoOnError.validationError.get)
-      val eoWithDisplayableError = eoOnError.copy(validationError = Some(escapedHtml))
-      val eoPk = EOValue.pk(value.eomodel.get, eoWithDisplayableError).get
-      val entityMap = value.eos(entityName)
-      val newEntityMap = entityMap + (eoPk -> eoWithDisplayableError)
-      val newValue = value.eos + (entityName -> newEntityMap)
-      updated(updatedOutOfDBCache(newValue))
+      val eo = EOValue.escapeValidationError(eoOnError)
+      val newValue = EOCacheUtils.updatedDBCacheWithEO(value,eo)
+      updated(newValue)
 
 
     case UpdateEOValueForProperty(eo, d2wContext, newEOValue) =>
@@ -573,9 +560,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val propertyName = d2wContext.propertyKey.get
 
       D2SpaLogger.logfinest(entityName, "CacheHandler | Update EO Property: for entity " + entityName + " property: " + propertyName + " " + newEOValue)
-      //val modelWriter: ModelRW[M, EO] = AppCircuit.zoomTo(_.get)
-      //val propertyValueWriter = zoomToPropertyValue(property,modelRW)
-      // case class EO(entity: String, values: scala.collection.Map[String,EOValue])
+
       D2SpaLogger.logfinest(entityName, "EO: " + eo)
       val noValidationErrorEO = eo.copy(validationError = None)
       val updatedEO = EOValue.takeValueForKey(noValidationErrorEO, newEOValue, propertyName)
@@ -583,10 +568,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       if (EOValue.isNew(updatedEO.pk)) {
         D2SpaLogger.logfinest(entityName, "CacheHandler | Update EO Property: updatedMemCacheWithEOs " + updatedEO)
-        updated(updatedMemCacheWithEOs(Seq(updatedEO)))
+        updated(EOCacheUtils.updatedMemCacheWithEO(value, updatedEO))
       } else {
         D2SpaLogger.logfinest(entityName, "CacheHandler | Update EO Property: updatedOutOfDBCacheWithEOs " + updatedEO)
-        updated(EOCacheUtils.updatedOutOfDBCacheWithEOs(value.eomodel.get, value, Seq(updatedEO)))
+        updated(EOCacheUtils.updatedDBCacheWithEO(value, updatedEO))
       }
 
     case NewAndRegisteredEO(d2wContext) =>
@@ -594,16 +579,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val entityName = d2wContext.entityName.get
       // Create the EO and set it in the cache
 
-
       println("value.insertedEOs " + value.insertedEOs)
       println("entityName " + entityName)
-      val (newValue, newEO) = EOValue.createAndInsertNewObject(value.insertedEOs, entityName)
-
-      D2SpaLogger.logfinest(entityName, "newValue " + newValue)
+      val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, entityName)
       D2SpaLogger.logfinest(entityName, "newEO " + newEO)
       val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
 
-      updated(updatedMemCache(newValue),Effect.action(RegisterPreviousPage(updatedD2WContext)))
+      updated(newCache,Effect.action(RegisterPreviousPage(updatedD2WContext)))
 
 
 

@@ -33,7 +33,7 @@ object WebSocketMessages {
   final case class FetchedEOModel(eomodel: EOModel) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class FetchedObjectsMsgOut(eos: Seq[EO]) extends WebSocketMsgOut
+  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO]) extends WebSocketMsgOut
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
@@ -231,6 +231,12 @@ case class EOPk(pks: List[Int])
 
 object EOValue {
 
+  def escapeValidationError(eo: EO) : EO = {
+    val escapedHtml = Utils.escapeHtml(eo.validationError.get)
+    eo.copy(validationError = Some(escapedHtml))
+  }
+
+
 
   def isNew(pk: EOPk) = pk.pks.size == 1 && pk.pks.head < 0
 
@@ -264,28 +270,6 @@ object EOValue {
   def eoValueWithString(str: String) = if (str.length == 0) EmptyValue else StringValue(str)
   def eoValueWithInt(str: String) = if (str.length == 0) EmptyValue else IntValue(str.toInt)
 
-  def createAndInsertNewObject(insertedEOs: Map[String, Map[EOPk, EO]], entityName: String): (Map[String, Map[EOPk, EO]], EO) = {
-    //val entityName = entity.name
-    val insertedEOsForEntityOpt = if (insertedEOs.contains(entityName)) Some(insertedEOs(entityName)) else None
-    insertedEOsForEntityOpt match {
-      // We have alreaydy existing in memory eo for that entityName
-      case Some(insertedEOsForEntity) =>
-        val existingPks = insertedEOsForEntity.keySet.map(_.pks.head)
-        val newMemID = if (existingPks.isEmpty) -1 else existingPks.min - 1
-
-        val newPk = EOPk(List(newMemID))
-        val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
-        val newEntityMap = insertedEOsForEntity + (newPk -> newEO)
-        val newInsertedEOs = insertedEOs + (entityName -> newEntityMap)
-        (newInsertedEOs, newEO)
-      case None =>
-        val newPk = EOPk(List(-1))
-        val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
-        val newEntityMap = Map(newPk -> newEO)
-        val newInsertedEOs = Map(entityName -> newEntityMap)
-        (newInsertedEOs, newEO)
-    }
-  }
 
   //def createAndInsertNewObject(insertedEOs: Map[String, Map[List[Int], EO]], eomodel: EOModel, entityName: String): (Map[String, Map[List[Int], EO]], EO) = {
   //    val entity = EOModelUtils.entityNamed(eomodel, entityName).get

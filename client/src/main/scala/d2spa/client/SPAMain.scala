@@ -19,8 +19,10 @@ import diode.react.ModelProxy
 import org.scalajs.dom.{Blob, MessageEvent}
 import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
 
+import scala.scalajs.js.JSApp
+
 @JSExportTopLevel("SPAMain")
-object SPAMain extends js.JSApp {
+object SPAMain   extends  js.JSApp {
 
   // Define the locations (pages) used in this application
   sealed trait AppPage
@@ -161,16 +163,17 @@ object SPAMain extends js.JSApp {
 
   val router = Router(baseUrl, config)
 
-  val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
+  lazy val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
     case blob: Blob =>
       //println("Will read socket")
       Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
-      //Socket.blobReader.abort()
+    //Socket.blobReader.abort()
     case _ => dom.console.log("Error on receive, should be a blob.")
   })
 
   @JSExport
   def main(): Unit = {
+
     // FINE level -> severe, warning, info
 
     //log.severe("Severe")
