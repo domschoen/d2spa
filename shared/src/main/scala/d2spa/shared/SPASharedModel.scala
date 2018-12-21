@@ -368,7 +368,7 @@ object EOValue {
     existingEO.copy(keys = newValues.keys.toList, values = newValues.values.toList, validationError = refreshedEO.validationError)
   }
 
-  def isNew(eo: EO) = {
+  def isNewEO(eo: EO) = {
     eo.pk.pks.head < 0
     //val pk = EOValue.pk(eo)
     //(pk.isDefined && pk.get < 0) || pk.isEmpty

@@ -47,25 +47,6 @@ class StackSpec extends PlaySpec {
       //val newMemID = existingPks.min - 1
       existingPks.size mustBe 0
     }
-    "Works with insertedEOs partialling filled" in {
-      val exception = try {
-        val (newValue, newEO) = EOValue.createAndInsertNewObject(TestData.insertedEOs, "Project")
-        None
-      } catch {
-        case e: Throwable => Some(e)
-        case _ => None
-      }
-
-      exception.isEmpty mustBe true
-    }
-    "returns an updated cache" in {
-      val (newValue, newEO) = EOValue.createAndInsertNewObject(TestData.emptyInsertedEOs, "Project")
-
-      val insertedEOsForEntity = newValue("Project")
-      println("insertedEOsForEntity " + insertedEOsForEntity)
-      insertedEOsForEntity.size mustBe 1
-
-    }
   }
 
 

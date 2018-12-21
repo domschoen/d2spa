@@ -102,6 +102,9 @@ case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewAndRegisteredEO(d2wContext: D2WContext) extends Action
+case class RegisteredExistingEO(d2wContext: D2WContext) extends Action
+
+
 case class NewEOCreated(eo: EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class NewEOCreatedForEdit(eo: EO) extends Action
 
@@ -265,8 +268,8 @@ case class D2WContext(entityName: Option[String],
                       // - defined by a rule not yet fired (RuleFault). It is a action which is before in the list
                       // - a value
                       // - None
-                      pageConfiguration: PotFiredKey = PotFiredKey(Right(None)),
-                      pk : Option[Int] = None)
+                      pageConfiguration: PotFiredKey = PotFiredKey(Right(None))
+                      )
 
 // Right = Some
 // here right is an result which could be Some or None
@@ -729,6 +732,8 @@ object EOCacheUtils {
           case None =>
             None
         }
+      case None =>
+        None
     }
   }
 
@@ -755,7 +760,7 @@ object EOCacheUtils {
 
 
 
-  def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) None else Some(cache(entityName))
+  def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) Some(cache(entityName)) else None
 
   def allEOsForEntityNamed(cache: EOCache, entityName: String) : List[EO] = {
     val entityElements = List(
@@ -860,17 +865,17 @@ object EOCacheUtils {
   def updatedDBCacheWithEO(eoCache : EOCache, eo: EO) : EOCache = {
     val entityName = eo.entityName
     val entitMapOpt = dbEntityMapForEntityNamed(eoCache, eo.entityName)
-    entitMapOpt match {
-      case Some(entityMap) =>
+    val eoPk = eo.pk
 
-        //val eoPk = EOValue.pk(value.eomodel.get, eoWithDisplayableError).get
-        val eoPk = eo.pk
-        val newEntityMap = entityMap + (eoPk -> eo)
-        updatedCacheForDb(eoCache,entityName,newEntityMap)
+    val innerMap = Map(eoPk -> eo)
+
+    val newEntityMap = entitMapOpt match {
+      case Some(entityMap) =>
+        entityMap ++ innerMap
       case None =>
-        // should never happen
-        eoCache
+        innerMap
     }
+    updatedCacheForDb(eoCache,entityName,newEntityMap)
   }
 
 

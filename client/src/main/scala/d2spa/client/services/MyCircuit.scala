@@ -33,8 +33,25 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
   // define initial value for the application model
   override protected def initialModel = AppModel.bootingModel
 
+  /*var _bootingModel = AppModel.bootingModel
 
+  def setInitialPage(d2wContext : D2WContext) = {
+    _bootingModel = AppModel(MegaContent(
+      sendingActions = Set.empty[Action],
+      false,
+      AppConfiguration(),
+      Empty,
+      Empty,
+      Map(),
+      //EditEOFault(Empty,0),
+      EOCache(Empty,Map(),Map()), //Map.empty[String, EOValue],Map.empty[String, EOValue],
+      previousPage = Some(d2wContext)
+      )
+    )
+  }*/
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
+  val previousH = new PreviousPageHandler(zoomTo(_.content.previousPage))
+  val cacheH = new EOCacheHandler(zoomTo(_.content.cache))
 
   override val actionHandler = composeHandlers(
     new SendingActionsHandler(zoomTo(_.content.sendingActions)),
@@ -42,8 +59,8 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new BusyIndicatorHandler(zoomTo(_.content.showBusyIndicator)),
     new MenuHandler(zoomTo(_.content.menuModel)),
     new RuleResultsHandler(zoomTo(_.content.ruleResults)),
-    new EOCacheHandler(zoomTo(_.content.cache)),
-    new PreviousPageHandler(zoomTo(_.content.previousPage))
+    cacheH,
+    previousH
   )
 
 

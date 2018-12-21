@@ -14,7 +14,7 @@ import CssSettings._
 import scalacss.ScalaCssReact._
 import d2spa.client.logger._
 import d2spa.client.services.WebSocketClient.{Socket, websocketUrl}
-import d2spa.shared.{EO, EOEntity, EOValue, TaskDefine}
+import d2spa.shared._
 import diode.react.ModelProxy
 import org.scalajs.dom.{Blob, MessageEvent}
 import org.scalajs.dom.raw.{ErrorEvent, Event, MessageEvent, WebSocket}
@@ -105,11 +105,8 @@ object SPAMain   extends  js.JSApp {
                    case Some(previousPage) =>
                      previousPage
                    case None =>
-                     val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), pk = Some(m.pk))
-                     //p.dispatchCB(RegisterPreviousPage(firstD2WContext))
-                     firstD2WContext
-
-
+                     D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), eo = Some(
+                       EO(entityName = m.entity, pk = EOPk(List(m.pk)))))
                  }
                  D2WEditPage(ctl, d2wContext, p)
                })
@@ -120,7 +117,10 @@ object SPAMain   extends  js.JSApp {
               AfterEffectRouter.setCtl(ctl)
 
               menusConnection(p => {
-                val d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), pk = Some(m.pk))
+
+                val d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), eo = Some(
+                  EO(entityName = m.entity, pk = EOPk(List(m.pk)))
+                ))
                 D2WEditPage(ctl, d2wContext, p)
               })
             }
@@ -163,7 +163,7 @@ object SPAMain   extends  js.JSApp {
 
   val router = Router(baseUrl, config)
 
-  lazy val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
+  val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
     case blob: Blob =>
       //println("Will read socket")
       Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.

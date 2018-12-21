@@ -1,8 +1,9 @@
 package d2spa.client.services
 
+import d2spa.client.EOCacheUtils.{dbEntityMapForEntityNamed, eoCacheEntityElementForEntityNamed, refreshedEOMap, updatedCacheForDb}
 import d2spa.client.RuleUtils.{ruleContainerForContext, ruleListValueWithRuleResult, ruleResultForContextAndKey}
 import d2spa.client.components.ERD2WEditToOneRelationship
-import d2spa.client.{RuleUtils, _}
+import d2spa.client.{EOCache, RuleUtils, _}
 import d2spa.client.services.RuleResultsHandler
 import d2spa.shared
 import diode.ActionResult._
@@ -30,32 +31,49 @@ object SPACircuitTests extends TestSuite {
     Map.empty[String, QueryValue], // queryValues
     None, // Data Rep
     None, // property Key
-    PotFiredKey(Right(Some("InspectEmbeddedCustomerBusinessManufacturer"))),
-    None)
+    PotFiredKey(Right(Some("InspectEmbeddedCustomerBusinessManufacturer")))
+    )
 
-  val cacheBefore = Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List(),List(),EOPk(List(-1)),None)))
-  val cacheBefore2 = Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None)))
+  val cacheBefore = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List(),List(),EOPk(List(-1)),None))))
+  val cacheBefore2 = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None))))
 
   def tests = TestSuite {
-    'Cache - {
+    'CacheInMemory - {
       val entity = d2spa.shared.SharedTestData.projectEntity
 
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map(),cacheBefore)
       val eosForUpdating = List(EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None))
-      val updatedCache = EOCacheUtils.updatedModelForEntityNamed(entity,cacheBefore,eosForUpdating)
-      assert(updatedCache.equals(Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None)))))
+      val updatedCache = EOCacheUtils.updatedMemCacheWithEOsForEntityNamed(cache, eosForUpdating, "Project")
+      assert(updatedCache.equals(
+        EOCache(Ready(SharedTestData.eomodel),
+          Map(),
+          Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None)))))))
     }
     'CachePutNothingShouldReturnSome  - {
       val entity = d2spa.shared.SharedTestData.projectEntity
 
       // Empty cache
       val cache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+      val eos = List()
+      val entityName = entity.name
+
+
       // Register an empty list for Project entity
-      val newCache = EOCacheUtils.updatedCacheWithDBEOs(entity, cache, Vector())
+      val newCache = EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(cache, eos, entity.name)
+      println("new Cache " + newCache)
 
       // Ask the cache for entity Project return a Pot which is Ready but with empty content
-      val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(newCache.eos, entity.name)
+      val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(newCache, entity.name)
 
       assert(destinationEOs.equals(Some(List())))
+    }
+    "Update cache for existing object" - {
+      val eoCache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+      val eo = EO("Project",List(),List(),EOPk(List(1)))
+      val entityName = eo.entityName
+      val newCache = EOCacheUtils.updatedDBCacheWithEO(eoCache, eo)
+      assert(newCache.eos.equals(Map("Project" -> EODBCacheEntityElement(Ready(Map(EOPk(List(1)) ->
+        EO("Project",List(),List(),EOPk(List(1)),None)))))))
     }
     'Cache2 - {
       val entity = d2spa.shared.SharedTestData.projectEntity
@@ -67,7 +85,7 @@ object SPACircuitTests extends TestSuite {
         Some((pk, eo))
       }).flatten.toMap
       val refreshedPks = refreshedEOs.keySet
-      val existingPks = entityMap.keySet
+      val existingPks = entityMap.data.keySet
 
       println("refreshedPks " + refreshedPks)
       println("existingPks " + existingPks)
@@ -76,9 +94,13 @@ object SPACircuitTests extends TestSuite {
       assert(existingPks.equals(Set(EOPk(List(-1)))))
 
 
-      val updatedCache = EOCacheUtils.updatedModelForEntityNamed(entity,cacheBefore2,eosForUpdating)
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map(),cacheBefore2)
+      val updatedCache = EOCacheUtils.updatedMemCacheWithEOsForEntityNamed(cache,eosForUpdating,"Project")
       println("updatedCache " + updatedCache)
-      assert(updatedCache.equals(Map("Project" -> Map(EOPk(List(-1)) -> EO("Project",List("descr","projectNumber"),List(StringValue("8"),IntValue(8)),EOPk(List(-1)),None)))))
+      assert(updatedCache.equals(
+        EOCache(Ready(SharedTestData.eomodel),
+          Map(),
+          Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr","projectNumber"),List(StringValue("8"),IntValue(8)),EOPk(List(-1)),None)))))))
     }
     'EOValueCompleteEoWithEo - {
       val existingEO = EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None)
@@ -194,6 +216,27 @@ object SPACircuitTests extends TestSuite {
           case _ =>
             assert(false)
         }
+      }
+      "Works with insertedEOs partialling filled" - {
+        val exception = try {
+          val cache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+          val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(cache, "Project")
+          None
+        } catch {
+          case e: Throwable => Some(e)
+          case _ => None
+        }
+
+        assert(exception.isEmpty)
+      }
+      "returns an updated cache" - {
+        val cache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+        val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(cache, "Project")
+
+        val insertedEOsForEntity = EOCacheUtils.allEOsForEntityNamed(newCache,"Project")
+        println("insertedEOsForEntity " + insertedEOsForEntity)
+        assert(insertedEOsForEntity.size == 1)
+
       }
 
 

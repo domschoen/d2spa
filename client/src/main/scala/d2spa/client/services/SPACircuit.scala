@@ -401,7 +401,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val entityName = eo.entityName
       val eomodel = value.eomodel.get
       D2SpaLogger.logfinest(entityName," v " + eo)
-      val isNewEO = EOValue.isNew(eo)
+      val isNewEO = EOValue.isNewEO(eo)
       val updatedEO = if (isNewEO) {
         val pk = EOValue.pk(eomodel, eo)
         D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | pk out of EO  " + pk)
@@ -573,6 +573,17 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         D2SpaLogger.logfinest(entityName, "CacheHandler | Update EO Property: updatedOutOfDBCacheWithEOs " + updatedEO)
         updated(EOCacheUtils.updatedDBCacheWithEO(value, updatedEO))
       }
+
+    case RegisteredExistingEO(d2wContext) =>
+      D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | RegisteredExistingEO: " + d2wContext)
+      val entityName = d2wContext.entityName.get
+      // Create the EO and set it in the cache
+
+      println("entityName " + entityName)
+      val newCache = EOCacheUtils.updatedDBCacheWithEO(value, d2wContext.eo.get)
+      println("newCache " + newCache)
+
+      updated(newCache)
 
     case NewAndRegisteredEO(d2wContext) =>
       D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | NewEOWithEOModel: " + d2wContext)

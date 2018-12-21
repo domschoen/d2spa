@@ -64,9 +64,15 @@ object D2WQueryPage {
         case Some(ppD2WContext) => ppD2WContext.equals(d2wContext)
         case None => false
       }
+      log.finest("D2WQueryPage | mounted | previousPageHasBeenSet: " + previousPageHasBeenSet + " dataNotFetched && !alreadySent: " + (dataNotFetched && !alreadySent))
+      log.finest("D2WQueryPage | mounted | alreadySent: " + alreadySent + " dataNotFetched: " + dataNotFetched)
 
-      Callback.when(!previousPageHasBeenSet)(p.proxy.dispatchCB(RegisterPreviousPage(d2wContext))) >>
+      if (previousPageHasBeenSet) {
         Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
+      } else {
+        p.proxy.dispatchCB(RegisterPreviousPage(d2wContext))
+      }
+
     }
 
 
