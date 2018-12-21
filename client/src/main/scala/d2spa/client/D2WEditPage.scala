@@ -29,7 +29,7 @@ object D2WEditPage {
 
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
     // To cope with this problem, we check if there is any change to the props and then call the willMount
-    def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
+    /*def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       log.finest("D2WEditPage | willReceiveProps | currentProps: " + currentProps)
       log.finest("D2WEditPage | willReceiveProps | nextProps: " + nextProps)
 
@@ -49,14 +49,14 @@ object D2WEditPage {
       }
       //willmounted(nextProps)
 
-    }
+    }*/
 
 
     val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
 
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
-    def willmounted(p: Props) = {
+    def willmounted(p: Props, s: State) = {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("D2WEditPage | will Mount " + entityName)
@@ -66,6 +66,8 @@ object D2WEditPage {
       if (!allowedTasks.contains(task))
         Callback.empty
       else {
+
+
 
         val ruleResults = p.proxy.value.ruleResults
         val socketReady = p.proxy.value.appConfiguration.socketReady
@@ -182,6 +184,15 @@ object D2WEditPage {
 
       log.finest("D2WEditPage: render | eocache : " + p.proxy.value.cache)
       log.finest("D2WEditPage: render | p.proxy.value.previousPage : " + p.proxy.value.previousPage)
+
+
+      if (s.initialized) {
+
+      } else {
+        $.modState(_.copy(initialized = true))
+
+      }
+
 
       p.proxy.value.previousPage match {
         case Some(d2wContext) =>
@@ -304,8 +315,8 @@ object D2WEditPage {
   private val component = ScalaComponent.builder[Props]("D2WEditPage")
     .initialState(State(false))
     .renderBackend[Backend]
-    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
-    .componentWillMount(scope => scope.backend.willmounted(scope.props))
+    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
+    .componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
