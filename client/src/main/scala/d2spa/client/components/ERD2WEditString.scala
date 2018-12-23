@@ -36,16 +36,24 @@ object ERD2WEditString  {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, p.d2wContext.eo.get)
-      eoOpt match {
+      val faultOpt = p.d2wContext.eo
+      faultOpt match {
         case Some(eo) =>
-          val value = EOValue.stringValueForKey(eo,propertyName)
-          <.div(
-            <.input(^.className := "form-control", ^.id := "description", ^.value := value,
-              ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.eoValueWithString(e.target.value)))} )
-          )
-        case None => <.div("No eo out of cache")
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, eo)
+          eoOpt match {
+            case Some(eo) =>
+              val value = EOValue.stringValueForKey(eo, propertyName)
+              <.div(
+                <.input(^.className := "form-control", ^.id := "description", ^.value := value,
+                  ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.eoValueWithString(e.target.value)))
+                  })
+              )
+            case None => <.div("No eo out of cache")
+          }
+
+        case None =>
+          <.div("No eo in context")
       }
     }
   }

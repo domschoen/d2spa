@@ -105,7 +105,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.finest("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged)) // reply with RuleResults and then action SetJustRuleResults
       noChange
 
     case UpdateCurrentContextWithEO(eo) =>

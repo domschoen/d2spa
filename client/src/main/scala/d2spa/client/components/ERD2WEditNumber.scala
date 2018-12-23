@@ -31,19 +31,27 @@ object ERD2WEditNumber {
       val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
-      eoOpt match {
+      val faultOpt = p.d2wContext.eo
+      faultOpt match {
         case Some(eo) =>
-          val value = EOValue.stringValueForKey(eo, propertyName)
-          <.div(
-            <.input(^.id := "description", ^.value := value,
-              ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext,EOValue.eoValueWithInt(e.target.value))
-                )
-              })
-          )
-        case None => <.div("")
+
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, eo)
+          eoOpt match {
+            case Some(eo) =>
+              val value = EOValue.stringValueForKey(eo, propertyName)
+              <.div(
+                <.input(^.id := "description", ^.value := value,
+                  ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, p.d2wContext, EOValue.eoValueWithInt(e.target.value))
+                    )
+                  })
+              )
+            case None => <.div("")
+          }
+        case None =>
+          <.div("No eo in context")
       }
+
     }
   }
 
