@@ -583,7 +583,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val newCache = EOCacheUtils.updatedDBCacheWithEO(value, d2wContext.eo.get)
       println("newCache " + newCache)
 
-      updated(newCache)
+      updated(newCache,Effect.action(RegisterPreviousPage(d2wContext)))
 
     case NewAndRegisteredEO(d2wContext) =>
       D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | NewEOWithEOModel: " + d2wContext)

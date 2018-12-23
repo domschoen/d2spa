@@ -20,39 +20,15 @@ import d2spa.client.SPAMain.{TaskAppPage}
 
 object D2WEditPage {
 
+
+
+
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
   case class State(initialized: Boolean)
 
+  val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
 
-  class Backend($: BackendScope[Props, Unit]) {
-
-
-    // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
-    // To cope with this problem, we check if there is any change to the props and then call the willMount
-    /*def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      log.finest("D2WEditPage | willReceiveProps | currentProps: " + currentProps)
-      log.finest("D2WEditPage | willReceiveProps | nextProps: " + nextProps)
-
-      val cTask = currentProps.d2wContext.task
-      val nTask = nextProps.d2wContext.task
-      val taskChanged = !cTask.equals(nTask)
-
-      // may not be up to date ? (we should take the eo from the proxy)
-      val cPk = currentProps.d2wContext.eo
-      val nPk = nextProps.d2wContext.eo
-      val pkChanged = !nPk.equals(nPk)
-
-      val anyChange = taskChanged || pkChanged
-
-      Callback.when(anyChange) {
-        willmounted(nextProps)
-      }
-      //willmounted(nextProps)
-
-    }*/
-
-
-    val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
+  protected class Backend($: BackendScope[Props, State]) {
 
 
     // Page do a WillMount and components do a DidMount in order to have the page first (eo hydration has to be done first)
@@ -63,87 +39,90 @@ object D2WEditPage {
       log.finest("D2WEditPage | willMount eo " + d2wContext.eo)
       log.finest("D2WEditPage | willMount d2wContext " + d2wContext)
       val task = d2wContext.task.get
-      if (!allowedTasks.contains(task))
+      if (!allowedTasks.contains(task)) {
         Callback.empty
-      else {
+      } else {
+        val needsInit = p.proxy.value.previousPage.isEmpty && !s.initialized
+
+        if (needsInit) {
+            $.modState(_.copy(initialized = true))
+            p.proxy.dispatchCB(RegisteredExistingEO(d2wContext))
+
+        } else {
+          val ruleResults = p.proxy.value.ruleResults
+          val socketReady = p.proxy.value.appConfiguration.socketReady
+          val dataNotFetched = socketReady && !RuleUtils.metaDataFetched(ruleResults, d2wContext)
+          val sendingAction = InitMetaData(d2wContext)
+          val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
+
+          val previousPage = p.proxy.value.previousPage
+          log.finest("D2WEditPage | mounted | previousPage: " + previousPage)
+
+          val previousPageHasBeenSet = previousPage match {
+            case Some(ppD2WContext) => true
+            case None => false
+          }
+          log.finest("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
 
 
-
-        val ruleResults = p.proxy.value.ruleResults
-        val socketReady = p.proxy.value.appConfiguration.socketReady
-        val dataNotFetched = socketReady && !RuleUtils.metaDataFetched(ruleResults, d2wContext)
-        val sendingAction = InitMetaData(d2wContext)
-        val alreadySent = p.proxy.value.sendingActions.contains(sendingAction)
-
-
-        val previousPage = p.proxy.value.previousPage
-        log.finest("D2WEditPage | mounted | previousPage: " + previousPage )
-
-        val previousPageHasBeenSet = previousPage match {
-          case Some(ppD2WContext) => true
-          case None => false
-        }
-        log.finest("D2WEditPage | mounted | socketReady: " + socketReady + " dataNotFetched: " + dataNotFetched + " previousPageHasBeenSet: " + previousPageHasBeenSet + " alreadySent: " + alreadySent)
-
-
-        val eoOpt = d2wContext.eo
-        val action = eoOpt match {
-          case Some(eo) =>
-            log.finest("D2WEditPage: willMount eo " + eo)
-            if (previousPageHasBeenSet) {
-              log.finest("D2WEditPage: willMount previousPageHasBeenSet ")
-              if (EOValue.isNew(eo.pk)) {
-                log.finest("D2WEditPage: willMount isNew ")
-                None
-              } else {
-                log.finest("D2WEditPage: willMount is not new  ")
-                val eoFault = EOFault(entityName, eo.pk)
-                val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-
-                val actionList = List(
-                  // in order to have an EO completed with all attributes for the task,
-                  // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-                  Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
-                )
-                log.finest("D2WEditPage: willMount actionList " + actionList)
-                if (actionList.isEmpty)
+          val eoOpt = d2wContext.eo
+          val action = eoOpt match {
+            case Some(eo) =>
+              log.finest("D2WEditPage: willMount eo " + eo)
+              if (previousPageHasBeenSet) {
+                log.finest("D2WEditPage: willMount previousPageHasBeenSet ")
+                if (EOValue.isNew(eo.pk)) {
+                  log.finest("D2WEditPage: willMount isNew ")
                   None
-                else
-                  Some(FireActions(
-                    d2wContext,
-                    actionList
-                  ))
+                } else {
+                  log.finest("D2WEditPage: willMount is not new  ")
+                  val eoFault = EOFault(entityName, eo.pk)
+                  val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
+                  val actionList = List(
+                    // in order to have an EO completed with all attributes for the task,
+                    // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                    Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
+                  )
+                  log.finest("D2WEditPage: willMount actionList " + actionList)
+                  if (actionList.isEmpty)
+                    None
+                  else
+                    Some(FireActions(
+                      d2wContext,
+                      actionList
+                    ))
+                }
+
+              } else {
+                log.finest("D2WEditPage: willMount register previous page ")
+                //Some(RegisterPreviousPage(d2wContext))
+                //Some(RegisteredExistingEO(d2wContext))
+                None
               }
 
-            } else {
-              log.finest("D2WEditPage: willMount register previous page ")
-              //Some(RegisterPreviousPage(d2wContext))
-              //Some(RegisteredExistingEO(d2wContext))
-              None
-            }
+            case None =>
+              // D2WContext(
+              //  entityName : Some(Project),
+              //  task : Some(inspect),
+              //  previousTask : None,
+              //  eo : None,
+              //  queryValues : Map(),
+              //  dataRep : None,
+              //  propertyKey: None,
+              //  pageConfiguration : PotFiredKey(Right(None)),
+              //  pk : Some(1))↩
+              Some(NewAndRegisteredEO(d2wContext))
 
-          case None =>
-            // D2WContext(
-            //  entityName : Some(Project),
-            //  task : Some(inspect),
-            //  previousTask : None,
-            //  eo : None,
-            //  queryValues : Map(),
-            //  dataRep : None,
-            //  propertyKey: None,
-            //  pageConfiguration : PotFiredKey(Right(None)),
-            //  pk : Some(1))↩
-            Some(NewAndRegisteredEO(d2wContext))
 
+          }
+
+          Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get)) >>
+            Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
 
         }
-
-        Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get)) >>
-          Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
-
       }
     }
-
 
     def save(router: RouterCtl[TaskAppPage], entityName: String, eo: EO) = {
 
@@ -157,17 +136,6 @@ object D2WEditPage {
       }
 
     }
-
-    def returnAction(router: RouterCtl[TaskAppPage], entityName: String) = {
-      Callback.log(s"Search: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
-    }
-
-    /*def eo(propertyKeys: List[EditInspectProperty]): EO = {
-       //propertyKeys.filter(p => p.value.value.length > 0).map(p => EOKeyValueQualifier(p.key,p.value.value))
-      EO(Map())
-    }*/
-
     def isEdit(p: Props) = p.d2wContext.task.get.equals(TaskDefine.edit)
 
 
@@ -175,6 +143,12 @@ object D2WEditPage {
       RuleUtils.ruleListValueForContextAndKey(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
     }
 
+
+
+    def returnAction(router: RouterCtl[TaskAppPage], entityName: String) = {
+      Callback.log(s"Search: $entityName") >>
+        $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
+    }
 
     def render(p: Props, s: State) = {
 
@@ -184,15 +158,6 @@ object D2WEditPage {
 
       log.finest("D2WEditPage: render | eocache : " + p.proxy.value.cache)
       log.finest("D2WEditPage: render | p.proxy.value.previousPage : " + p.proxy.value.previousPage)
-
-
-      if (s.initialized) {
-
-      } else {
-        $.modState(_.copy(initialized = true))
-
-      }
-
 
       p.proxy.value.previousPage match {
         case Some(d2wContext) =>
@@ -311,11 +276,10 @@ object D2WEditPage {
       }
     }
   }
-
-  private val component = ScalaComponent.builder[Props]("D2WEditPage")
+  // create the React component for Dashboard
+  private val component = ScalaComponent.builder[Props]("SignUpPage")
     .initialState(State(false))
     .renderBackend[Backend]
-    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
     .build
 
