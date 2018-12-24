@@ -1,0 +1,16 @@
+From url: inspect
+
+1) create a D2WContext with an EO containing a PK
+2) will mount see that the previous is missing
+3) RegisterPreviousPage
+
+
+
+From menu: new
+
+1) create previous with new EO
+2) setPage goes through Main but which is designed to create a new D2WContext..
+   and EO Cannot be created here because it need to be inserted in the cache (can only be done by Circuit)
+   
+==> new goes through the router ==> No eo created only None ==> D2WEditPage create an eo, register and set previous
+==> through router the eo is a pk

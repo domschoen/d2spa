@@ -111,6 +111,10 @@ case class NewEOCreatedForEdit(eo: EO) extends Action
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
+
+case class PrepareEODisplay(d2wContext: D2WContext) extends Action
+case class PrepareEODisplayRules(d2wContext: D2WContext, needsHydration: Boolean) extends Action
+
 case class RegisterPreviousPage(d2wContext: D2WContext) extends Action
 case class RegisterPreviousPageAndSetPage(d2wContext: D2WContext) extends Action
 

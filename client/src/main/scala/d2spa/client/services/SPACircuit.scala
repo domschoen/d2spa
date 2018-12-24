@@ -144,6 +144,44 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
     }*/
 
+    case PrepareEODisplayRules(d2wContext, needsHydration) =>
+      val entityName = d2wContext.entityName.get
+      val isMetaDataPresent = RuleUtils.metaDataFetched(value, d2wContext)
+      if (isMetaDataPresent) {
+        if (needsHydration) {
+          // Verify completeness of EO
+          log.finest("RuleResultsHandler | PrepareEODisplayRules | meta data present")
+          val eo = d2wContext.eo.get
+          //val displayPropertyKeys = RuleUtils.ruleResultForContextAndKey(value, d2wContext, RuleKeys.displayPropertyKeys).get
+          val eoFault = EOFault(entityName, eo.pk)
+          val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
+          val actionList = List(
+            // in order to have an EO completed with all attributes for the task,
+            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+            Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
+          )
+          /* val isHydrated = Hydration.isHydratedForPropertyKeys(
+          eomodel,
+          cache,
+          DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
+          List(keyWhenRelahionship))*/
+
+
+
+
+          effectOnly(Effect.action(FireActions(
+            d2wContext,
+            actionList
+          )))
+        }
+        else
+          noChange
+      } else {
+
+        // but should call again this action
+        effectOnly(Effect.action(InitMetaData(d2wContext)))
+      }
 
     case FetchMetaData(d2wContext) =>
       log.finest("RuleResultsHandler | FireActions | FetchMetaData: ")
@@ -452,6 +490,48 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       effectOnly(Effect.action(action))
 
 
+    // EO from router is a pk mainly (in an EO shell)
+    // Different case may occur:
+    // 1) pk is none, New EO
+    //    - create a new EO, register it in the cache
+    // 2) pk is Some, existing EO
+    //    2 cases:
+    //      2.1) eo in cache
+    //      2.2) eo not in cache
+    //          - Fetch it
+    //             2 cases:
+    //                 2.2.1) EO found in DB
+    //                     - register it
+    //                 2.2.2) EO not found in DB --> error
+    // After, if successful, we continue with rules
+    case PrepareEODisplay(d2wContext) =>
+      val entityName = d2wContext.entityName.get
+      val eoOpt = d2wContext.eo
+      eoOpt match {
+        case Some(eoRef) =>
+          // case 2: Existing EO
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(value, entityName, eoRef)
+          log.finest("CacheHandler | PrepareEODisplay | Existing EO from cache: " + eoOpt)
+
+          eoOpt match {
+            case Some(existingEO) =>
+              // case 2.1: Existing EO in cache
+              val updatedD2WContext = d2wContext.copy(eo = Some(existingEO))
+
+              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, true)))
+            case None =>
+              // case 2.2: Existing EO not in cache => fetch it
+              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, true)))
+          }
+        case None =>
+          // case 1: new EO
+          log.finest("CacheHandler | PrepareEODisplay | New EO")
+          val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, entityName)
+          D2SpaLogger.logfinest(entityName, "newEO " + newEO)
+          val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
+
+          updated(newCache, Effect.action(PrepareEODisplayRules(updatedD2WContext, false)))
+      }
     // Update EO, stay on same page
     // Examples:
     //   - Save error -> update error in EO
@@ -584,19 +664,6 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       println("newCache " + newCache)
 
       updated(newCache,Effect.action(RegisterPreviousPage(d2wContext)))
-
-    case NewAndRegisteredEO(d2wContext) =>
-      D2SpaLogger.logDebugWithD2WContext(d2wContext,"CacheHandler | NewEOWithEOModel: " + d2wContext)
-      val entityName = d2wContext.entityName.get
-      // Create the EO and set it in the cache
-
-      println("value.insertedEOs " + value.insertedEOs)
-      println("entityName " + entityName)
-      val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, entityName)
-      D2SpaLogger.logfinest(entityName, "newEO " + newEO)
-      val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
-
-      updated(newCache,Effect.action(RegisterPreviousPage(updatedD2WContext)))
 
 
 

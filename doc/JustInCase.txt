@@ -1,0 +1,68 @@
+
+
+            val ruleResults = p.proxy.value.ruleResults
+            val realMetaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
+
+            if (s.metaDataPresent) {
+              if (realMetaDataPresent) {
+                log.finest("D2WEditPage | mounted | realMetaDataPresent")
+                val eoOpt = d2wContext.eo
+                eoOpt match {
+                  case Some(eo) =>
+                    log.finest("D2WEditPage | mounted eo " + eo)
+                    // if (EOValue.isNew(eo.pk)) {
+                    //   log.finest("D2WEditPage: willMount isNew ")
+                    //   None
+                    // } else {
+                    log.finest("D2WEditPage | mounted is not new  ")
+                    val eoFault = EOFault(entityName, eo.pk)
+                    val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
+
+                    val actionList = List(
+                      // in order to have an EO completed with all attributes for the task,
+                      // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
+                      Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
+                    )
+                    log.finest("D2WEditPage | mounted actionList " + actionList)
+                    val action = if (actionList.isEmpty)
+                      None
+                    else
+                      Some(FireActions(
+                        d2wContext,
+                        actionList
+                      ))
+
+                    Callback.when(action.isDefined)(p.proxy.dispatchCB(action.get))
+                  case None =>
+                    // D2WContext(
+                    //  entityName : Some(Project),
+                    //  task : Some(inspect),
+                    //  previousTask : None,
+                    //  eo : None,
+                    //  queryValues : Map(),
+                    //  dataRep : None,
+                    //  propertyKey: None,
+                    //  pageConfiguration : PotFiredKey(Right(None)),
+                    //  pk : Some(1))↩
+                    p.proxy.dispatchCB(NewAndRegisteredEO(d2wContext))
+
+
+                }
+
+              } else {
+                log.finest("D2WEditPage | mounted | Inconsistency: meta data present flag true but real meta data not present")
+                Callback.empty
+              }
+            } else {
+              log.finest("D2WEditPage | mounted | metaData not Present " + realMetaDataPresent)
+              $.modState(_.copy(metaDataPresent = true))
+              if (realMetaDataPresent) {
+                Callback.empty
+              } else {
+                p.proxy.dispatchCB(InitMetaData(d2wContext))
+              }
+            }
+          
+          
+
+          
