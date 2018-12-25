@@ -1,7 +1,7 @@
 package d2spa.client.services
 
 import autowire._
-import diode._
+import diode.{Effect, _}
 import diode.data._
 import diode.util._
 import diode.react.ReactConnector
@@ -144,44 +144,42 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
     }*/
 
-    case PrepareEODisplayRules(d2wContext, needsHydration) =>
+    case PrepareEODisplayRules(d2wContext, cache, needsHydration) =>
+      log.finest("RuleResultsHandler | PrepareEODisplayRules | d2wContext " + d2wContext)
       val entityName = d2wContext.entityName.get
-      val isMetaDataPresent = RuleUtils.metaDataFetched(value, d2wContext)
-      if (isMetaDataPresent) {
-        if (needsHydration) {
-          // Verify completeness of EO
-          log.finest("RuleResultsHandler | PrepareEODisplayRules | meta data present")
-          val eo = d2wContext.eo.get
-          //val displayPropertyKeys = RuleUtils.ruleResultForContextAndKey(value, d2wContext, RuleKeys.displayPropertyKeys).get
+      if (needsHydration) {
+        val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(value, d2wContext, RuleKeys.displayPropertyKeys)
+        val eo = d2wContext.eo.get
+        val eoFault = Hydration.toFault(eo)
+        if (displayPropertyKeys.isEmpty) {
+          val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+          SPAMain.socket.send(WebSocketMessages.CompleteEO(ff,eoFault, Set()))
+        } else {
           val eoFault = EOFault(entityName, eo.pk)
-          val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
 
-          val actionList = List(
-            // in order to have an EO completed with all attributes for the task,
-            // gives the eorefs needed for next action which is EOs for the eorefs according to embedded list display property keys
-            Hydration(DrySubstrate(eo = Some(eoFault)), WateringScope(ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))))
-          )
-          /* val isHydrated = Hydration.isHydratedForPropertyKeys(
-          eomodel,
-          cache,
-          DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
-          List(keyWhenRelahionship))*/
+          // Verify completeness of EO
+          val isHydrated = Hydration.isHydratedForPropertyKeys(cache.eomodel.get,
+            cache,
+            DrySubstrate(eo = Some(eoFault)),
+            displayPropertyKeys)
 
-
-
-
-          effectOnly(Effect.action(FireActions(
-            d2wContext,
-            actionList
-          )))
+          if (!isHydrated) {
+            log.finest("RuleResultsHandler | PrepareEODisplayRules | displayProperties yes -> ask server for hydration")
+            val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+            SPAMain.socket.send(WebSocketMessages.CompleteEO(ff, eoFault, displayPropertyKeys.toSet))
+          }
         }
-        else
-          noChange
-      } else {
+        noChange
 
-        // but should call again this action
-        effectOnly(Effect.action(InitMetaData(d2wContext)))
+      } else {
+        val metaDataFetched = RuleUtils.metaDataFetched(value,d2wContext)
+        if (!metaDataFetched) {
+          val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+          SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+        }
+        effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
       }
+
 
     case FetchMetaData(d2wContext) =>
       log.finest("RuleResultsHandler | FireActions | FetchMetaData: ")
@@ -261,7 +259,10 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                     // completeEO ends up with a MegaContent eo update
                     log.finest("Hydration Call server with eo " + eoFault.pk + " missingKeys " + missingKeys)
                     // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                    SPAMain.socket.send(WebSocketMessages.CompleteEO(eoFault, missingKeys))
+
+                    // not yet implemented on server side
+                    val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+                    SPAMain.socket.send(WebSocketMessages.HydrateEOs(ff, List(eoFault.pk), missingKeys))
 
                   case DrySubstrate(Some(eoakp), _, _) =>
                     log.finest("Hydration DrySubstrate " + eoakp.eo.entityName + " for key " + eoakp.keyPath)
@@ -274,7 +275,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                           case ObjectsValue(pks) =>
                             log.finest("NVListComponent render pks " + pks)
                             // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                            SPAMain.socket.send(WebSocketMessages.HydrateEOs(ruleResult.rhs.entityName.get, pks, missingKeys))
+                            val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+                            SPAMain.socket.send(WebSocketMessages.HydrateEOs(ff, pks, missingKeys))
 
                           case _ => // we skip the action ....
                         }
@@ -344,6 +346,12 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       log.finest("RuleResultsHandler | SetJustRuleResults | ruleResults " + ruleResults)
       val newRuleResults = updatedRuleResults(value,ruleResults)
       updated(newRuleResults)
+
+    case SetPreviousWithResults(ruleResults, d2wContext) =>
+      log.finest("RuleResultsHandler | SetPreviousWithResults | ruleResults " + ruleResults)
+      val newRuleResults = updatedRuleResults(value,ruleResults)
+      updated(newRuleResults, Effect.action(RegisterPreviousPage(d2wContext)))
+
 
   }
 
@@ -506,6 +514,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     // After, if successful, we continue with rules
     case PrepareEODisplay(d2wContext) =>
       val entityName = d2wContext.entityName.get
+      log.finest("CacheHandler | PrepareEODisplay | entityName " + entityName)
       val eoOpt = d2wContext.eo
       eoOpt match {
         case Some(eoRef) =>
@@ -518,10 +527,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
               // case 2.1: Existing EO in cache
               val updatedD2WContext = d2wContext.copy(eo = Some(existingEO))
 
-              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, true)))
+              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, value, true)))
             case None =>
               // case 2.2: Existing EO not in cache => fetch it
-              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, true)))
+              effectOnly(Effect.action(PrepareEODisplayRules(d2wContext, value , true)))
           }
         case None =>
           // case 1: new EO
@@ -530,7 +539,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
           D2SpaLogger.logfinest(entityName, "newEO " + newEO)
           val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
 
-          updated(newCache, Effect.action(PrepareEODisplayRules(updatedD2WContext, false)))
+          // We may need to fetch rules
+          updated(newCache,Effect.action(PrepareEODisplayRules(updatedD2WContext, value,false)))
       }
     // Update EO, stay on same page
     // Examples:
@@ -561,14 +571,42 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(
         EOCacheUtils.updatedCacheWithDBEOs(value.eomodel.get, value,eoses)
       )
-
-    case FetchedObjectsForEntity(entityName, eos) =>
+*/
+    case FetchedObjectsForEntity(entityName, eos, ruleResultsOpt) =>
       log.finest("CacheHandler | FetchedObjectsForEntity eoses " + eos)
       val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
+      ruleResultsOpt match {
+        case Some(ruleResults) =>
+          updated(
+            EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eos.toList, entityName),
+            Effect.action(SetJustRuleResults(ruleResults))
+          )
 
-      updated(
-        EOCacheUtils.updatedCacheWithDBEOs(entity, value, eos)
-      )*/
+        case None =>
+          updated(
+            EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eos.toList, entityName)
+          )
+
+      }
+
+    case CompletedEO(entityName, eo, ruleResultsOpt) =>
+      log.finest("CacheHandler | CompletedEO  " + eo)
+      //val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
+      val d2wContext = D2WContext(entityName = Some(entityName), task =  Some(TaskDefine.edit), eo = Some(eo))
+
+      ruleResultsOpt match {
+        case Some(ruleResults) =>
+          updated(
+            EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
+            Effect.action(SetPreviousWithResults(ruleResults, d2wContext))
+          )
+
+        case None =>
+          updated(
+            EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
+            Effect.action(RegisterPreviousPage(d2wContext))
+          )
+      }
 
 
     case SearchResult(fs, eoses) =>

@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.RuleUtils.ruleListValueWithRuleResult
+
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -117,7 +117,7 @@ object NVListComponent {
                 case Some(displayPropertyKeysRuleResult) =>
                   D2SpaLogger.logfinest(entityName,"NVListComponent mounted: some display property keys")
 
-                  val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
+                  val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
 
                   val isHydrated = Hydration.isHydratedForPropertyKeys(eomodel,p.proxy.value.cache, drySubstrate, displayPropertyKeys)
                   if (isHydrated) {

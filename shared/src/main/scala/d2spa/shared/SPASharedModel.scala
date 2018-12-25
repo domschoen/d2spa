@@ -18,8 +18,8 @@ object WebSocketMessages {
   final case class GetMetaData(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
   final case class RuleToFire(rhs: FiringD2WContext, key: String) extends WebSocketMsgIn
   final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
-  final case class CompleteEO(eo: EOFault, missingKeys: Set[String]) extends WebSocketMsgIn
-  final case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
@@ -33,7 +33,8 @@ object WebSocketMessages {
   final case class FetchedEOModel(eomodel: EOModel) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO]) extends WebSocketMsgOut
+  final case class CompletedEOMsgOut(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
@@ -552,6 +553,18 @@ case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
 
 object RulesUtilities {
+
+  def ruleResultForKey(ruleResults: List[RuleResult], key: String) =
+    ruleResults.find(r => {r.key.equals(key)})
+
+
+
+  def ruleListValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
+    ruleResultOpt match {
+      case Some(ruleResult) => ruleResult.value.stringsV
+      case _ => List()
+    }
+  }
 
   def convertFullFledgedToFiringD2WContext(d2wContext: D2WContextFullFledged): FiringD2WContext = {
     FiringD2WContext(

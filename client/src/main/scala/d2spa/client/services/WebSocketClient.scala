@@ -55,7 +55,10 @@ object WebSocketClient {
               case FetchedEOModel(eomodel) => MyCircuit.dispatch(SetEOModelThenFetchMenu(eomodel))
               case FetchedMenus(menus) => MyCircuit.dispatch(SetMenus(menus))
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
-              case FetchedObjectsMsgOut(entityName, eos) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos))
+
+
+              case CompletedEOMsgOut(entityName, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(entityName,eo,ruleResultsOpt))
+              case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))

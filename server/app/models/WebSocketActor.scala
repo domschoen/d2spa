@@ -6,10 +6,9 @@ import d2spa.shared._
 import d2spa.shared.WebSocketMessages._
 import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
-import models.EORepoActor.{DeletingResponse, FetchedObjects, FetchedObjectsForList, SavingResponse}
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.NodeActor.SetItUp
-import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
+import models.RulesActor.{GetRule, GetRulesForMetaData, HydrateEOsForDisplayPropertyKeys, RuleResultsResponse}
 import play.api.Configuration
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.ws.WSClient
@@ -49,23 +48,30 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-    case FetchedObjects(entityName, eos) =>
+
+
+    case EORepoActor.CompletedEO(entityName, eo, ruleResultsOpt) =>
+      println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
+      //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
+      out ! CompletedEOMsgOut(entityName, eo, ruleResultsOpt)
+
+    case EORepoActor.FetchedObjects(entityName, eos, ruleResultsOpt) =>
       println("Receive FetchedObjects ---> sending FetchedObjectsMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsMsgOut(entityName, eos)
+      out ! FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt)
 
 
-    case FetchedObjectsForList(fs, eos) =>
+    case EORepoActor.FetchedObjectsForList(fs, eos) =>
       println("Receive FetchedObjectsForList ---> sending FetchedObjectsForListMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
       out ! FetchedObjectsForListMsgOut(fs, eos)
 
 
-    case SavingResponse(eo) =>
+    case EORepoActor.SavingResponse(eo) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
       out ! SavingResponseMsgOut(eo)
 
-    case DeletingResponse(eo) =>
+    case EORepoActor.DeletingResponse(eo) =>
       println("Receive DeletingResponse ---> sending DeletingResponseMsgOut")
       out ! DeletingResponseMsgOut(eo)
 
@@ -83,6 +89,29 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
       case HydrateAll(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
+
+
+      case CompleteEO(d2wContext, eoFault, missingKeys) =>
+        val entityName = d2wContext.entityName.get
+        if (missingKeys.isEmpty) {
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
+        } else {
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.CompleteEO(eoFault, missingKeys, None, self) //: Future[Seq[EO]]
+        }
+
+
+
+      case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
+        val entityName = d2wContext.entityName.get
+        if (missingKeys.isEmpty) {
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], self)
+        } else {
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
+        }
 
       case Search(fs) =>
         println("Receive Search")

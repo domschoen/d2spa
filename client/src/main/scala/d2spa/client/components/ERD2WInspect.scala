@@ -108,7 +108,7 @@ object ERD2WInspect {
             case Some(drySubstrate) =>
               displayPropertyKeysRuleResultOpt match {
                 case Some(displayPropertyKeysRuleResult) =>
-                  val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
+                  val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
 
                   val isHydrated = Hydration.isHydratedForPropertyKeys(p.proxy.value.cache.eomodel.get, p.proxy.value.cache, drySubstrate, displayPropertyKeys)
                   //val isHydrated = false

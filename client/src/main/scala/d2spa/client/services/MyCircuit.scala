@@ -121,12 +121,17 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
 
-    case RegisterPreviousPage(d2WContext) =>
-      val  stack = stackD2WContext(d2WContext)
+    case RegisterPreviousPage(d2wContext) =>
+      val  stack = stackD2WContext(d2wContext)
       log.finest("PreviousPageHandler | RegisterPreviousPage for d2wContext: " + stack)
 
       updated(Some(stack))
 
+    case PrepareEditPage(d2wContext) =>
+      val  stack = stackD2WContext(d2wContext)
+      log.finest("PreviousPageHandler | PrepareEditPage for d2wContext: " + stack)
+
+      updated(Some(stack),Effect.action(PrepareEODisplay(stack)))
 
     case SetPage(d2WContext) =>
       log.finest("PreviousPageHandler | SetPage for d2wContext: " + d2WContext)

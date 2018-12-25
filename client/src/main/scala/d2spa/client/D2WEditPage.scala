@@ -42,7 +42,13 @@ object D2WEditPage {
       val nPk = nextProps.d2wContext.eo
       val pkChanged = !nPk.equals(nPk)
 
-      val anyChange = taskChanged || pkChanged
+      val cPP = currentProps.proxy.value.previousPage
+      val nPP = nextProps.proxy.value.previousPage
+      val previousPageChanged = !cPP.equals(nPP)
+
+
+
+      val anyChange = taskChanged || pkChanged || previousPageChanged
 
       //Callback.when(anyChange) {
         willmounted(nextProps, s)
@@ -57,27 +63,17 @@ object D2WEditPage {
       log.finest("D2WEditPage | mounted " + entityName + "state " + s)
       log.finest("D2WEditPage | mounted eo " + d2wContext.eo)
       log.finest("D2WEditPage | mounted d2wContext " + d2wContext)
+      log.finest("D2WEditPage | mounted proxy d2wContext " + p.proxy.value.previousPage)
       val task = d2wContext.task.get
       if (!allowedTasks.contains(task)) {
         Callback.empty
       } else {
-        val needsInit = p.proxy.value.previousPage.isEmpty &&  !s.initialized
+        val socketReady = p.proxy.value.appConfiguration.socketReady
 
-        if (needsInit) {
-          log.finest("D2WEditPage | mounted | needsInit")
-          $.modState(_.copy(initialized = true))
-          p.proxy.dispatchCB(RegisterPreviousPage(d2wContext))
-
+        if (!socketReady) {
+          Callback.empty
         } else {
-          val socketReady = p.proxy.value.appConfiguration.socketReady
-
-          if (!socketReady) {
-            log.finest("D2WEditPage | mounted | socket not Ready")
-            Callback.empty
-          } else {
-            log.finest("D2WEditPage | mounted | socket Ready")
-            p.proxy.dispatchCB(PrepareEODisplay(d2wContext))
-          }
+          p.proxy.dispatchCB(PrepareEODisplay(d2wContext))
         }
       }
     }
@@ -141,7 +137,7 @@ object D2WEditPage {
                   log.finest("D2WEditPage: render check meta data fetched in rules " + ruleResults)
                   val metaDataPresent = RuleUtils.metaDataFetched(ruleResults, d2wContext)
 
-                  if (metaDataPresent) {
+                  //if (metaDataPresent) {
                     log.finest("entityMetaDatas not empty")
 
                     //log.finest("Entity meta Data " + metaDatas)
@@ -219,9 +215,9 @@ object D2WEditPage {
                         )
                       )
                     )
-                  } else {
-                    <.div("no meta datas " + d2wContext)
-                  }
+                  //} else {
+                  //  <.div("no meta datas " + d2wContext)
+                  //}
                 case None => <.div("Object not found in cache")
               }
             case _ => <.div("Object Ref not found")
@@ -239,7 +235,7 @@ object D2WEditPage {
     .initialState(State(false))
     .renderBackend[Backend]
     .componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
-    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps, scope.state))
+    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps, scope.state))
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {

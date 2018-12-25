@@ -34,8 +34,9 @@ object EORepoActor {
 
 
   case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
-  case class CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) //: Future[EO]
-  case class HydrateEOs(entityName: String, pks: Seq[List[Int]], missingKeys: Set[String], requester: ActorRef) //: Future[Seq[EO]]
+
+  case class CompleteEO(eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
   case class NewEO(entityName: String, eo: EO, requester: ActorRef) //: Future[EO]
   case class UpdateEO(eo: EO, requester: ActorRef) //: Future[EO]
@@ -43,7 +44,8 @@ object EORepoActor {
   case class DeleteEO(eo: EO, requester: ActorRef) // : Future[EO]
 
   // Responses
-  case class FetchedObjects(entityName: String, eos: List[EO])
+  case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
+  case class CompletedEO(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(eo: EO)
@@ -600,7 +602,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       val entityName = EOFetchSpecification.entityName(fs)
 
       searchOnWORepository(entityName, None).map(rrs =>
-        requester ! FetchedObjects(entityName, rrs)
+        requester ! FetchedObjects(entityName, rrs, None)
       )
 
     case Search(fs: EOFetchSpecification, requester: ActorRef) =>
@@ -615,17 +617,22 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjectsForList(fs,rrs)
       )
 
-    case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>
+    /*case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
       completeEO(eo,missingKeys).map(rrs =>
         requester ! FetchedObjects(eo.entityName, rrs)
-      )
-    case HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], requester: ActorRef) =>
+      )*/
+    case HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get HydrateEOs")
       hydrateEOs(entityName, pks, missingKeys).map(rrs =>
-        requester ! FetchedObjects(entityName, rrs)
+        requester ! FetchedObjects(entityName, rrs, ruleResults)
       )
 
+    case CompleteEO(eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+      log.debug("Get CompleteEO")
+      hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs =>
+        requester ! CompletedEO(eo.entityName, rrs.head, ruleResults)
+      )
 
 
     case NewEO(entityName: String, eo: EO, requester: ActorRef) =>

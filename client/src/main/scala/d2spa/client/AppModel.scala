@@ -90,7 +90,10 @@ case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
 case object FetchMenu extends Action
 
-case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO]) extends Action
+case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class CompletedEO(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
+
+
 case class RefreshedEOs(eos: Seq[EO])
 
 case class InitMetaData(d2wContext: D2WContext) extends Action
@@ -113,7 +116,10 @@ case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
 
 case class PrepareEODisplay(d2wContext: D2WContext) extends Action
-case class PrepareEODisplayRules(d2wContext: D2WContext, needsHydration: Boolean) extends Action
+case class PrepareEditPage(d2wContext: D2WContext) extends Action
+
+
+case class PrepareEODisplayRules(d2wContext: D2WContext, cache: EOCache, needsHydration: Boolean) extends Action
 
 case class RegisterPreviousPage(d2wContext: D2WContext) extends Action
 case class RegisterPreviousPageAndSetPage(d2wContext: D2WContext) extends Action
@@ -168,6 +174,8 @@ case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends
 
 
 object Hydration {
+
+  def toFault(eo:EO) = EOFault(eo.entityName, eo.pk)
 
   // case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
   def entityName(drySubstrate: DrySubstrate) = drySubstrate match {
@@ -348,7 +356,7 @@ object RuleUtils {
 
     displayPropertyKeysRuleResultOpt match {
       case Some(displayPropertyKeysRuleResult) =>
-        val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
+        val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
         if (displayPropertyKeys.size == 0) {
           None
         } else {
@@ -434,7 +442,7 @@ object RuleUtils {
 
   def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
     val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
-    ruleListValueWithRuleResult(ruleResult)
+    RulesUtilities.ruleListValueWithRuleResult(ruleResult)
   }
 
   def pageConfigurationWithRuleResult(propertyKeyOpt: Option[String],ruleResult: RuleResult) = {
@@ -555,12 +563,6 @@ object RuleUtils {
       case _ => None
     }
   }
-  def ruleListValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
-    ruleResultOpt match {
-      case Some(ruleResult) => ruleResult.value.stringsV
-      case _ => List()
-    }
-  }
 
   def existsRuleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String) =
     ruleResultForContextAndKey(ruleResults, d2wContext, key).isDefined
@@ -648,6 +650,7 @@ object D2WContextUtils {
 
 case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class SetJustRuleResults(ruleResults: List[RuleResult]) extends Action
+case class SetPreviousWithResults(ruleResults: List[RuleResult], d2wContext: D2WContext) extends Action
 
 
 

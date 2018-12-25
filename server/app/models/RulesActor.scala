@@ -19,7 +19,7 @@ import d2spa.shared._
 import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.MenusActor.{GetMenus, MenusResponse}
-import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
+import models.RulesActor._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -40,6 +40,9 @@ object RulesActor {
 
   case class GetRulesForMetaData(d2wContext: D2WContextFullFledged, requester: ActorRef)
 
+  case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], requester: ActorRef)
+
+  case class GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef)
 }
 
 class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
@@ -257,6 +260,26 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         requester ! RuleResultsResponse(List(rr))
       )
     }
+    case HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], requester) =>
+      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
+      fireRule(fD2WContext, "displayPropertyKeys").map(rr => {
+
+          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(rr))
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.HydrateEOs(fD2WContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), self) //: Future[Seq[EO]]
+        }
+      )
+    case GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef) =>
+      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
+      getRuleResultsForMetaData(d2wContext).map(rr => {
+        val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
+        val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
+          EORepoActor.CompleteEO(eoFault, displayPropertyKeys.toSet, Some(rr), self) //: Future[Seq[EO]]
+      }
+      )
+
+
   }
 
 
