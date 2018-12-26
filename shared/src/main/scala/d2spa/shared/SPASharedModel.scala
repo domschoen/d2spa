@@ -12,9 +12,9 @@ object WebSocketMessages {
   // Client ---> Server
   sealed trait WebSocketMsgIn
   final case class StringMsgIn(string: String) extends WebSocketMsgIn
-  final case object GetDebugConfiguration extends WebSocketMsgIn
-  final case object FetchEOModel extends WebSocketMsgIn
-  final case object FetchMenus extends WebSocketMsgIn
+  final case class GetDebugConfiguration(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
+  final case class FetchEOModel(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
+  final case class FetchMenus(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
   final case class GetMetaData(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
   final case class RuleToFire(rhs: FiringD2WContext, key: String) extends WebSocketMsgIn
   final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
@@ -29,9 +29,9 @@ object WebSocketMessages {
   // Server ---> Client
   sealed trait WebSocketMsgOut
 
-  final case class DebugConfMsg(showD2WDebugButton: Boolean) extends WebSocketMsgOut
-  final case class FetchedEOModel(eomodel: EOModel) extends WebSocketMsgOut
-  final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
+  final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
+  final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
+  final case class FetchedMenus(menus: Menus, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
   final case class CompletedEOMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
@@ -547,7 +547,9 @@ case class FiringD2WContext(entityName: Option[String],
 case class D2WContextFullFledged(entityName: Option[String],
                   task: Option[String],
                   propertyKey:  Option[String] = None,
-                  pageConfiguration: Option[String] = None)
+                  pageConfiguration: Option[String] = None,
+                  eo: Option[EO] = None
+                                )
 
 case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())

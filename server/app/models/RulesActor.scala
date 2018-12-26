@@ -233,11 +233,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
   override def preStart {
     println("Rules Actors: preStart")
-    eomodelActor ! GetEOModel(self)
+    eomodelActor ! GetEOModel(None, self)
   }
 
   def receive = LoggingReceive {
-    case EOModelResponse(model) =>
+    case EOModelResponse(model, d2wContext) =>
       eomodel = model
 
      // for a D2WContext, give ruleResults for
@@ -270,12 +270,13 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         }
       )
     case GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef) =>
+      println("Rule Actor Receive GetMetaDataForEOCompletion")
       val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
       getRuleResultsForMetaData(d2wContext).map(rr => {
         val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
         val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), self) //: Future[Seq[EO]]
+          EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), requester) //: Future[Seq[EO]]
       }
       )
 

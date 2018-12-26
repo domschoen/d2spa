@@ -40,9 +40,9 @@ case class MenuItem(
 object MenusActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new MenusActor(eomodelActor, ws))
 
-  case class MenusResponse(menus: Menus)
+  case class MenusResponse(menus: Menus, d2wContext: D2WContextFullFledged)
 
-  case class GetMenus(requester: ActorRef)
+  case class GetMenus(d2wContext: D2WContextFullFledged, requester: ActorRef)
 
 }
 
@@ -120,17 +120,17 @@ class MenusActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorL
 
   override def preStart {
     println("Menus Actors: preStart")
-    eomodelActor ! GetEOModel(self)
+    eomodelActor ! GetEOModel(None, self)
   }
 
   def receive = LoggingReceive {
-    case EOModelResponse(model) =>
+    case EOModelResponse(model, d2wContext) =>
       eomodel = model
 
-    case GetMenus(requester) => {
+    case GetMenus(d2wContext, requester) => {
       log.debug("Get Menus")
       getMenus().map({
-        requester ! MenusResponse(_)
+        requester ! MenusResponse(_, d2wContext)
 
       })
     }

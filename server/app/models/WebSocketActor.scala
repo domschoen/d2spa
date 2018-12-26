@@ -33,15 +33,15 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
 
   def receive = {
-    case EOModelResponse(eomodel) =>
+    case EOModelResponse(eomodel, d2wContextOpt) =>
       println("Receive EOModelResponse ---> sending FetchedEOModel")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedEOModel(eomodel))
-      out ! FetchedEOModel(eomodel)
+      out ! FetchedEOModel(eomodel, d2wContextOpt.get)
 
-    case MenusResponse(menus) =>
+    case MenusResponse(menus, d2wContext) =>
       println("Receive MenusResponse ---> sending FetchedMenus")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedMenus(menus))
-      out ! FetchedMenus(menus)
+      out ! FetchedMenus(menus, d2wContext)
 
     case RuleResultsResponse(ruleResults) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
@@ -94,9 +94,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case CompleteEO(d2wContext, eoFault, missingKeys) =>
         val entityName = d2wContext.entityName.get
         if (missingKeys.isEmpty) {
+          println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
         } else {
+          println("Receive CompleteEO ---> sending EORepoActor CompleteEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.CompleteEO(d2wContext, eoFault, missingKeys, None, self) //: Future[Seq[EO]]
         }
@@ -117,17 +119,17 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
         println("Receive Search")
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
 
-      case GetDebugConfiguration =>
+      case GetDebugConfiguration(d2wContext) =>
         println("Receive GetDebugConfiguration ---> sending DebugConfMsg")
-        out ! DebugConfMsg(showDebugButton)
+        out ! DebugConfMsg(showDebugButton,d2wContext)
 
-      case FetchEOModel =>
+      case FetchEOModel(d2wContext) =>
         println("Receive FetchEOModel")
-        context.actorSelection("akka://application/user/node-actor/eomodelFetcher") ! GetEOModel(self)
+        context.actorSelection("akka://application/user/node-actor/eomodelFetcher") ! GetEOModel(Some(d2wContext), self)
 
-      case FetchMenus =>
+      case FetchMenus(d2wContext) =>
         println("Receive FetchMenus")
-        context.actorSelection("akka://application/user/node-actor/menusFetcher") ! GetMenus(self)
+        context.actorSelection("akka://application/user/node-actor/menusFetcher") ! GetMenus(d2wContext, self)
 
       case GetMetaData(d2wContext) =>
         println("Receive GetMetaData")

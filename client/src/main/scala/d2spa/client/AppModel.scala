@@ -3,7 +3,7 @@ package d2spa.client
 import diode._
 import diode.data.{Pot, _}
 import diode.util._
-import d2spa.shared.{EntityMetaData, _}
+import d2spa.shared.{D2WContextFullFledged, EntityMetaData, _}
 import boopickle.DefaultBasic._
 import d2spa.client.EOCacheUtils.eoEntityMapOpt
 import d2spa.client.logger.{D2SpaLogger, log}
@@ -75,20 +75,20 @@ case object HideBusyIndicator extends Action
 case class SearchWithBusyIndicator(entityName: String) extends Action
 
 case object SocketReady extends Action
-case object InitAppSpecificClient extends Action
+case class InitAppSpecificClient(d2wContext: D2WContextFullFledged) extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
-case class SetMenus(menus: Menus) extends Action
+case class SetMenus(menus: Menus, d2wContext: D2WContextFullFledged) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
 case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
-case object FetchEOModelAndMenus extends Action
+case class FetchEOModelAndMenus(d2wContext: D2WContextFullFledged) extends Action
 
 
-case class SetEOModelThenFetchMenu(eomodel: EOModel) extends Action
+case class SetEOModelThenFetchMenu(eomodel: EOModel, d2wContext: D2WContextFullFledged) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
-case object FetchMenu extends Action
+case class FetchMenu(d2wContext: D2WContextFullFledged) extends Action
 
 case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
@@ -621,7 +621,8 @@ object D2WContextUtils {
       d2wContext.entityName,
       d2wContext.task,
       d2wContext.propertyKey,
-      d2wContext.pageConfiguration.value.right.get
+      d2wContext.pageConfiguration.value.right.get,
+      d2wContext.eo
     )
   }
 
@@ -629,7 +630,7 @@ object D2WContextUtils {
     d2wContext.entityName,
     d2wContext.task,
     None,
-    None,
+    d2wContext.eo,
     Map(),
     None,
     d2wContext.propertyKey,
@@ -660,8 +661,8 @@ case class ShowPage(entity: EOEntity, task: String) extends Action
 case class SetupQueryPageForEntity(entityName: String) extends Action
 
 case object SwithDebugMode extends Action
-case object FetchShowD2WDebugButton extends Action
-case class SetDebugConfiguration(debugConf: DebugConf) extends Action
+case class FetchShowD2WDebugButton(d2wContext: D2WContext) extends Action
+case class SetDebugConfiguration(debugConf: DebugConf, d2wContext: D2WContextFullFledged) extends Action
 
 object EOCacheUtils {
 

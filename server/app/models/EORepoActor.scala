@@ -309,7 +309,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 }*/
 
   def completeEO(eoFault: EOFault, missingKeys: Set[String]): Future[List[EO]] = {
-    Logger.debug("Complete EO: " + eoFault)
+    Logger.debug("Complete EO: " + eoFault + " missing keys: " + missingKeys)
     val entityName = eoFault.entityName
     val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
     entityOpt match {
@@ -378,7 +378,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   def completeEOWithUrl(eo: EO, url: String, unwrapper: JsValue => JsValue): Future[List[EO]] = {
     val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
-    Logger.debug("Complete EO: request : " + request)
+    Logger.debug("Complete EO: request : " + url)
 
     val futureResponse: Future[WSResponse] = request.get
     futureResponse.map { response =>
@@ -582,11 +582,11 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   override def preStart {
     println("Menus Actors: preStart")
-    eomodelActor ! GetEOModel(self)
+    eomodelActor ! GetEOModel(None, self)
   }
 
   def receive = LoggingReceive {
-    case EOModelResponse(model) =>
+    case EOModelResponse(model, d2wContext) =>
       eomodel = model
 
      // for a D2WContext, give ruleResults for
@@ -630,8 +630,11 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
     case CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get CompleteEO")
-      hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs =>
+      hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs => {
+        println("Hydrate gives " + rrs)
+        println("Hydrate send to " + requester)
         requester ! CompletedEO(d2wContext, rrs.head, ruleResults)
+      }
       )
 
 

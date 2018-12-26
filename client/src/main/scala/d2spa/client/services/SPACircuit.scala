@@ -29,15 +29,17 @@ class SendingActionsHandler[M](modelRW: ModelRW[M, Set[Action]]) extends ActionH
 
 class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends ActionHandler(modelRW) {
   override def handle = {
-    case FetchShowD2WDebugButton =>
+    case FetchShowD2WDebugButton(d2wContext) =>
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"DebugHandler | FetchShowD2WDebugButton")
-      SPAMain.socket.send(GetDebugConfiguration)
+      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+
+      SPAMain.socket.send(GetDebugConfiguration(fullFledged))
       noChange
 
-    case SetDebugConfiguration(debugConf) =>
+    case SetDebugConfiguration(debugConf, d2wContext) =>
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"DebugHandler | SetShowD2WDebugButton " + debugConf.showD2WDebugButton)
       //val nextAction = if (value.fetchMenus) FetchEOModelAndMenus else FetchEOModel
-      updated(value.copy(serverAppConf = DebugConf(debugConf.showD2WDebugButton)), Effect.action(FetchEOModelAndMenus))
+      updated(value.copy(serverAppConf = DebugConf(debugConf.showD2WDebugButton)), Effect.action(FetchEOModelAndMenus(d2wContext)))
 
 
     case SwithDebugMode =>
@@ -55,13 +57,13 @@ class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends 
     // 8 FetchEOModel
     // 9 SetEOModel
     // 10 InitAppSpecificClient (to be implemented in the app specific part)
-    case SocketReady =>
+    /*case SocketReady =>
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"Socket Ready")
-      updated(value.copy(socketReady = true), Effect.action(FetchShowD2WDebugButton))
+      updated(value.copy(socketReady = true), Effect.action(FetchShowD2WDebugButton))*/
 
     case SetPageForSocketReady(d2wContext) =>
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"Socket Ready")
-      updated(value.copy(socketReady = true), Effect.action(SetPage(d2wContext)))
+      updated(value.copy(socketReady = true), Effect.action(FetchShowD2WDebugButton(d2wContext)))
 
   }
 }
@@ -411,20 +413,20 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
   override def handle = {
 
 
-    case FetchEOModelAndMenus =>
+    case FetchEOModelAndMenus(d2wContext) =>
       log.finest("FetchEOModel")
-      SPAMain.socket.send(WebSocketMessages.FetchEOModel)
+      SPAMain.socket.send(WebSocketMessages.FetchEOModel(d2wContext))
       noChange
 
-    case SetEOModelThenFetchMenu(eomodel) =>
+    case SetEOModelThenFetchMenu(eomodel, d2wContext) =>
       val updatedModel = value.copy(eomodel = Ready(eomodel))
-      updated(updatedModel, Effect.action(FetchMenu))
+      updated(updatedModel, Effect.action(FetchMenu(d2wContext)))
 
 
-    case SetEOModel(eomodel) =>
+    /*case SetEOModel(eomodel) =>
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"FetchEOModel set eomodel ")
       val updatedModel = value.copy(eomodel = Ready(eomodel))
-      updated(updatedModel, Effect.action(InitAppSpecificClient))
+      updated(updatedModel, Effect.action(InitAppSpecificClient))*/
 
 
 
@@ -721,18 +723,18 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
   override def handle = {
 
     // server response will come with SetMenus
-    case FetchMenu =>
+    case FetchMenu(d2wContext) =>
       log.finest("Init Client")
       if (value.isEmpty) {
         log.finest("Api get Menus")
-        SPAMain.socket.send(FetchMenus)
+        SPAMain.socket.send(FetchMenus(d2wContext))
       }
       noChange
 
 
-    case SetMenus(menus) =>
+    case SetMenus(menus, d2wContext) =>
       log.finest("Set Menus " + menus)
-      updated(Ready(menus), Effect.action(InitAppSpecificClient))
+      updated(Ready(menus), Effect.action(InitAppSpecificClient(d2wContext)))
 
 
   }

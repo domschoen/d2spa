@@ -75,6 +75,10 @@ object SPAMain   extends  js.JSApp {
                     firstD2WContext
 
                 }
+                if (!p.value.appConfiguration.socketReady) {
+                  setSocket(d2wContext)
+                }
+
                 D2WQueryPage(ctl, d2wContext, p)
               })
             }
@@ -93,6 +97,10 @@ object SPAMain   extends  js.JSApp {
                     firstD2WContext
 
                 }
+                if (!p.value.appConfiguration.socketReady) {
+                  setSocket(d2wContext)
+                }
+
                 D2WListPage(ctl, d2wContext, p)
               })
             }
@@ -105,8 +113,12 @@ object SPAMain   extends  js.JSApp {
                    case Some(previousPage) =>
                      previousPage
                    case None =>
-                     D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), eo = Some(
+                     val firstD2WContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), eo = Some(
                        EO(entityName = m.entity, pk = EOPk(List(m.pk)))))
+                     firstD2WContext
+                 }
+                 if (!p.value.appConfiguration.socketReady) {
+                   setSocket(d2wContext)
                  }
                  D2WEditPage(ctl, d2wContext, p)
                })
@@ -121,6 +133,9 @@ object SPAMain   extends  js.JSApp {
                 val d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), eo = Some(
                   EO(entityName = m.entity, pk = EOPk(List(m.pk)))
                 ))
+                if (!p.value.appConfiguration.socketReady) {
+                   setSocket(d2wContext)
+                }
                 D2WEditPage(ctl, d2wContext, p)
               })
             }
@@ -132,6 +147,9 @@ object SPAMain   extends  js.JSApp {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
               val d2wContext = D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit), eo = None)
+              if (!p.value.appConfiguration.socketReady) {
+                setSocket(d2wContext)
+              }
               D2WEditPage(ctl, d2wContext, p)
             })
           }

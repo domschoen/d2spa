@@ -52,8 +52,8 @@ object WebSocketClient {
         reader.result match {
           case buf: ArrayBuffer =>
             Unpickle[WebSocketMsgOut].fromBytes(TypedArrayBuffer.wrap(buf)) match {
-              case FetchedEOModel(eomodel) => MyCircuit.dispatch(SetEOModelThenFetchMenu(eomodel))
-              case FetchedMenus(menus) => MyCircuit.dispatch(SetMenus(menus))
+              case FetchedEOModel(eomodel,d2wContext) => MyCircuit.dispatch(SetEOModelThenFetchMenu(eomodel,d2wContext))
+              case FetchedMenus(menus, d2wContext) => MyCircuit.dispatch(SetMenus(menus, d2wContext))
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
 
 
@@ -62,7 +62,7 @@ object WebSocketClient {
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
-              case DebugConfMsg(showDebugButton) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton)))
+              case DebugConfMsg(showDebugButton, d2wContext) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton), d2wContext))
             }
           case _ => // ignored
         }

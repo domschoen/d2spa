@@ -78,8 +78,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
   }
 
   override def handle = {
-    case InitAppSpecificClient =>
-      noChange
+    case InitAppSpecificClient(ffd2wContext) =>
+      val d2wContext = D2WContextUtils.convertFullFledgedToD2WContext(ffd2wContext)
+      effectOnly(Effect.action(PrepareEODisplay(d2wContext)))
+
 
     case ShowResults(fs) =>
       val entityName = EOFetchSpecification.entityName(fs)
