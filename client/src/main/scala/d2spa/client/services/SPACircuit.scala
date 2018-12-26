@@ -183,7 +183,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
           SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
         }
-        effectOnly(Effect.action(RegisterPreviousPage(d2wContext)))
+        effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
       }
 
 
@@ -356,7 +356,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
     case SetPreviousWithResults(ruleResults, d2wContext) =>
       log.finest("RuleResultsHandler | SetPreviousWithResults | ruleResults " + ruleResults)
       val newRuleResults = updatedRuleResults(value,ruleResults)
-      updated(newRuleResults, Effect.action(RegisterPreviousPage(d2wContext)))
+      updated(newRuleResults, Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
   }
@@ -612,7 +612,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         case None =>
           updated(
             EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-            Effect.action(RegisterPreviousPage(d2wContextWithEO))
+            Effect.action(RegisterPreviousPageAndSetPage(d2wContextWithEO))
           )
       }
 

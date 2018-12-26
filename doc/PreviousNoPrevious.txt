@@ -14,3 +14,31 @@ From menu: new
    
 ==> new goes through the router ==> No eo created only None ==> D2WEditPage create an eo, register and set previous
 ==> through router the eo is a pk
+
+
+Inspect Url (working)
+
+1) Main Router 
+   setSocket(d2wContext)
+   D2WEditPage (not important)
+2) socket open
+    MyCircuit.dispatch(SetPageForSocketReady(d2wContext))   
+      socketReady = true
+      FetchShowD2WDebugButton(d2wContext)
+         socket send GetDebugConfiguration
+      SetDebugConfiguration
+         FetchEOModelAndMenus
+            socket send FetchEOModel
+         SetEOModelThenFetchMenu
+            FetchMenu
+               socket send FetchMenus
+            SetMenus
+               InitAppSpecificClient
+                  PrepareEODisplay
+                     PrepareEODisplayRules
+                        socket send CompleteEO
+                     CompletedEO
+                        SetPreviousWithResults
+                           RegisterPreviousPage
+                                    
+               

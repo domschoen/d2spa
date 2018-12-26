@@ -149,6 +149,8 @@ object SPAMain   extends  js.JSApp {
               val d2wContext = D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit), eo = None)
               if (!p.value.appConfiguration.socketReady) {
                 setSocket(d2wContext)
+              } else {
+                p.dispatchCB(PrepareEODisplay(d2wContext))
               }
               D2WEditPage(ctl, d2wContext, p)
             })

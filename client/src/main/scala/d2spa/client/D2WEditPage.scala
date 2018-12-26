@@ -236,7 +236,7 @@ object D2WEditPage {
   private val component = ScalaComponent.builder[Props]("SignUpPage")
     .initialState(State(false))
     .renderBackend[Backend]
-    .componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
+    //.componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
     //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps, scope.state))
     .build
 
