@@ -50,10 +50,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
 
 
-    case EORepoActor.CompletedEO(entityName, eo, ruleResultsOpt) =>
+    case EORepoActor.CompletedEO(d2wContext, eo, ruleResultsOpt) =>
       println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! CompletedEOMsgOut(entityName, eo, ruleResultsOpt)
+      out ! CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt)
 
     case EORepoActor.FetchedObjects(entityName, eos, ruleResultsOpt) =>
       println("Receive FetchedObjects ---> sending FetchedObjectsMsgOut")
@@ -98,7 +98,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
         } else {
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.CompleteEO(eoFault, missingKeys, None, self) //: Future[Seq[EO]]
+            EORepoActor.CompleteEO(d2wContext, eoFault, missingKeys, None, self) //: Future[Seq[EO]]
         }
 
 

@@ -275,7 +275,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
         val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.CompleteEO(eoFault, displayPropertyKeys.toSet, Some(rr), self) //: Future[Seq[EO]]
+          EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), self) //: Future[Seq[EO]]
       }
       )
 

@@ -24,7 +24,7 @@ import d2spa.client.logger._
 object WebSocketClient {
   val websocketUrl = s"ws://${dom.document.location.host}/ws"
 
-  case class Socket(url: String)(onMessage: (MessageEvent) => _) {
+  case class Socket(url: String, d2wContext: D2WContext)(onMessage: (MessageEvent) => _) {
     println("  SOCKETE SOCKETE SOCKETE")
     private val socket: WebSocket = new dom.WebSocket(url = url)
 
@@ -37,7 +37,7 @@ object WebSocketClient {
       socket.send(bytes)
     }
 
-    socket.onopen = (e: Event) => { MyCircuit.dispatch(SocketReady) }
+    socket.onopen = (e: Event) => { MyCircuit.dispatch(SetPageForSocketReady(d2wContext)) }
     socket.onclose = (e: CloseEvent) => { dom.console.log(s"Socket closed. Reason: ${e.reason} (${e.code})") }
     socket.onerror = (e: Event) => { dom.console.log(s"Socket error! ${e}") }
     socket.onmessage = onMessage
@@ -57,7 +57,7 @@ object WebSocketClient {
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
 
 
-              case CompletedEOMsgOut(entityName, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(entityName,eo,ruleResultsOpt))
+              case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))

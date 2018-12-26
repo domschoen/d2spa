@@ -59,6 +59,10 @@ class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends 
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"Socket Ready")
       updated(value.copy(socketReady = true), Effect.action(FetchShowD2WDebugButton))
 
+    case SetPageForSocketReady(d2wContext) =>
+      D2SpaLogger.logfinest(D2SpaLogger.ALL,"Socket Ready")
+      updated(value.copy(socketReady = true), Effect.action(SetPage(d2wContext)))
+
   }
 }
 
@@ -589,22 +593,24 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       }
 
-    case CompletedEO(entityName, eo, ruleResultsOpt) =>
+    case CompletedEO(d2wContext, eo, ruleResultsOpt) =>
       log.finest("CacheHandler | CompletedEO  " + eo)
       //val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
-      val d2wContext = D2WContext(entityName = Some(entityName), task =  Some(TaskDefine.edit), eo = Some(eo))
+      val d2wContextConverted = D2WContextUtils.convertFullFledgedToD2WContext(d2wContext)
+      val d2wContextWithEO = d2wContextConverted.copy(eo = Some(eo))
+      val entityName = d2wContextWithEO.entityName.get
 
       ruleResultsOpt match {
         case Some(ruleResults) =>
           updated(
             EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-            Effect.action(SetPreviousWithResults(ruleResults, d2wContext))
+            Effect.action(SetPreviousWithResults(ruleResults, d2wContextWithEO))
           )
 
         case None =>
           updated(
             EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-            Effect.action(RegisterPreviousPage(d2wContext))
+            Effect.action(RegisterPreviousPage(d2wContextWithEO))
           )
       }
 

@@ -66,11 +66,13 @@ object D2WEditPage {
       log.finest("D2WEditPage | mounted proxy d2wContext " + p.proxy.value.previousPage)
       val task = d2wContext.task.get
       if (!allowedTasks.contains(task)) {
+        log.finest("D2WEditPage | mounted | task not allowed " + task)
         Callback.empty
       } else {
         val socketReady = p.proxy.value.appConfiguration.socketReady
 
         if (!socketReady) {
+          log.finest("D2WEditPage | mounted | socket not ready")
           Callback.empty
         } else {
           p.proxy.dispatchCB(PrepareEODisplay(d2wContext))

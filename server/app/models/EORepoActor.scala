@@ -35,7 +35,7 @@ object EORepoActor {
 
   case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
 
-  case class CompleteEO(eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
   case class NewEO(entityName: String, eo: EO, requester: ActorRef) //: Future[EO]
@@ -45,7 +45,7 @@ object EORepoActor {
 
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
-  case class CompletedEO(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]])
+  case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(eo: EO)
@@ -628,10 +628,10 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(entityName, rrs, ruleResults)
       )
 
-    case CompleteEO(eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get CompleteEO")
       hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs =>
-        requester ! CompletedEO(eo.entityName, rrs.head, ruleResults)
+        requester ! CompletedEO(d2wContext, rrs.head, ruleResults)
       )
 
 

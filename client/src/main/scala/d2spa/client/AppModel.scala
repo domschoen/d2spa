@@ -91,8 +91,8 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case object FetchMenu extends Action
 
 case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class CompletedEO(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
-
+case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
+case class SetPageForSocketReady(d2wContext: D2WContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
 

@@ -163,13 +163,19 @@ object SPAMain   extends  js.JSApp {
 
   val router = Router(baseUrl, config)
 
-  val socket = Socket(websocketUrl)((event: MessageEvent) => event.data match {
-    case blob: Blob =>
-      //println("Will read socket")
-      Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
-    //Socket.blobReader.abort()
-    case _ => dom.console.log("Error on receive, should be a blob.")
-  })
+  var socket: Socket = null
+
+  def setSocket(d2wContext: D2WContext) = {
+    socket = Socket(websocketUrl, d2wContext)((event: MessageEvent) => event.data match {
+      case blob: Blob =>
+        //println("Will read socket")
+        Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
+      //Socket.blobReader.abort()
+      case _ => dom.console.log("Error on receive, should be a blob.")
+    })
+
+  }
+
 
   @JSExport
   def main(): Unit = {

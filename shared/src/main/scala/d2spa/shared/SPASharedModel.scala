@@ -33,7 +33,7 @@ object WebSocketMessages {
   final case class FetchedEOModel(eomodel: EOModel) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class CompletedEOMsgOut(entityName: String, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class CompletedEOMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
