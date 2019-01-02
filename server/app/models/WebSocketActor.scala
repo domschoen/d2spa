@@ -66,10 +66,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
       out ! FetchedObjectsForListMsgOut(fs, eos)
 
-
-    case EORepoActor.SavingResponse(eo) =>
+    case EORepoActor.SavingResponse(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
-      out ! SavingResponseMsgOut(eo)
+      out ! SavingResponseMsgOut(d2wContext, eo, ruleResults)
 
     case EORepoActor.DeletingResponse(eo) =>
       println("Receive DeletingResponse ---> sending DeletingResponseMsgOut")
@@ -80,9 +79,17 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case DeleteEOMsgIn(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.DeleteEO(eo, self)
 
-      case NewEO(entityName,eo) =>
-        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.NewEO(entityName,eo, self)
-
+      case NewEO(d2wContext,eo, isMetaDataFetched) =>
+        val entityName = d2wContext.entityName.get
+        if (isMetaDataFetched) {
+          println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForNewEO(d2wContext, eo, self)
+        } else {
+          println("Receive NewEO ---> sending EORepoActor NewEO")
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.NewEO(d2wContext, eo, None, self)
+        }
 
       case UpdateEO(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.UpdateEO(eo, self)

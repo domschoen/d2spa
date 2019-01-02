@@ -1,19 +1,16 @@
 package d2spa.client.services
 
 import d2spa.client._
-import d2spa.shared.{FrontendRequest, FrontendResponse}
+import d2spa.shared._
 import d2spa.shared.WebSocketMessages._
 import boopickle.Default._
 import boopickle.{MaterializePicklerFallback, TransformPicklers}
-
 import d2spa.client
 import org.scalajs.dom
 import org.scalajs.dom._
-import d2spa.shared.{Test3,Test4,Test5,Test10}
 
 import scala.scalajs.js.typedarray.{ArrayBuffer, TypedArrayBuffer}
 import scala.scalajs.js.timers._
-
 import d2spa.client.logger._
 
 // google: scala.js websocket send java.nio.ByteBuffer
@@ -60,7 +57,8 @@ object WebSocketClient {
               case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
-              case SavingResponseMsgOut(eo) => MyCircuit.dispatch(client.SavingEO(eo))
+              case SavingResponseMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+                MyCircuit.dispatch(client.SavingEO(d2wContext, eo, ruleResults))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
               case DebugConfMsg(showDebugButton, d2wContext) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton), d2wContext))
             }

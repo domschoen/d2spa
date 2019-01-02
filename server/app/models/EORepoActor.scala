@@ -38,7 +38,7 @@ object EORepoActor {
   case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
-  case class NewEO(entityName: String, eo: EO, requester: ActorRef) //: Future[EO]
+  case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class UpdateEO(eo: EO, requester: ActorRef) //: Future[EO]
 
   case class DeleteEO(eo: EO, requester: ActorRef) // : Future[EO]
@@ -48,7 +48,7 @@ object EORepoActor {
   case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
-  case class SavingResponse(eo: EO)
+  case class SavingResponse(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]])
   case class DeletingResponse(eo: EO)
 
   def valueMapWithJsonFields(eomodel: EOModel, fields : Seq[(String,JsValue)]): Map[String,EOValue] = {
@@ -637,16 +637,24 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       }
       )
 
-
-    case NewEO(entityName: String, eo: EO, requester: ActorRef) =>
+    case NewEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
+      val entityName = d2wContext.entityName.get
       newEO(entityName, eo).map(rrs =>
-        requester ! SavingResponse(rrs)
+        requester ! SavingResponse(d2wContext, rrs, ruleResults)
       )
     case UpdateEO(eo: EO, requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
+      val d2wContext = D2WContextFullFledged(
+        Some(eo.entityName),
+        Some(TaskDefine.inspect),
+        None,
+        None,
+        Some(eo)
+      )
+
       updateEO(eo).map(rrs =>
-        requester ! SavingResponse(rrs)
+        requester ! SavingResponse(d2wContext, rrs, None)
       )
     case DeleteEO(eo: EO, requester: ActorRef)  =>
       log.debug("Get GetRulesForMetaData")

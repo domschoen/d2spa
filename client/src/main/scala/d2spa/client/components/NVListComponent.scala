@@ -205,7 +205,7 @@ object NVListComponent {
 
       Callback.log(s"Inspect: $eo") >>
         //$.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
-        $.props >>= (_.proxy.dispatchCB(SetPage(d2wContext)))
+        $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))
     }
 
     def editEO(eo: EO) = {
@@ -213,7 +213,7 @@ object NVListComponent {
       val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPageAndSetPage(d2wContext)))
+        $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))
     }
 
     def deleteEO(eo: EO) = {

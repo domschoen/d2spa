@@ -43,6 +43,8 @@ object RulesActor {
   case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], requester: ActorRef)
 
   case class GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef)
+
+  case class GetMetaDataForNewEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef)
 }
 
 class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
@@ -280,6 +282,17 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       }
       )
 
+    case GetMetaDataForNewEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef) =>
+      println("Rule Actor Receive GetMetaDataForEOCompletion")
+      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
+      getRuleResultsForMetaData(d2wContext).map(
+        rr => {
+          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
+          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.NewEO(d2wContext, eo, Some(rr), requester) //: Future[Seq[EO]]
+        }
+      )
 
   }
 

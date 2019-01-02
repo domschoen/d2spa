@@ -37,8 +37,35 @@ Inspect Url (working)
                   PrepareEODisplay
                      PrepareEODisplayRules
                         socket send CompleteEO
-                     CompletedEO
+                     CompletedEO(d2wContext, eo, ruleResultsOpt)
                         SetPreviousWithResults
                            RegisterPreviousPage
                                     
+
+New Project (after entering the app with inspect url)
+
+                  PrepareEODisplay
+                     PrepareEODisplayRules
+                        socket send CompleteEO
+                     CompletedEO
+                        SetPreviousWithResults
+                           RegisterPreviousPage
+
+D2WEditPage
+    SaveNewEO (CacheHandler of SPACircuit)
+        socket send NewEO
+            RulesActor.GetMetaDataForNewEO
+                EORepoActor.NewEO
+                    SavingResponse
+                        SavingResponseMsgOut
+        SavingEO (CacheHandler)
+            SavedEOWithResults (RuleResultsHandler)
+                SavedEO
+                    update cache
+                RegisterPreviousPageAndSetPage
+            
+            
+            
+
+
                

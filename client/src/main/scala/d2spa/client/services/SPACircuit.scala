@@ -150,6 +150,22 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       updated(updatedRuleResults,Effect.action(RegisterPreviousPage(d2wContext)))
     }*/
 
+    // 1) NewEO (MenuHandler)
+    // 2) Effect: Save DB
+    // 3) SavedEO (EOCache)
+    // 4) InstallInspectPage (MenuHandler)
+    case SaveNewEO(entityName, eo) =>
+      D2SpaLogger.logfinest(entityName,"CacheHandler | SaveNewEO " + eo)
+      // Update the DB and dispatch the result withing UpdatedEO action
+      // Will get response with SavingEO
+      val d2wContext = D2WContext(entityName = Some(entityName), task =  Some(TaskDefine.inspect), eo = Some(eo))
+      val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
+
+      val isMetaDataFetched = RuleUtils.metaDataFetched(value, d2wContext)
+      SPAMain.socket.send(WebSocketMessages.NewEO(ff, eo, isMetaDataFetched))
+      noChange
+
+
     case PrepareEODisplayRules(d2wContext, cache, needsHydration) =>
       log.finest("RuleResultsHandler | PrepareEODisplayRules | d2wContext " + d2wContext)
       val entityName = d2wContext.entityName.get
@@ -358,6 +374,25 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       val newRuleResults = updatedRuleResults(value,ruleResults)
       updated(newRuleResults, Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
+    case EditEOWithResults(fromTask, eo, d2wContext, ruleResultsOpt: Option[List[RuleResult]]) =>
+      log.finest("RuleResultsHandler | EditEOWitResults | ruleResults " + ruleResultsOpt)
+      ruleResultsOpt match {
+        case Some(ruleResults) =>
+          val newRuleResults = updatedRuleResults(value,ruleResults)
+          updated(newRuleResults, Effect.action(EditEO(d2wContext)))
+        case None =>
+          effectOnly(Effect.action(EditEO(d2wContext)))
+      }
+
+    case SavedEOWithResults(fromTask, eo, d2wContext, ruleResultsOpt: Option[List[RuleResult]]) =>
+      log.finest("RuleResultsHandler | EditEOWitResults | ruleResults " + ruleResultsOpt)
+      ruleResultsOpt match {
+        case Some(ruleResults) =>
+          val newRuleResults = updatedRuleResults(value,ruleResults)
+          updated(newRuleResults, Effect.action(SavedEO(d2wContext)))
+        case None =>
+          effectOnly(Effect.action(SavedEO(d2wContext)))
+      }
 
   }
 
@@ -437,7 +472,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         Effect.action(NewEOWithEOModelForEdit(value.get, selectedEntityName)) // from edit ?
       )*/
 
-    case EditEO(fromTask, eo) =>
+    case EditEO(d2wContext) =>
+      val eo = d2wContext.eo.get
       val entityName = eo.entityName
       D2SpaLogger.logfinest(entityName,"CacheHandler | EditEO | register faulty eo  " + eo)
 
@@ -449,7 +485,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
     // EO goes from inserted EO to db eos
-    case SavedEO(fromTask, eo) =>
+    case SavedEO(d2wContext) =>
+      val eo = d2wContext.eo.get
       val entityName = eo.entityName
       val eomodel = value.eomodel.get
       D2SpaLogger.logfinest(entityName," v " + eo)
@@ -462,11 +499,10 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       } else eo
 
       val newCache = EOCacheUtils.updatedCachesForSavedEO(value, updatedEO, isNewEO)
-      val d2WContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(updatedEO))
-      D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + d2WContext)
+      D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + d2wContext)
       updated(
         newCache,
-        Effect.action(RegisterPreviousPageAndSetPage(d2WContext))
+        Effect.action(RegisterPreviousPageAndSetPage(d2wContext))
       )
 
     case Save(selectedEntityName, eo) =>
@@ -479,29 +515,25 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       SPAMain.socket.send(WebSocketMessages.UpdateEO(purgedEO))
       noChange
 
-    // 1) NewEO (MenuHandler)
-    // 2) Effect: Save DB
-    // 3) SavedEO (EOCache)
-    // 4) InstallInspectPage (MenuHandler)
-    case SaveNewEO(entityName, eo) =>
-      D2SpaLogger.logfinest(entityName,"CacheHandler | SaveNewEO " + eo)
-      // Update the DB and dispatch the result withing UpdatedEO action
-      // Will get response with SavingEO
-      SPAMain.socket.send(WebSocketMessages.NewEO(entityName, eo))
-      noChange
 
-    case SavingEO(eo) =>
+    case SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO " + eo)
       // Update the DB and dispatch the result withing UpdatedEO action
       val onError = eo.validationError.isDefined
+
+      val d2wContextConverted = D2WContextUtils.convertFullFledgedToD2WContext(d2wContext)
+      val d2wContextWithEO = d2wContextConverted.copy(eo = Some(eo))
+
+
       val action = if (onError) {
           // TODO implement it
-          EditEO("edit", eo)
+          EditEOWithResults("edit", eo, d2wContextWithEO, ruleResults)
 
       } else {
-          SavedEO("edit", eo)
+          SavedEOWithResults("edit", eo, d2wContextWithEO, ruleResults)
       }
       effectOnly(Effect.action(action))
+
 
 
     // EO from router is a pk mainly (in an EO shell)

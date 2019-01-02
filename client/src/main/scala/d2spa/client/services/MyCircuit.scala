@@ -89,12 +89,6 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
-    case  InspectEO (fromTask, eo, isOneRecord) =>
-      log.finest("PreviousPageHandler | InspectEO from: " + fromTask)
-      val d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo))
-      effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
-
-
     case  InitMetaDataForList (entityName) =>
       log.finest("PreviousPageHandler | InitMetaDataForList for: " + entityName)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))

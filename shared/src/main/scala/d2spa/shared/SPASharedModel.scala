@@ -23,7 +23,7 @@ object WebSocketMessages {
   final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
-  final case class NewEO(entityName: String, eo: EO) extends WebSocketMsgIn
+  final case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
   final case class UpdateEO(eo: EO) extends WebSocketMsgIn
 
   // Server ---> Client
@@ -36,7 +36,7 @@ object WebSocketMessages {
   final case class CompletedEOMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
-  final case class SavingResponseMsgOut(eo: EO) extends WebSocketMsgOut
+  final case class SavingResponseMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }
 

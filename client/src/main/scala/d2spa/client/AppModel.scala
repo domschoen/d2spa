@@ -133,7 +133,7 @@ case class ShowResults(fs: EOFetchSpecification) extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
-case class SavingEO(eo: EO) extends Action
+case class SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
@@ -146,11 +146,14 @@ case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
-case class SavedEO(fromTask: String, eo: EO) extends Action
+case class SavedEO(dw2Context: D2WContext) extends Action
+case class SavedEOWithResults(fromTask: String, eo: EO, dw2Context: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
+
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(eo: EO) extends Action
 case class DeletingEO(eo: EO) extends Action
-case class EditEO(fromTask: String, eo: EO) extends Action
+case class EditEO(dw2Context: D2WContext) extends Action
+case class EditEOWithResults(fromTask: String, eo: EO, dw2Context: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
 case class InspectEO(fromTask: String, eo: EO, isOneRecord: Boolean = false) extends Action
 
 case class SaveError(eo: EO) extends Action
