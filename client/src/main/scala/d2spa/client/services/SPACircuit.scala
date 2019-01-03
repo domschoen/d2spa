@@ -435,13 +435,13 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     EOCacheUtils.updatedModelForEntityNamed(value.eomodel.get, eos, Seq(eo))
   }*/
 
-  def removeEOFromDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
+  /*def removeEOFromDBCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     EOCacheUtils.removeEOFromCache(eo,  eos)
   }
 
   def removeEOFromMemCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
     EOCacheUtils.removeEOFromCache(eo, eos)
-  }
+  }*/
 
 
 
@@ -488,6 +488,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     case SavedEO(d2wContext) =>
       val eo = d2wContext.eo.get
       val entityName = eo.entityName
+      D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | entityName  " + entityName)
+
       val eomodel = value.eomodel.get
       D2SpaLogger.logfinest(entityName," v " + eo)
       val isNewEO = EOValue.isNewEO(eo)
@@ -498,11 +500,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         eo.copy(pk = pk.get)
       } else eo
 
-      val newCache = EOCacheUtils.updatedCachesForSavedEO(value, updatedEO, isNewEO)
+      val newCache = EOCacheUtils.updatedCachesForSavedEO(value, updatedEO, Some(eo))
       D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + d2wContext)
       updated(
         newCache,
-        Effect.action(RegisterPreviousPageAndSetPage(d2wContext))
+          Effect.action(RegisterPreviousPageAndSetPage(d2wContext))
       )
 
     case Save(selectedEntityName, eo) =>
@@ -518,6 +520,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     case SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO " + eo)
+      D2SpaLogger.logfinest(eo.entityName,"CacheHandler | cache " + value)
       // Update the DB and dispatch the result withing UpdatedEO action
       val onError = eo.validationError.isDefined
 

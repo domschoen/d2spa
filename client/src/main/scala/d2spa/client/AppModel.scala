@@ -669,14 +669,6 @@ case class SetDebugConfiguration(debugConf: DebugConf, d2wContext: D2WContextFul
 
 object EOCacheUtils {
 
-  def removeEOFromCache(eo: EO, eos: Map[String, Map[EOPk, EO]]): Map[String, Map[EOPk, EO]] = {
-    val entityName = eo.entityName
-    val id = eo.pk
-    val entityCache = eos(entityName)
-    val updatedEntityCache = entityCache - id
-    val updatedCache = eos + (entityName -> updatedEntityCache)
-    updatedCache
-  }
 
   def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
     val pk = eo.pk
@@ -914,13 +906,30 @@ object EOCacheUtils {
   }
 
 
+  def removeEOFromCache(eo: EO, entityCache: Map[EOPk, EO]): Map[EOPk, EO] = {
+    val entityName = eo.entityName
+    val id = eo.pk
+    val updatedEntityCache = entityCache - id
+    updatedEntityCache
+  }
 
+  def updatedMemCacheByRemovingEO(eoCache : EOCache, eo: EO): EOCache = {
+    val entityName = eo.entityName
+    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+    entitMapOpt match {
+      case Some(entityMap) =>
+        val newEntityMap = removeEOFromCache(eo, entityMap)
+        updatedCacheForMem(eoCache,entityName,newEntityMap)
+      case None =>
+        eoCache
+    }
+  }
 
-  def updatedCachesForSavedEO(eoCache : EOCache, eo: EO, isNewEO: Boolean) : EOCache = {
+  def updatedCachesForSavedEO(eoCache : EOCache, eo: EO, memEO: Option[EO]) : EOCache = {
     // Adjust the insertedEOs cache
     val entityName = eo.entityName
-    val newCache = if (isNewEO) updatedMemCacheWithEO(eoCache, eo) else eoCache
-    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | removed if new  " + isNewEO)
+    val newCache = if (memEO.isDefined) updatedMemCacheByRemovingEO(eoCache, memEO.get) else eoCache
+    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | removed if new  " + memEO)
     D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | register eo  " + eo)
 
     // Adjust the db cache

@@ -1,7 +1,7 @@
 package d2spa.client.services
 
 import d2spa.client.EOCacheUtils.{dbEntityMapForEntityNamed, eoCacheEntityElementForEntityNamed, refreshedEOMap, updatedCacheForDb}
-import d2spa.client.RuleUtils.{ruleContainerForContext, ruleListValueWithRuleResult, ruleResultForContextAndKey}
+import d2spa.client.RuleUtils.{ruleContainerForContext, ruleResultForContextAndKey}
 import d2spa.client.components.ERD2WEditToOneRelationship
 import d2spa.client.{EOCache, RuleUtils, _}
 import d2spa.client.services.RuleResultsHandler
@@ -38,9 +38,54 @@ object SPACircuitTests extends TestSuite {
   val cacheBefore2 = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None))))
 
   def tests = TestSuite {
-    'CacheInMemory - {
+    "Create new EO" - {
+      val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, "Project")
+    }
+    "Saved EO should be removed from mem cache and added to db cache" - {
       val entity = d2spa.shared.SharedTestData.projectEntity
 
+
+      val beforeSaveInCacheEO = EO(entity.name,
+        List("descr", "projectNumber"),
+        List(StringValue("1"), IntValue(1)),
+        EOPk(List(-1)),None)
+      val savedEO = EO(entity.name,
+        List("descr", "projectNumber", "id"),
+        List(StringValue("1"), IntValue(1), IntValue(1)),
+        EOPk(List(-1)),None)
+
+      val cache = EOCache(Ready(SharedTestData.eomodel),
+        // db eos
+        Map("Customer" -> EODBCacheEntityElement(Ready(Map()))),
+        // inserted eos
+        Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) ->
+          beforeSaveInCacheEO
+          ))))
+      val pk = EOValue.pk(SharedTestData.eomodel, savedEO)
+      val updatedEO = savedEO.copy(pk = pk.get)
+
+      val updatedEORef = EO(entity.name,
+        List("descr", "projectNumber", "id"),
+        List(StringValue("1"), IntValue(1), IntValue(1)),
+        EOPk(List(1)),None)
+
+      val newCache = EOCacheUtils.updatedCachesForSavedEO(cache, updatedEO, Some(savedEO))
+
+      val newCacheReference = EOCache(Ready(SharedTestData.eomodel),
+        // db eos
+        Map("Customer" -> EODBCacheEntityElement(Ready(Map())),
+          "Project" -> EODBCacheEntityElement(Ready(
+            Map(EOPk(List(1)) -> updatedEORef)
+          ))
+        ),
+        // inserted eos
+        Map("Project" -> EOMemCacheEntityElement(Map(
+        ))))
+
+      assert(cache.equals(newCacheReference))
+    }
+    'CacheInMemory - {
+      val entity = d2spa.shared.SharedTestData.projectEntity
       val cache = EOCache(Ready(SharedTestData.eomodel),Map(),cacheBefore)
       val eosForUpdating = List(EO("Project",List("descr"),List(StringValue("1")),EOPk(List(-1)),None))
       val updatedCache = EOCacheUtils.updatedMemCacheWithEOsForEntityNamed(cache, eosForUpdating, "Project")
@@ -201,7 +246,7 @@ object SPACircuitTests extends TestSuite {
                     assert(ruleResult.value.stringV.isEmpty)
                     assert(ruleResult.value.stringsV.size == 1)
 
-                    val displayPropertyKeys = RuleUtils.ruleListValueWithRuleResult(ruleResultOpt)
+                    val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(ruleResultOpt)
                     assert(displayPropertyKeys.size == 1)
                     assert(displayPropertyKeys.equals(List("comments")))
 

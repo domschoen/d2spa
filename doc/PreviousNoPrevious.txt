@@ -51,6 +51,7 @@ New Project (after entering the app with inspect url)
                         SetPreviousWithResults
                            RegisterPreviousPage
 
+Save a new EO and show inspect page
 D2WEditPage
     SaveNewEO (CacheHandler of SPACircuit)
         socket send NewEO
@@ -58,13 +59,14 @@ D2WEditPage
                 EORepoActor.NewEO
                     SavingResponse
                         SavingResponseMsgOut
-        SavingEO (CacheHandler)
+        SavingEO (CacheHandler) to switch between error (-> edit) or continue saving (inspect)
             SavedEOWithResults (RuleResultsHandler)
                 SavedEO
                     update cache
                 RegisterPreviousPageAndSetPage
             
-            
+Inspect record from list page
+    RegisterPreviousPageAndSetPage            
             
 
 
