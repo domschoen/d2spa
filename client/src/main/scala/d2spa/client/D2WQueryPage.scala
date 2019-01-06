@@ -48,7 +48,7 @@ object D2WQueryPage {
 
 
     def mounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      /*val d2wContext = p.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("D2WQueryPage | mounted " + entityName)
 
@@ -71,8 +71,8 @@ object D2WQueryPage {
         Callback.when(dataNotFetched && !alreadySent)(p.proxy.dispatchCB(SendingAction(sendingAction)))
       } else {
         p.proxy.dispatchCB(RegisterPreviousPage(d2wContext))
-      }
-
+      }*/
+      Callback.empty
     }
 
 

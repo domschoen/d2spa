@@ -101,7 +101,7 @@ case class InitMetaDataForList(entityName: String) extends Action
 //case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
-case class SetMetaData(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
+case class SetMetaData(d2wContext: D2WContextFullFledged, ruleResults: Option[List[RuleResult]]) extends Action
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewAndRegisteredEO(d2wContext: D2WContext) extends Action
@@ -135,6 +135,7 @@ case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
 case class SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
+case class PrepareSearchForServer(d2wContext: D2WContext, isMetaDataFetched: Boolean) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
@@ -142,7 +143,11 @@ case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOVal
 
 case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
+case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class SearchResultWithRuleResults(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
+
+
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
@@ -171,7 +176,7 @@ case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 case class FireRules(propertyKeys: List[String], rhs: D2WContext, key: String) extends D2WAction
 case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
-case class FetchMetaData(d2wContext: D2WContext) extends Action
+case class GetMetaDataForSetPage(d2wContext: D2WContext) extends Action
 
 case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
 
@@ -942,6 +947,19 @@ object EOCacheUtils {
   }
 
 
+  def newMemIdWithLastId(memID: Option[Int]) = {
+    memID match {
+      case Some(min) => min -1
+      case None => -1
+    }
+  }
+
+  def newEOWithLastMemID(entityName: String, memID: Option[Int]) = {
+    val newMemID = newMemIdWithLastId(memID)
+    val newPk = EOPk(List(newMemID))
+    EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
+  }
+
   def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache : EOCache, entityName: String): (EOCache, EO) = {
     val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
     val entityMap = entitMapOpt match {
@@ -949,9 +967,10 @@ object EOCacheUtils {
       case None => Map.empty[EOPk, EO]
     }
     val existingPks = entityMap.keySet.map(_.pks.head)
-    val newMemID = if (existingPks.isEmpty) -1 else existingPks.min - 1
-    val newPk = EOPk(List(newMemID))
-    val newEO = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
+    val lastMemIDOpt = if (existingPks.isEmpty) None else Some(existingPks.min)
+    val newEO = newEOWithLastMemID(entityName, lastMemIDOpt)
+    val newPk = newEO.pk
+
     val newEntityMap = entityMap + (newPk -> newEO)
 
     (updatedCacheForMem(eoCache,entityName,newEntityMap), newEO)

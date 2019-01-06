@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.NodeActor.SetItUp
-import models.RulesActor.{GetRule, GetRulesForMetaData, HydrateEOsForDisplayPropertyKeys, RuleResultsResponse}
+import models.RulesActor.{GetRule, GetRulesForMetaData, MetaDataResponse, HydrateEOsForDisplayPropertyKeys, RuleResultsResponse}
 import play.api.Configuration
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.ws.WSClient
@@ -48,7 +48,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-
+    case MetaDataResponse(d2wContext: D2WContextFullFledged, ruleResults) =>
+      println("Receive RuleResultsResponse ---> sending RuleResults")
+      out ! MetaDataResponseMsg(d2wContext, Some(ruleResults))
 
     case EORepoActor.CompletedEO(d2wContext, eo, ruleResultsOpt) =>
       println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
@@ -61,10 +63,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt)
 
 
-    case EORepoActor.FetchedObjectsForList(fs, eos) =>
+    case EORepoActor.FetchedObjectsForList(fs, eos, ruleResultsOpt) =>
       println("Receive FetchedObjectsForList ---> sending FetchedObjectsForListMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsForListMsgOut(fs, eos)
+      out ! FetchedObjectsForListMsgOut(fs, eos, ruleResultsOpt)
 
     case EORepoActor.SavingResponse(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
@@ -82,13 +84,13 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case NewEO(d2wContext,eo, isMetaDataFetched) =>
         val entityName = d2wContext.entityName.get
         if (isMetaDataFetched) {
-          println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
-          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForNewEO(d2wContext, eo, self)
-        } else {
           println("Receive NewEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.NewEO(d2wContext, eo, None, self)
+        } else {
+          println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForNewEO(d2wContext, eo, self)
         }
 
       case UpdateEO(eo) =>
@@ -96,7 +98,6 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
       case HydrateAll(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
-
 
       case CompleteEO(d2wContext, eoFault, missingKeys) =>
         val entityName = d2wContext.entityName.get
@@ -122,9 +123,16 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
         }
 
-      case Search(fs) =>
-        println("Receive Search")
-        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
+      case Search(fs, isMetaDataFetched) =>
+        if (isMetaDataFetched) {
+          println("Receive Search ---> sending EORepoActor Search")
+          context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, None, self)
+        } else {
+          println("Receive NewEO ---> sending EORepoActor GetMetaDataForSearch")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForSearch(fs, self)
+
+        }
 
       case GetDebugConfiguration(d2wContext) =>
         println("Receive GetDebugConfiguration ---> sending DebugConfMsg")

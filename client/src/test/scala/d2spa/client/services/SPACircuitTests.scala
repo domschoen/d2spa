@@ -39,7 +39,36 @@ object SPACircuitTests extends TestSuite {
 
   def tests = TestSuite {
     "Create new EO" - {
-      val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, "Project")
+      val entityName = "Project"
+      val newEO = EOCacheUtils.newEOWithLastMemID(entityName, None)
+      val newEOReference = EO(entityName,
+          List(),
+          List(),
+          EOPk(List(-1)),None)
+      assert(newEO.equals(newEOReference))
+    }
+    "Create new EO and update cache" - {
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map(),Map())
+      val entityName = "Project"
+
+      val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(cache,entityName )
+
+      val newEOReference = EO(entityName,
+        List(),
+        List(),
+        EOPk(List(-1)),None)
+
+      val newCacheReference = EOCache(Ready(SharedTestData.eomodel),
+        // db eos
+        Map(),
+        // inserted eos
+        Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) ->
+          newEOReference
+        )))
+       )
+
+      assert(newEO.equals(newEOReference))
+      assert(newCache.equals(newCacheReference))
     }
     "Saved EO should be removed from mem cache and added to db cache" - {
       val entity = d2spa.shared.SharedTestData.projectEntity
@@ -82,7 +111,7 @@ object SPACircuitTests extends TestSuite {
         Map("Project" -> EOMemCacheEntityElement(Map(
         ))))
 
-      assert(cache.equals(newCacheReference))
+      assert(newCache.equals(newCacheReference))
     }
     'CacheInMemory - {
       val entity = d2spa.shared.SharedTestData.projectEntity

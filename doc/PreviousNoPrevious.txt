@@ -40,6 +40,13 @@ Inspect Url (working)
                      CompletedEO(d2wContext, eo, ruleResultsOpt)
                         SetPreviousWithResults
                            RegisterPreviousPage
+
+QueryPage
+    InitAppSpecificClient
+        FetchMetaData
+            socket.GetMetaData
+                ruleActor.GetRulesForMetaData
+                socketActor.MetaDataResponse
                                     
 
 New Project (after entering the app with inspect url)
@@ -51,11 +58,19 @@ New Project (after entering the app with inspect url)
                         SetPreviousWithResults
                            RegisterPreviousPage
 
+
+New Project from Menu
+    PrepareEODisplay
+        PrepareEODisplayRules
+            CompleteEO
+    CompletedEO
+        
+
 Save a new EO and show inspect page
 D2WEditPage
     SaveNewEO (CacheHandler of SPACircuit)
         socket send NewEO
-            RulesActor.GetMetaDataForNewEO
+            RulesActor.NewEO
                 EORepoActor.NewEO
                     SavingResponse
                         SavingResponseMsgOut
@@ -69,5 +84,12 @@ Inspect record from list page
     RegisterPreviousPageAndSetPage            
             
 
-
+Search
+    SearchAction (MyCircuit)
+        socket.Search
+            EORepoActor.Search
+                FetchedObjectsForList
+                    out.FetchedObjectsForListMsgOut
+    SearchResult (CacheHandler)
+        
                

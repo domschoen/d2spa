@@ -16,6 +16,8 @@ import d2spa.client.SPAMain.TaskAppPage
 import d2spa.client._
 import d2spa.client.logger._
 
+import scala.collection.immutable.Set
+
 /*import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import japgolly.scalajs.react.extra.router._*/
@@ -79,11 +81,20 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
   override def handle = {
     case InitAppSpecificClient(ffd2wContext) =>
+      log.finest("PreviousPageHandler | InitAppSpecificClient: " + ffd2wContext)
       val d2wContext = D2WContextUtils.convertFullFledgedToD2WContext(ffd2wContext)
-      effectOnly(Effect.action(PrepareEODisplay(d2wContext)))
+      val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
+      val task = ffd2wContext.task.get
+      if (allowedTasks.contains(task)) {
+        effectOnly(Effect.action(PrepareEODisplay(d2wContext)))
+      } else {
+        effectOnly(Effect.action(GetMetaDataForSetPage(d2wContext)))
+      }
+
 
 
     case ShowResults(fs) =>
+      log.finest("PreviousPageHandler | ShowResults: " + fs)
       val entityName = EOFetchSpecification.entityName(fs)
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
@@ -168,7 +179,8 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
-    case SearchAction(entityName) =>
+    case PrepareSearchForServer(d2wContext, isMetaDataFetched) =>
+      val entityName = d2wContext.entityName.get
       log.finest("PreviousPageHandler | Search | " + entityName + " | value: " + value)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
@@ -185,11 +197,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       log.finest("PreviousPageHandler | Search | " + entityName + " query with fs " + fs)
       // Call the server to get the result +  then execute action Search Result (see above datahandler)
 
-      //val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
       //val  stack = stackD2WContext(d2wContext)
       //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
-      SPAMain.socket.send(WebSocketMessages.Search(fs))
+      SPAMain.socket.send(WebSocketMessages.Search(fs, isMetaDataFetched))
       noChange
 
       //updated(

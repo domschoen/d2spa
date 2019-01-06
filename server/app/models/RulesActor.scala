@@ -18,6 +18,7 @@ import play.api.libs.functional.syntax._
 import d2spa.shared._
 import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
+import models.EORepoActor.CompletedEO
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.RulesActor._
 
@@ -35,6 +36,7 @@ object RulesActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new RulesActor(eomodelActor, ws))
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
+  case class MetaDataResponse(d2wContext: D2WContextFullFledged, ruleResults: List[RuleResult])
 
   case class GetRule(d2wContext: FiringD2WContext, key: String, requester: ActorRef)
 
@@ -45,6 +47,11 @@ object RulesActor {
   case class GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef)
 
   case class GetMetaDataForNewEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef)
+  case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
+
+
+  case class GetMetaData(d2wContext: D2WContextFullFledged, requester: ActorRef)
+
 }
 
 class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
@@ -253,7 +260,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       println("Get GetRulesForMetaData")
 
       getRuleResultsForMetaData(d2wContext).map(rrs =>
-        requester ! RuleResultsResponse(rrs)
+        requester ! MetaDataResponse(d2wContext, rrs)
       )
 
     case GetRule(d2wContext, key, requester) => {
@@ -271,14 +278,21 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
             EORepoActor.HydrateEOs(fD2WContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), self) //: Future[Seq[EO]]
         }
       )
+
     case GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForEOCompletion")
       val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
       getRuleResultsForMetaData(d2wContext).map(rr => {
         val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
         val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
-        context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), requester) //: Future[Seq[EO]]
+        val isNewEO = EOValue.isNew(eoFault.pk)
+
+        if (isNewEO) {
+          requester ! CompletedEO(d2wContext, EO(entityName = eoFault.entityName, pk = eoFault.pk), Some(rr))
+        } else {
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), requester) //: Future[Seq[EO]]
+        }
       }
       )
 
@@ -291,6 +305,22 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.NewEO(d2wContext, eo, Some(rr), requester) //: Future[Seq[EO]]
+        }
+      )
+    case GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef) =>
+      println("Rule Actor Receive GetMetaDataForSearch")
+      val entityName = EOFetchSpecification.entityName(fs)
+      val d2wContext = D2WContextFullFledged (
+        entityName = Some(entityName),
+        task = Some(TaskDefine.list)
+      )
+
+      getRuleResultsForMetaData(d2wContext).map(
+        rr => {
+          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
+          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.Search(fs, Some(rr), requester) //: Future[Seq[EO]]
         }
       )
 

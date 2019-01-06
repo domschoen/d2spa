@@ -22,7 +22,7 @@ object WebSocketMessages {
   final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
+  final case class Search(fs: EOFetchSpecification, isMetaDataFetched: Boolean) extends WebSocketMsgIn
   final case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
   final case class UpdateEO(eo: EO) extends WebSocketMsgIn
 
@@ -30,12 +30,14 @@ object WebSocketMessages {
   sealed trait WebSocketMsgOut
 
   final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
+  final case class MetaDataResponseMsg(d2wContext: D2WContextFullFledged, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+
   final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
   final case class CompletedEOMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
+  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }
@@ -76,7 +78,7 @@ object RuleKeys {
 //case class DateValue(value: java.util.Date) extends EOValue
 
 //case class EO(entityName: String, values: Map[String, EOValue] = Map.empty[String, EOValue], pk: EOPk, validationError: Option[String] = None)
-case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk, validationError: Option[String] = None)
+case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk = EOPk(List()), validationError: Option[String] = None)
 //case class EO2(entityName: String, values: List[EOValue2], pk: List[Int], validationError: Option[String] = None)
 //case class EO2(entityName: String, values: Map[String,EOValue2] = Map(),  pk: List[Int])
 //case class EOValueMap(values: Map[String,String] = Map())
@@ -370,7 +372,7 @@ object EOValue {
   }
 
   def isNewEO(eo: EO) = {
-    eo.pk.pks.head < 0
+    isNew(eo.pk)
     //val pk = EOValue.pk(eo)
     //(pk.isDefined && pk.get < 0) || pk.isEmpty
     //eo.memID.isDefined
