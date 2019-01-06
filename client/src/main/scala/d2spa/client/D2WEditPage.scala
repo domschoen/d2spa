@@ -80,6 +80,12 @@ object D2WEditPage {
       }
     }
 
+    def clear =  {
+      println("CCCOOMMMPPPOOONNEEENNT UNNNNNMMMMMOOOUUUNNNTTTT")
+      Callback.empty
+    }
+
+
     def save(router: RouterCtl[TaskAppPage], entityName: String, eo: EO) = {
 
       val isNewEO = EOValue.isNewEO(eo)
@@ -238,6 +244,7 @@ object D2WEditPage {
     .renderBackend[Backend]
     //.componentWillMount(scope => scope.backend.willmounted(scope.props, scope.state))
     //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps, scope.state))
+    //.componentWillUnmount(scope => scope.backend.clear)
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
