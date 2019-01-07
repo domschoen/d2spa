@@ -123,6 +123,8 @@ case class PrepareEODisplayRules(d2wContext: D2WContext, cache: EOCache, needsHy
 
 case class RegisterPreviousPage(d2wContext: D2WContext) extends Action
 case class RegisterPreviousPageAndSetPage(d2wContext: D2WContext) extends Action
+case class RegisterPreviousPageAndSetPagePure(d2wContext: D2WContext) extends Action
+case class RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext: D2WContext, eo: EO) extends Action
 
 case class SetPage(d2WContext: D2WContext) extends Action
 case class UpdateCurrentContextWithEO(eo: EO) extends Action

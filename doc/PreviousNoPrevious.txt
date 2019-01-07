@@ -66,8 +66,10 @@ New Project (after entering the app with inspect url)
 New Project from Menu
     PrepareEODisplay
         PrepareEODisplayRules
-            CompleteEO
+            socket.CompleteEO
     CompletedEO
+        SetPreviousWithResults
+            RegisterPreviousPageAndSetPage
         
 
 Save a new EO and show inspect page
@@ -96,4 +98,33 @@ Search
                     out.FetchedObjectsForListMsgOut
     SearchResult (CacheHandler)
         
+    
+    
+    
+Should we avoid cache for new EO ? 
+@@ -539,7 +539,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
+ 
+       val updatedD2WContext = d2wContext.copy(eo = Some(updatedEO))
+       D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | updatedCachesForSavedEO  " + updatedEO + " eo " + eo)
+-      val newCache = EOCacheUtils.updatedCachesForSavedEO(value, updatedEO, Some(eo))
++      val newCache = EOCacheUtils.updatedDBCacheWithEO(value, updatedEO)
+       D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | updated cache " + newCache)
+       D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO update cache, call action Register with context " + updatedD2WContext)
+       updated(
+@@ -618,12 +618,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
+         case None =>
+           // case 1: new EO
+           log.finest("CacheHandler | PrepareEODisplay | New EO " + value)
+-          val (newCache, newEO) = EOCacheUtils.updatedMemCacheByCreatingNewEOForEntityNamed(value, entityName)
++          val newEO = EOCacheUtils.newEOWithLastMemID(entityName, None)
+           D2SpaLogger.logfinest(entityName, "newEO " + newEO)
+           val updatedD2WContext = d2wContext.copy(eo = Some(newEO))
+ 
+           // We may need to fetch rules
+-          updated(newCache,Effect.action(PrepareEODisplayRules(updatedD2WContext, value,false)))
++          effectOnly(Effect.action(PrepareEODisplayRules(updatedD2WContext, value,false)))
+       }
+     // Update EO, stay on same page
+     // Examples:
+
                

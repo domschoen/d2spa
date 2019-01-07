@@ -9,6 +9,7 @@ import diode.ActionResult.ModelUpdate
 import diode.ActionResult.ModelUpdateEffect
 import d2spa.shared._
 import boopickle.Default._
+import d2spa.client.EOCacheUtils.updatedMemCacheByRemovingEO
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -121,6 +122,35 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
 
     case RegisterPreviousPageAndSetPage(d2wContext) =>
+      log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage: " + d2wContext.entityName)
+      val newEOToBeRemovedFromCache = value match {
+        case Some(currentPage) =>
+          if (currentPage.task.get.equals(TaskDefine.edit)) {
+            val eoOpt = currentPage.eo
+            eoOpt match {
+              case Some(eo) =>
+                val isNewEO = EOValue.isNewEO(eo)
+                log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage | eo " + eo)
+                log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage | isNewEO " + isNewEO)
+                if (isNewEO) {
+                  Some(eo)
+                } else None
+              case None =>
+                None
+            }
+          } else None
+        case None => None
+      }
+      newEOToBeRemovedFromCache match {
+        case Some(eo) =>
+          effectOnly(Effect.action(RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext, eo)))
+
+        case None =>
+          effectOnly(Effect.action(RegisterPreviousPageAndSetPagePure(d2wContext)))
+      }
+
+
+    case RegisterPreviousPageAndSetPagePure(d2wContext) =>
       val  stack = stackD2WContext(d2wContext)
       log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage for d2wContext: " + stack)
 

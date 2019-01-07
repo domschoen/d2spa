@@ -672,6 +672,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       }
 
+
+    case RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext, eo) =>
+      log.finest("CacheHandler | RegisterPreviousPageAndSetPageRemoveMemEO: " + d2wContext.entityName)
+      updated(
+        EOCacheUtils.updatedMemCacheByRemovingEO(value, eo),
+        Effect.action(RegisterPreviousPageAndSetPagePure(d2wContext))
+      )
+
+
     case CompletedEO(d2wContext, eo, ruleResultsOpt) =>
       log.finest("CacheHandler | CompletedEO  " + eo)
       //val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
