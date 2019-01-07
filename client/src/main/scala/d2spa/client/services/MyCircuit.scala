@@ -106,14 +106,14 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+      WebSocketClient.send(WebSocketMessages.GetMetaData(fullFledged))
       noChange
 
     case InitMetaData(d2wContext) =>
       log.finest("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged)) // reply with RuleResults and then action SetJustRuleResults
+      WebSocketClient.send(WebSocketMessages.GetMetaData(fullFledged)) // reply with RuleResults and then action SetJustRuleResults
       noChange
 
     case UpdateCurrentContextWithEO(eo) =>
@@ -230,7 +230,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       //val  stack = stackD2WContext(d2wContext)
       //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
-      SPAMain.socket.send(WebSocketMessages.Search(fs, isMetaDataFetched))
+      WebSocketClient.send(WebSocketMessages.Search(fs, isMetaDataFetched))
       noChange
 
       //updated(

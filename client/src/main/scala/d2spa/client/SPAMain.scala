@@ -76,7 +76,7 @@ object SPAMain   extends  js.JSApp {
 
                 }
                 if (!p.value.appConfiguration.socketReady) {
-                  setSocket(d2wContext)
+                  WebSocketClient.setSocket(Some(d2wContext))
                 }
 
                 D2WQueryPage(ctl, d2wContext, p)
@@ -98,7 +98,7 @@ object SPAMain   extends  js.JSApp {
 
                 }
                 if (!p.value.appConfiguration.socketReady) {
-                  setSocket(d2wContext)
+                  WebSocketClient.setSocket(Some(d2wContext))
                 }
 
                 D2WListPage(ctl, d2wContext, p)
@@ -118,7 +118,7 @@ object SPAMain   extends  js.JSApp {
                      firstD2WContext
                  }
                  if (!p.value.appConfiguration.socketReady) {
-                   setSocket(d2wContext)
+                   WebSocketClient.setSocket(Some(d2wContext))
                  }
                  D2WEditPage(ctl, d2wContext, p)
                })
@@ -134,7 +134,7 @@ object SPAMain   extends  js.JSApp {
                   EO(entityName = m.entity, pk = EOPk(List(m.pk)))
                 ))
                 if (!p.value.appConfiguration.socketReady) {
-                   setSocket(d2wContext)
+                  WebSocketClient.setSocket(Some(d2wContext))
                 }
                 D2WEditPage(ctl, d2wContext, p)
               })
@@ -148,7 +148,7 @@ object SPAMain   extends  js.JSApp {
             menusConnection(p => {
               val d2wContext = D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit), eo = None)
               if (!p.value.appConfiguration.socketReady) {
-                setSocket(d2wContext)
+                WebSocketClient.setSocket(Some(d2wContext))
               } else {
                 p.dispatchCB(PrepareEODisplay(d2wContext))
               }
@@ -183,18 +183,6 @@ object SPAMain   extends  js.JSApp {
 
   val router = Router(baseUrl, config)
 
-  var socket: Socket = null
-
-  def setSocket(d2wContext: D2WContext) = {
-    socket = Socket(websocketUrl, d2wContext)((event: MessageEvent) => event.data match {
-      case blob: Blob =>
-        //println("Will read socket")
-        Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
-      //Socket.blobReader.abort()
-      case _ => dom.console.log("Error on receive, should be a blob.")
-    })
-
-  }
 
 
   @JSExport
@@ -228,8 +216,4 @@ object SPAMain   extends  js.JSApp {
 
 
 
-  def setupWebSocket() = {
-
-
-  }
 }

@@ -33,7 +33,7 @@ class AppConfigurationHandler[M](modelRW: ModelRW[M, AppConfiguration]) extends 
       D2SpaLogger.logfinest(D2SpaLogger.ALL,"DebugHandler | FetchShowD2WDebugButton")
       val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
 
-      SPAMain.socket.send(GetDebugConfiguration(fullFledged))
+      WebSocketClient.send(GetDebugConfiguration(fullFledged))
       noChange
 
     case SetDebugConfiguration(debugConf, d2wContext) =>
@@ -164,7 +164,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       val isMetaDataFetched = RuleUtils.metaDataFetched(value, d2wContext)
       D2SpaLogger.logfinest(entityName,"CacheHandler | SaveNewEO | isMetaDataFetched " + isMetaDataFetched)
       D2SpaLogger.logfinest(entityName,"CacheHandler | SaveNewEO | d2wContext " + d2wContext)
-      SPAMain.socket.send(WebSocketMessages.NewEO(ff, eo, isMetaDataFetched))
+      WebSocketClient.send(WebSocketMessages.NewEO(ff, eo, isMetaDataFetched))
       noChange
 
     case SearchAction(entityName) =>
@@ -181,7 +181,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         val eoFault = Hydration.toFault(eo)
         if (displayPropertyKeys.isEmpty) {
           val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-          SPAMain.socket.send(WebSocketMessages.CompleteEO(ff,eoFault, Set()))
+          WebSocketClient.send(WebSocketMessages.CompleteEO(ff,eoFault, Set()))
         } else {
           val eoFault = EOFault(entityName, eo.pk)
 
@@ -194,7 +194,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           if (!isHydrated) {
             log.finest("RuleResultsHandler | PrepareEODisplayRules | displayProperties yes -> ask server for hydration")
             val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-            SPAMain.socket.send(WebSocketMessages.CompleteEO(ff, eoFault, displayPropertyKeys.toSet))
+            WebSocketClient.send(WebSocketMessages.CompleteEO(ff, eoFault, displayPropertyKeys.toSet))
           }
         }
         noChange
@@ -206,7 +206,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
           log.finest("RuleResultsHandler | PrepareEODisplayRules | metaDataFetched not fetched send GetMetaData to server")
           val eoFault = Hydration.toFault(d2wContext.eo.get)
-          SPAMain.socket.send(WebSocketMessages.CompleteEO(fullFledged, eoFault, Set()))
+          WebSocketClient.send(WebSocketMessages.CompleteEO(fullFledged, eoFault, Set()))
           noChange
         } else {
           effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
@@ -221,7 +221,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       val metaDataFetched = RuleUtils.metaDataFetched(value,d2wContext)
       if (!metaDataFetched) {
         val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-        SPAMain.socket.send(WebSocketMessages.GetMetaData(fullFledged))
+        WebSocketClient.send(WebSocketMessages.GetMetaData(fullFledged))
         noChange
       } else {
         effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
@@ -250,13 +250,13 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           case FireRule(rhs, key) =>
             log.finest("RuleResultsHandler | FireActions | FireRule")
             val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(rhs)
-            SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, key))
+            WebSocketClient.send(WebSocketMessages.RuleToFire(newRhs, key))
           case FireRules(propertyKeys, rhs, key) =>
             for (propertyKey <- propertyKeys) {
               val firingRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(rhs)
 
               val d2wContextProperty = firingRhs.copy(propertyKey = Some(propertyKey))
-              SPAMain.socket.send(WebSocketMessages.RuleToFire(d2wContextProperty, key))
+              WebSocketClient.send(WebSocketMessages.RuleToFire(d2wContextProperty, key))
             }
           // Hydration(
           //   DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
@@ -309,7 +309,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
 
                     // not yet implemented on server side
                     val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-                    SPAMain.socket.send(WebSocketMessages.HydrateEOs(ff, List(eoFault.pk), missingKeys))
+                    WebSocketClient.send(WebSocketMessages.HydrateEOs(ff, List(eoFault.pk), missingKeys))
 
                   case DrySubstrate(Some(eoakp), _, _) =>
                     log.finest("Hydration DrySubstrate " + eoakp.eo.entityName + " for key " + eoakp.keyPath)
@@ -323,7 +323,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                             log.finest("NVListComponent render pks " + pks)
                             // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
                             val ff = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-                            SPAMain.socket.send(WebSocketMessages.HydrateEOs(ff, pks, missingKeys))
+                            WebSocketClient.send(WebSocketMessages.HydrateEOs(ff, pks, missingKeys))
 
                           case _ => // we skip the action ....
                         }
@@ -334,10 +334,10 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                     fs match {
                       case fa: EOFetchAll =>
                         // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                        SPAMain.socket.send(WebSocketMessages.HydrateAll(fa))
+                        WebSocketClient.send(WebSocketMessages.HydrateAll(fa))
                       case fq: EOQualifiedFetch =>
                         // Will get response with FetchedObjectsMsgOut and then FetchedObjectsForEntity
-                        SPAMain.socket.send(WebSocketMessages.Hydrate(fq))
+                        WebSocketClient.send(WebSocketMessages.Hydrate(fq))
                     }
 
 
@@ -360,7 +360,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
                     val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(ruleToFile.rhs)
                     log.finest("RuleResultsHandler | FireActions | Hydration: wateringScope with rule To File: firing | rhs " + newRhs)
                     log.finest("RuleResultsHandler | FireActions | Hydration: wateringScope with rule To File: firing | key " + ruleToFile.key)
-                    SPAMain.socket.send(WebSocketMessages.RuleToFire(newRhs, ruleToFile.key))
+                    WebSocketClient.send(WebSocketMessages.RuleToFire(newRhs, ruleToFile.key))
 
                 }
             }
@@ -487,7 +487,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
     case FetchEOModelAndMenus(d2wContext) =>
       log.finest("FetchEOModel")
-      SPAMain.socket.send(WebSocketMessages.FetchEOModel(d2wContext))
+      WebSocketClient.send(WebSocketMessages.FetchEOModel(d2wContext))
       noChange
 
     case SetEOModelThenFetchMenu(eomodel, d2wContext) =>
@@ -554,7 +554,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
       // Update the DB and dispatch the result withing UpdatedEO action
       //
-      SPAMain.socket.send(WebSocketMessages.UpdateEO(purgedEO))
+      WebSocketClient.send(WebSocketMessages.UpdateEO(purgedEO))
       noChange
 
 
@@ -741,7 +741,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val entityName = eo.entityName
       D2SpaLogger.logfinest(entityName,"CacheHandler | DeleteEOFromList " + eo)
 
-      SPAMain.socket.send(WebSocketMessages.DeleteEOMsgIn(eo))
+      WebSocketClient.send(WebSocketMessages.DeleteEOMsgIn(eo))
       noChange
 
 
@@ -828,7 +828,7 @@ class MenuHandler[M](modelRW: ModelRW[M, Pot[Menus]]) extends ActionHandler(mode
       log.finest("Init Client")
       if (value.isEmpty) {
         log.finest("Api get Menus")
-        SPAMain.socket.send(FetchMenus(d2wContext))
+        WebSocketClient.send(FetchMenus(d2wContext))
       }
       noChange
 

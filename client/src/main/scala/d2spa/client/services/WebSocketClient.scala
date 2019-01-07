@@ -12,6 +12,7 @@ import org.scalajs.dom._
 import scala.scalajs.js.typedarray.{ArrayBuffer, TypedArrayBuffer}
 import scala.scalajs.js.timers._
 import d2spa.client.logger._
+import org.scalajs.dom.raw.MessageEvent
 
 // google: scala.js websocket send java.nio.ByteBuffer
 // ->
@@ -21,23 +22,64 @@ import d2spa.client.logger._
 object WebSocketClient {
   val websocketUrl = s"ws://${dom.document.location.host}/ws"
 
-  case class Socket(url: String, d2wContext: D2WContext)(onMessage: (MessageEvent) => _) {
+  var socketOpt: Option[Socket] = None
+
+  def setSocket(d2wContext: Option[D2WContext]) = {
+    socketOpt = Some(Socket(websocketUrl, d2wContext)((event: MessageEvent) => event.data match {
+      case blob: Blob =>
+        //println("Will read socket")
+        Socket.blobReader().readAsArrayBuffer(blob) //the callbacks in blobReader take care of what happens with the data.
+      //Socket.blobReader.abort()
+      case _ => dom.console.log("Error on receive, should be a blob.")
+    }))
+
+  }
+
+  def send(msg: WebSocketMsgIn): Unit = {
+    socketOpt match {
+      case Some(socket) =>
+        if (socket.isClosed) {
+          setSocket(None)
+        }
+      case None =>
+        setSocket(None)
+    }
+    socketOpt.get.send(msg)
+  }
+
+
+  case class Socket(url: String, d2wContextOpt: Option[D2WContext])(onMessage: (MessageEvent) => _) {
     println("  SOCKETE SOCKETE SOCKETE")
+
+    var isClosed = true
+
     private val socket: WebSocket = new dom.WebSocket(url = url)
 
     def send(msg: WebSocketMsgIn): Unit = {
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
-
       val bytes = Pickle.intoBytes(msg).arrayBuffer()
       log.finest("Send " + msg)
       log.finest("Send " + bytes.byteLength + " bytes")
       socket.send(bytes)
     }
 
-    socket.onopen = (e: Event) => { MyCircuit.dispatch(SetPageForSocketReady(d2wContext)) }
-    socket.onclose = (e: CloseEvent) => { dom.console.log(s"Socket closed. Reason: ${e.reason} (${e.code})") }
-    socket.onerror = (e: Event) => { dom.console.log(s"Socket error! ${e}") }
-    socket.onmessage = onMessage
+
+      socket.onopen = (e: Event) => {
+        d2wContextOpt match {
+          case Some(d2wContext) =>
+            MyCircuit.dispatch(SetPageForSocketReady(d2wContext))
+          case None => ()
+        }
+        isClosed = false
+      }
+      socket.onclose = (e: CloseEvent) => {
+        dom.console.log(s"Socket closed. Reason: ${e.reason} (${e.code})")
+        isClosed = true
+      }
+      socket.onerror = (e: Event) => {
+        dom.console.log(s"Socket error! ${e}")
+      }
+      socket.onmessage = onMessage
   }
 
 
