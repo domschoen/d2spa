@@ -98,9 +98,8 @@ object ERD2WDisplayToOne  {
                 case Some(destinationEOValue) =>
                   destinationEOValue match {
                     case ObjectValue(destinationEO) =>
-                      val destinationPk = EOValue.pk(eomodel,destinationEO).get
                       val destinationEntityName = destinationEO.entityName
-                      val destEOFault = EOFault(destinationEntityName, destinationPk)
+                      val destEOFault = EOFault(destinationEntityName, destinationEO.pk)
 
                       keyWhenRelationshipOpt match {
                         case Some(keyWhenRelationshipFireRule) =>

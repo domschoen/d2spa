@@ -35,7 +35,7 @@ object MenuHeader {
       val d2wContext = D2WContext(entityName = Some(entityName), task = Some("query"))
 
       Callback.log(s"Menu selected: $entityName") >>
-        $.props >>= (_.proxy.dispatchCB(RegisterPreviousPageAndSetPage(d2wContext)))
+        $.props >>= (_.proxy.dispatchCB(GetMetaDataForSetPage(d2wContext)))
     }
 
     def newEO(entity: EOEntity) = {

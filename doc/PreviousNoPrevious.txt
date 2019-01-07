@@ -49,6 +49,10 @@ QueryPage
                 socketActor.MetaDataResponse
                                     
 
+Query page from menu
+    RegisterPreviousPageAndSetPage
+
+
 New Project (after entering the app with inspect url)
 
                   PrepareEODisplay
