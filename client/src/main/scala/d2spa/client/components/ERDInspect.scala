@@ -78,7 +78,7 @@ object ERDInspect {
       //log.finest("ERDInspect render with D2WContext: " + d2wContext)
 
       // to get access to the latest version of the eo we use the previous page context
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
       D2SpaLogger.logfinest(entityName,"ERDInspect render eoOpt " + eoOpt)
 
       eoOpt match {

@@ -47,6 +47,8 @@ object RulesActor {
   case class GetMetaDataForEOCompletion(d2wContext: D2WContextFullFledged, eoFault: EOFault, requester: ActorRef)
 
   case class GetMetaDataForNewEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef)
+  case class GetMetaDataForUpdatedEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef)
+
   case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
 
 
@@ -275,7 +277,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
           val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(rr))
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.HydrateEOs(fD2WContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), self) //: Future[Seq[EO]]
+            EORepoActor.HydrateEOs(fD2WContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), requester) //: Future[Seq[EO]]
         }
       )
 
@@ -297,7 +299,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       )
 
     case GetMetaDataForNewEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef) =>
-      println("Rule Actor Receive GetMetaDataForEOCompletion")
+      println("Rule Actor Receive GetMetaDataForNewEO")
       val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
       getRuleResultsForMetaData(d2wContext).map(
         rr => {
@@ -307,6 +309,19 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
             EORepoActor.NewEO(d2wContext, eo, Some(rr), requester) //: Future[Seq[EO]]
         }
       )
+
+    case GetMetaDataForUpdatedEO(d2wContext: D2WContextFullFledged, eo: EO, requester: ActorRef) =>
+      println("Rule Actor Receive GetMetaDataForUpdatedEO")
+      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
+      getRuleResultsForMetaData(d2wContext).map(
+        rr => {
+          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
+          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.UpdateEO(d2wContext, eo, Some(rr), requester)
+        }
+      )
+
     case GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForSearch")
       val entityName = EOFetchSpecification.entityName(fs)

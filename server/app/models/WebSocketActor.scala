@@ -81,7 +81,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case DeleteEOMsgIn(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.DeleteEO(eo, self)
 
-      case NewEO(d2wContext,eo, isMetaDataFetched) =>
+      case NewEO(d2wContext, eo, isMetaDataFetched) =>
         val entityName = d2wContext.entityName.get
         if (isMetaDataFetched) {
           println("Receive NewEO ---> sending EORepoActor NewEO")
@@ -93,15 +93,24 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             RulesActor.GetMetaDataForNewEO(d2wContext, eo, self)
         }
 
-      case UpdateEO(eo) =>
-        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.UpdateEO(eo, self)
+      case UpdateEO(d2wContext, eo, isMetaDataFetched) =>
+        if (isMetaDataFetched) {
+          println("Receive UpdateEO ---> sending EORepoActor NewEO")
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.UpdateEO(d2wContext, eo, None, self)
+        } else {
+          println("Receive UpdateEO ---> sending RulesActor GetMetaDataForNewEO")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, self)
+        }
+
 
       case HydrateAll(fs) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
 
-      case CompleteEO(d2wContext, eoFault, missingKeys) =>
+      case CompleteEO(d2wContext, eoFault, missingKeys, isMetaDataFetched) =>
         val entityName = d2wContext.entityName.get
-        if (missingKeys.isEmpty) {
+        if (!isMetaDataFetched) {
           println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
@@ -128,7 +137,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
           println("Receive Search ---> sending EORepoActor Search")
           context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, None, self)
         } else {
-          println("Receive NewEO ---> sending EORepoActor GetMetaDataForSearch")
+          println("Receive Search ---> sending EORepoActor GetMetaDataForSearch")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForSearch(fs, self)
 

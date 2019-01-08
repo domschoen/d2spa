@@ -164,7 +164,7 @@ object ERD2WDisplayToOne  {
                   D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
                   val cache = p.proxy.value.cache
                   //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
-                  val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(cache, destinationEntityName, destinationEO)
+                  val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(cache, destinationEntityName, destinationEO)
                   eoOpt match {
                     case Some(eo) =>
                       val ruleResultsModel = p.proxy.value.ruleResults

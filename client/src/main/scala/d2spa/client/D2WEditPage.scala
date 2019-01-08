@@ -133,7 +133,7 @@ object D2WEditPage {
               //log.finest("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
               //log.finest("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
 
-              val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, d2wContext.entityName.get, eoRef)
+              val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, d2wContext.entityName.get, eoRef)
               log.finest("D2WEditPage: render eo out of cache: " + eoOpt)
 
               eoOpt match {

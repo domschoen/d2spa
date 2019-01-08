@@ -35,7 +35,7 @@ object ERD2WEditNumber {
       faultOpt match {
         case Some(eo) =>
 
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromD2WContextEO(p.proxy.value.cache, entityName, eo)
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eo)
           eoOpt match {
             case Some(eo) =>
               val value = EOValue.stringValueForKey(eo, propertyName)

@@ -135,6 +135,8 @@ case class ShowResults(fs: EOFetchSpecification) extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
+case class GoSaving(entityName: String, eo: EO) extends Action
+
 case class SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 case class PrepareSearchForServer(d2wContext: D2WContext, isMetaDataFetched: Boolean) extends Action
@@ -792,7 +794,7 @@ object EOCacheUtils {
   }*/
 
   def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
-    eos.map(eo => outOfCacheEOUsingPkFromD2WContextEO(cache,entityName,eo)).flatten
+    eos.map(eo => outOfCacheEOUsingPkFromEO(cache,entityName,eo)).flatten
   }
 
 
@@ -805,7 +807,7 @@ object EOCacheUtils {
   }
 
 
-  def outOfCacheEOUsingPkFromD2WContextEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
+  def outOfCacheEOUsingPkFromEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
     outOfCacheEOUsingPk(cache, entityName, eo.pk)
   }
 

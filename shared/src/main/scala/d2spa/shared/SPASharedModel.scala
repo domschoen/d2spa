@@ -18,13 +18,15 @@ object WebSocketMessages {
   final case class GetMetaData(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
   final case class RuleToFire(rhs: FiringD2WContext, key: String) extends WebSocketMsgIn
   final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
-  final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String]) extends WebSocketMsgIn
+  final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], isMetaDataFetched: Boolean) extends WebSocketMsgIn
   final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class Search(fs: EOFetchSpecification, isMetaDataFetched: Boolean) extends WebSocketMsgIn
+
+  // D2W Context is needed for the fetch of rules
   final case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
-  final case class UpdateEO(eo: EO) extends WebSocketMsgIn
+  final case class UpdateEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
 
   // Server ---> Client
   sealed trait WebSocketMsgOut

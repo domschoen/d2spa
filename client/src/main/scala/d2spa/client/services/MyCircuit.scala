@@ -93,7 +93,6 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       }
 
 
-
     case ShowResults(fs) =>
       log.finest("PreviousPageHandler | ShowResults: " + fs)
       val entityName = EOFetchSpecification.entityName(fs)
@@ -211,7 +210,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
 
     case PrepareSearchForServer(d2wContext, isMetaDataFetched) =>
       val entityName = d2wContext.entityName.get
-      log.finest("PreviousPageHandler | Search | " + entityName + " | value: " + value)
+      log.finest("PreviousPageHandler | PrepareSearchForServer | entityName: " + entityName + " | isMetaDataFetched: " + isMetaDataFetched)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
           val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)

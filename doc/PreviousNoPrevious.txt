@@ -75,7 +75,7 @@ New Project from Menu
 Save a new EO and show inspect page
 D2WEditPage
     SaveNewEO (CacheHandler of SPACircuit)
-        socket send NewEO
+        socket.NewEO
             RulesActor.NewEO
                 EORepoActor.NewEO
                     SavingResponse
@@ -85,6 +85,15 @@ D2WEditPage
                 SavedEO
                     update cache
                 RegisterPreviousPageAndSetPage
+       
+Save update of existing EO and show inspect page
+D2WEditPage
+    Save (SPACircuit.CacheHandler)
+        socket.UpdateEO
+            RulesActor.GetMetaDataForUpdatedEO
+                EORepoActor.UpdateEO
+                    SavingResponse
+                        SavingResponseMsgOut
             
 Inspect record from list page
     RegisterPreviousPageAndSetPage            
@@ -92,11 +101,17 @@ Inspect record from list page
 
 Search
     SearchAction (MyCircuit)
-        socket.Search
-            EORepoActor.Search
-                FetchedObjectsForList
-                    out.FetchedObjectsForListMsgOut
+        PrepareSearchForServer ((MyCircuit.PreviousPageHandler)
+            socket.Search
+                RulesActor ! GetMetaDataForSearch
+                    EORepoActor ! Search
+                        WebSocketActor ! FetchedObjectsForList
+                            out ! FetchedObjectsForListMsgOut
     SearchResult (CacheHandler)
+        SearchResultWithRuleResults (RuleResultsHandler)
+            RegisterSearchResults
+                ShowResults (MyCircuit.PreviousPageHandler)
+                    RegisterPreviousPageAndSetPage
         
     
     
