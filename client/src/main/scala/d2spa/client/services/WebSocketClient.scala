@@ -24,7 +24,7 @@ object WebSocketClient {
 
   var socketOpt: Option[Socket] = None
 
-  def setSocket(d2wContext: Option[D2WContext]) = {
+  def setSocket(d2wContext: Option[PageContext]) = {
     socketOpt = Some(Socket(websocketUrl, d2wContext)((event: MessageEvent) => event.data match {
       case blob: Blob =>
         //println("Will read socket")
@@ -48,7 +48,7 @@ object WebSocketClient {
   }
 
 
-  case class Socket(url: String, d2wContextOpt: Option[D2WContext])(onMessage: (MessageEvent) => _) {
+  case class Socket(url: String, d2wContextOpt: Option[PageContext])(onMessage: (MessageEvent) => _) {
     println("  SOCKETE SOCKETE SOCKETE")
 
     var isClosed = true
@@ -100,7 +100,7 @@ object WebSocketClient {
               case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               case FetchedObjectsForListMsgOut(fs, eos, ruleResultsOpt) => MyCircuit.dispatch(client.SearchResult(fs, eos, ruleResultsOpt))
-              case SavingResponseMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+              case SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
                 MyCircuit.dispatch(client.SavingEO(d2wContext, eo, ruleResults))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
               case DebugConfMsg(showDebugButton, d2wContext) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton), d2wContext))

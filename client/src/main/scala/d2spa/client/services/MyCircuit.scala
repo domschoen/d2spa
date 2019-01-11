@@ -69,9 +69,9 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
 
 }
 
-class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends ActionHandler(modelRW) {
+class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends ActionHandler(modelRW) {
 
-  def stackD2WContext(d2WContext: D2WContext) : D2WContext = {
+  def stackD2WContext(d2WContext: PageContext) : PageContext = {
     value match {
       case Some(currentPage) => {
         d2WContext.copy(previousTask = value)
@@ -100,12 +100,9 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[D2WContext]]) extends Ac
       effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
 
 
-    case  InitMetaDataForList (entityName) =>
-      log.finest("PreviousPageHandler | InitMetaDataForList for: " + entityName)
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
-      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-
-      WebSocketClient.send(WebSocketMessages.GetMetaData(fullFledged))
+    case  SendRuleRequest (ruleRequest) =>
+      log.finest("PreviousPageHandler | SendRuleRequest | ruleRequest: " + ruleRequest)
+      WebSocketClient.send(WebSocketMessages.ExecuteRuleRequest(ruleRequest))
       noChange
 
     case InitMetaData(d2wContext) =>

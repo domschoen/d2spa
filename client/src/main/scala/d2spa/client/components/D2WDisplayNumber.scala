@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.D2WContext
+import d2spa.client.PageContext
 import d2spa.shared.{EO, EOValue}
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
@@ -17,7 +17,7 @@ object D2WDisplayNumber {
 
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($: BackendScope[Props, Unit]) {
@@ -59,6 +59,6 @@ object D2WDisplayNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }

@@ -13,7 +13,7 @@ import play.api.libs.ws._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
-import d2spa.shared.{D2WContextFullFledged, EOEntity, EOModel, EORelationship}
+import d2spa.shared.{D2WContext, EOEntity, EOModel, EORelationship}
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 
 import scala.concurrent.Future
@@ -45,8 +45,8 @@ case class FetchedEOAttribute(`type`: String, name: String)
 object EOModelActor {
   def props(ws: WSClient): Props = Props(new EOModelActor(ws))
 
-  case class EOModelResponse(eomodel: EOModel, d2wContext: Option[D2WContextFullFledged])
-  case class GetEOModel(d2wContext: Option[D2WContextFullFledged], requester: ActorRef)
+  case class EOModelResponse(eomodel: EOModel, d2wContext: Option[D2WContext])
+  case class GetEOModel(d2wContext: Option[D2WContext], requester: ActorRef)
 
 }
 

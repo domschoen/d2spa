@@ -1,6 +1,7 @@
 package d2spa.client.components
 
 
+import d2spa.client.RuleUtils.firingRulesFromPotFiredRuleResult
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -18,7 +19,7 @@ import diode.data.Ready
 object NVListComponent {
 
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent])
 
   class Backend($: BackendScope[Props, Unit]) {
 
@@ -28,8 +29,9 @@ object NVListComponent {
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       //log.finest("NVListComponent willReceiveProps | currentProps: " + currentProps)
       //log.finest("NVListComponent willReceiveProps | nextProps: " + nextProps)
-      val cEntityName = currentProps.d2wContext.entityName
-      val nEntityName = nextProps.d2wContext.entityName
+
+      val cEntityName = currentProps.d2wContext.d2wContext.entityName
+      val nEntityName = nextProps.d2wContext.d2wContext.entityName
       val entityChanged = !cEntityName.equals(nEntityName)
 
       val cDataRep = currentProps.d2wContext.dataRep
@@ -53,18 +55,25 @@ object NVListComponent {
 
     def willmounted(p: Props) = {
       if (!p.isEmbedded) {
-        val d2wContext = p.d2wContext
+        val pageContext = p.d2wContext
+        val d2wContext = pageContext.d2wContext
         val entityName = d2wContext.entityName.get
         D2SpaLogger.logfinest(entityName, "NVListComponent | mounted | entityName: " + entityName)
-        val fireIsEditAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isEditAllowed)
-        val fireIsInspectAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isInspectAllowed)
-        val fireActions: List[Option[D2WAction]] = List(
-          fireIsEditAllowedOpt, // standard Fire Rule
-          fireIsInspectAllowedOpt // standard Fire Rule
-        )
-        val actions = fireActions.flatten
 
-        D2SpaLogger.logfinest(entityName, "NVListComponent mounted: actions: " + actions)
+        val ruleResults = p.proxy.value.ruleResults
+        val isEditAllowedRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.isEditAllowed)
+        val isInspectAllowedRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.isInspectAllowed)
+
+        val fireSingleRulesPots = List(isEditAllowedRuleResultPot, isInspectAllowedRuleResultPot)
+        val allFirings = RuleUtils.firingRulesFromPotFiredRuleResult(fireSingleRulesPots)
+
+        if (allFirings.isEmpty) {
+          Callback.empty
+        } else {
+          val ruleRequest = RuleRequest(d2wContext,allFirings)
+          p.proxy.dispatchCB(SendRuleRequest(ruleRequest))
+        }
+
 
 
         Callback.when(!actions.isEmpty)(p.proxy.dispatchCB(
@@ -74,7 +83,8 @@ object NVListComponent {
           )
         ))
       } else {
-        val d2wContext = p.d2wContext
+        val pageContext = p.d2wContext
+        val d2wContext = pageContext.d2wContext
         //val destinationEntity = EOModelUtilsdes
         val pageConfigurationDebug = d2wContext.pageConfiguration match {
           case PotFiredKey(Right(s)) => s
@@ -86,13 +96,13 @@ object NVListComponent {
         val eomodel = p.proxy.value.cache.eomodel.get
         //val d2wContext = p.proxy.value.previousPage.get
         //val propertyName = staleD2WContext.propertyKey.get
-        val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
-        entityOpt match {
-          case Some(entity) =>
+        //val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
+        //entityOpt match {
+        //  case Some(entity) =>
             val ruleResultsModel = p.proxy.value.ruleResults
 
 
-            D2SpaLogger.logfinest(entityName, "NVListComponent mounted: entity: " + entity.name)
+            D2SpaLogger.logfinest(entityName, "NVListComponent mounted: entity: " + entityName)
             //log.finest("NVListComponent mounted: eomodel: " + eomodel)
 
             // listConfigurationName
@@ -112,60 +122,24 @@ object NVListComponent {
 
 
             // Fire "isEditAllowed" ?
-            val fireIsEditAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isEditAllowed)
-            val fireIsInspectAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isInspectAllowed)
-            val fireDisplayNameForEntityOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayNameForEntity)
-            val fireComponentNamesOpt = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultOpt, RuleKeys.componentName)
-            val fireDisplayNameForPropertiesOpt = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultOpt, RuleKeys.displayNameForProperty)
+            val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
+            val fireIsEditAllowedPot = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.isEditAllowed)
+            val fireIsInspectAllowedPot = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.isInspectAllowed)
+            val fireDisplayNameForEntityPot = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+            val fireComponentNamesPot = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.componentName)
+            val fireDisplayNameForPropertiesPot = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.displayNameForProperty)
 
 
             val dataRep = d2wContext.dataRep
-            val drySubstrateOpt: Option[DrySubstrate] = dataRep match {
-              case Some(DataRep(Some(fetchSpecification), _)) =>
-                Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
-
-              case Some(DataRep(_, Some(eosAtKeyPath))) => {
-                Some(DrySubstrate(Some(eosAtKeyPath)))
-              }
-              case _ => None
-            }
-
-
-            val hydrationOpt = drySubstrateOpt match {
-              case Some(drySubstrate) =>
-                D2SpaLogger.logfinest(entityName, "NVListComponent mounted: some drySubstrate")
-
-                displayPropertyKeysRuleResultOpt match {
-                  case Some(displayPropertyKeysRuleResult) =>
-                    D2SpaLogger.logfinest(entityName, "NVListComponent mounted: some display property keys")
-
-                    val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
-
-                    val isHydrated = Hydration.isHydratedForPropertyKeys(eomodel, p.proxy.value.cache, drySubstrate, displayPropertyKeys)
-                    if (isHydrated) {
-                      None
-                    } else {
-                      Some(Hydration(
-                        drySubstrate, // Hydration of objects at the end of relationship, stored in cache
-                        WateringScope(
-                          ruleResult = PotFiredRuleResult(value = Right(displayPropertyKeysRuleResult))
-                        )))
-                    }
-                  case None =>
-                    // DisplayPropertyKeys already fetched -> hydrate with displayProperty Keys
-                    D2SpaLogger.logfinest(entityName, "NVListComponent mounted: drySubstrate | displayPropertyKeys is none " + drySubstrate)
-                    val fireDisplayPropertyKeys = FireRule(d2wContext, RuleKeys.displayPropertyKeys)
-
-                    Some(Hydration(
-                      drySubstrate, // Hydration of objects at the end of relationship, stored in cache
-                      WateringScope( // RuleFault
-                        ruleResult = PotFiredRuleResult(Left(fireDisplayPropertyKeys))
-                      )))
-                }
-
-              case None =>
-                None
-            }
+            val drySubstrateOpt: Option[DrySubstrate] = Hydration.drySubstrateFromDataRep(d2wContext.dataRep)
+            val needsHydration =  Hydration.needsHydration(drySubstrateOpt, displayPropertyKeysRuleResultPot, p.proxy.value.cache, eomodel)
+            val hydrationOpt = if (needsHydration) {
+              Some(Hydration(
+                drySubstrateOpt.get, // Hydration of objects at the end of relationship, not stored in cache
+                WateringScope(
+                  ruleResult = displayPropertyKeysRuleResultPot)
+              ))
+            } else None
 
             D2SpaLogger.logfinest(entityName, "NVListComponent mounted: hydration is defined " + hydrationOpt.isDefined)
 
@@ -208,10 +182,10 @@ object NVListComponent {
                 actions
               )
             ))
-          case _ =>
-            D2SpaLogger.logfinest(entityName, "NVListComponent mounted: no entity for entity name: " + entityName)
-            Callback.empty
-        }
+          //case _ =>
+          //  D2SpaLogger.logfinest(entityName, "NVListComponent mounted: no entity for entity name: " + entityName)
+          //  Callback.empty
+        //}
       }
     }
 
@@ -416,7 +390,7 @@ object NVListComponent {
     .componentDidMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, isEmbedded, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, isEmbedded, proxy))
 
 
 }

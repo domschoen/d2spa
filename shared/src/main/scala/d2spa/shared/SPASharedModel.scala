@@ -12,35 +12,36 @@ object WebSocketMessages {
   // Client ---> Server
   sealed trait WebSocketMsgIn
   final case class StringMsgIn(string: String) extends WebSocketMsgIn
-  final case class GetDebugConfiguration(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
-  final case class FetchEOModel(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
-  final case class FetchMenus(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
-  final case class GetMetaData(d2wContext: D2WContextFullFledged) extends WebSocketMsgIn
-  final case class RuleToFire(rhs: FiringD2WContext, key: String) extends WebSocketMsgIn
+  final case class GetDebugConfiguration(d2wContext: D2WContext) extends WebSocketMsgIn
+  final case class FetchEOModel(d2wContext: D2WContext) extends WebSocketMsgIn
+  final case class FetchMenus(d2wContext: D2WContext) extends WebSocketMsgIn
+  final case class ExecuteRuleRequest(ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class RuleToFire(rhs: D2WContext, key: String) extends WebSocketMsgIn
   final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
-  final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], isMetaDataFetched: Boolean) extends WebSocketMsgIn
-  final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
-  final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
-  final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
+  //final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], isMetaDataFetched: Boolean) extends WebSocketMsgIn
+  //final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
+  //final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
+  //final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
   final case class Search(fs: EOFetchSpecification, isMetaDataFetched: Boolean) extends WebSocketMsgIn
+  final case class Hydrate(hydration: Option[Hydration], ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   // D2W Context is needed for the fetch of rules
-  final case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
-  final case class UpdateEO(d2wContext: D2WContextFullFledged, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
+  final case class NewEO(d2wContext: D2WContext, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
+  final case class UpdateEO(d2wContext: D2WContext, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
 
   // Server ---> Client
   sealed trait WebSocketMsgOut
 
-  final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
-  final case class MetaDataResponseMsg(d2wContext: D2WContextFullFledged, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
+  final case class MetaDataResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
-  final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
-  final case class FetchedMenus(menus: Menus, d2wContext: D2WContextFullFledged) extends WebSocketMsgOut
+  final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContext) extends WebSocketMsgOut
+  final case class FetchedMenus(menus: Menus, d2wContext: D2WContext) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class CompletedEOMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class CompletedEOMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class SavingResponseMsgOut(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }
 
@@ -64,6 +65,7 @@ object RuleKeys {
   val displayPropertyKeys = "displayPropertyKeys"
   val destinationEos = "destinationEos"
   val pkAttributeName = "pkAttributeName"
+  val attributeType = "attributeType"
   val listConfigurationName = "listConfigurationName"
   val inspectConfigurationName = "inspectConfigurationName"
   val pageConfiguration = "pageConfiguration"
@@ -76,6 +78,25 @@ object RuleKeys {
 
 
 
+// Use cases:
+// 1) Display all related eos in an embedded list
+//     - embedded list ask for an hydration based on the related eos pks
+//     - result of hydration will populate the cache
+//     - when rendering the embedded list get the eos out of the cache with pks directly and fearlessly
+case class DrySubstrate(
+                         eos: Option[EOsFault] = None,
+                         eo: Option[EOFault] = None,
+                         fetchSpecification: Option[EOFetchSpecification] = None
+                       )
+case class WateringScope(ruleResult: PotFiredRuleResult)
+case class Hydration(drySubstrate: DrySubstrate, wateringScope: WateringScope)
+case class PotFiredRuleResult (value: Either[FireRule, RuleResult])
+case class PotFiredRulePropertyKeys (value: Either[FireRule, List[String]])
+
+sealed trait FiringRules
+case class FireRule(key: String) extends FiringRules
+case class FireRules(propertyKeys: PotFiredRulePropertyKeys, key: String) extends FiringRules
+case class RuleRequest(d2wContext: D2WContext, rules: List[FiringRules])
 
 //case class DateValue(value: java.util.Date) extends EOValue
 
@@ -534,28 +555,24 @@ case class MainMenu(id: Int, title: String,  children: List[Menu])
 case class Menu(id:Int, title: String, entity: EOEntity)
 
 case class EOFault(entityName : String, pk: EOPk)
+case class EOsFault(entityName : String, pks: Seq[EOPk])
 
 //case class PreviousTask(task: String, pk: Option[Int])
 
 
 case class PotFiringKey (value: Either[RuleToFire, Option[String]])
 
-case class FiringD2WContext(entityName: Option[String],
-                            task: Option[String],
-                            propertyKey:  Option[String] = None,
-                            pageConfiguration: PotFiringKey = PotFiringKey(Right(None))
-                           )
 
-
-
-case class D2WContextFullFledged(entityName: Option[String],
+case class D2WContext(
+                  entityName: Option[String],
                   task: Option[String],
                   propertyKey:  Option[String] = None,
                   pageConfiguration: Option[String] = None,
                   eo: Option[EO] = None
                                 )
 
-case class RuleResult(rhs: D2WContextFullFledged, key: String, value: RuleValue)
+
+case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
 
 object RulesUtilities {
@@ -571,33 +588,14 @@ object RulesUtilities {
       case _ => List()
     }
   }
+  def ruleResultFromRuleResultsForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {
+    isD2WContextEquals(r.rhs, rhs) && r.key.equals(key)
+  })
 
-  def convertFullFledgedToFiringD2WContext(d2wContext: D2WContextFullFledged): FiringD2WContext = {
-    FiringD2WContext(
-    d2wContext.entityName,
-    d2wContext.task,
-    d2wContext.propertyKey,
-      PotFiringKey(Right(d2wContext.pageConfiguration))
-    )
-
+  def isD2WContextEquals(a: D2WContext, b: D2WContext): Boolean = {
+    return a.equals(b)
   }
 
-  def convertD2WContextToFullFledged(d2wContext: FiringD2WContext): D2WContextFullFledged = {
-    //log.debug("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
-    /*if(d2wContext.pageConfiguration.isDefined) {
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
-      log.debug("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
-
-    }*/
-
-    D2WContextFullFledged(
-      d2wContext.entityName,
-      d2wContext.task,
-      d2wContext.propertyKey,
-      d2wContext.pageConfiguration.value.right.get
-    )
-  }
 
 }
 
@@ -618,7 +616,7 @@ case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName 
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 // A D2W Context of type page (without property)
-case class EntityMetaData(d2wContext: D2WContextFullFledged, displayName: String, displayPropertyKeys: List[PropertyMetaInfo])
+case class EntityMetaData(d2wContext: D2WContext, displayName: String, displayPropertyKeys: List[PropertyMetaInfo])
 
 
 // Task

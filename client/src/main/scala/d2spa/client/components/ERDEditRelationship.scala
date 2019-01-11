@@ -15,7 +15,7 @@ import d2spa.shared.{PropertyMetaInfo, RuleKeys}
 
 object ERDEditRelationship  {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, property: PropertyMetaInfo, proxy: ModelProxy[MegaContent])
 
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
@@ -63,5 +63,5 @@ object ERDEditRelationship  {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, property: PropertyMetaInfo, eo: EO, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, property, proxy))
 }

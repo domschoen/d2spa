@@ -213,7 +213,7 @@ object SPACircuitTests extends TestSuite {
 
       val fireDisplayPropertyKeysRuleResult = List(
         RuleResult(
-          D2WContextFullFledged(
+          D2WContext(
             Some("CustomerBusiness"),
             Some(TaskDefine.inspect),
             None,

@@ -18,22 +18,31 @@ import diode.data.Ready
 
 object D2WListPage {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
+
+
     def willmounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
 
-      val entityMetaDataNotFetched = !RuleUtils.metaDataFetched(p.proxy().ruleResults, d2wContext)
-      log.finest("entityMetaDataNotFetched " + entityMetaDataNotFetched)
-      Callback.when(entityMetaDataNotFetched)(p.proxy.dispatchCB(InitMetaDataForList(entityName)))
+      val allFirings = RuleUtils.metaDataFiringRules(p.proxy.value.ruleResults, d2wContext)
+
+      if (allFirings.isEmpty) {
+        Callback.empty
+      } else {
+        val ruleRequest = RuleRequest(d2wContext,allFirings)
+        p.proxy.dispatchCB(SendRuleRequest(ruleRequest))
+      }
     }
 
     def render(p: Props) = {
       log.finest("D2WListPage render " + p.proxy.value)
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       <.div(
         <.div(^.id:="b",MenuHeader(p.router,entityName,p.proxy)),
@@ -49,7 +58,7 @@ object D2WListPage {
     .componentWillMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = {
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = {
     component(Props(ctl, d2wContext, proxy))
   }
 }

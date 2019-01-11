@@ -48,7 +48,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-    case MetaDataResponse(d2wContext: D2WContextFullFledged, ruleResults) =>
+    case MetaDataResponse(d2wContext: D2WContext, ruleResults) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
       out ! MetaDataResponseMsg(d2wContext, Some(ruleResults))
 
@@ -68,7 +68,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
       out ! FetchedObjectsForListMsgOut(fs, eos, ruleResultsOpt)
 
-    case EORepoActor.SavingResponse(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+    case EORepoActor.SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
       out ! SavingResponseMsgOut(d2wContext, eo, ruleResults)
 
@@ -155,7 +155,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
         println("Receive FetchMenus")
         context.actorSelection("akka://application/user/node-actor/menusFetcher") ! GetMenus(d2wContext, self)
 
-      case GetMetaData(d2wContext) =>
+      case ExecuteRuleRequest(ruleRequest) =>
         println("Receive GetMetaData")
         context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForMetaData(d2wContext,self)
 

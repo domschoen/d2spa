@@ -35,20 +35,20 @@ object EORepoActor {
 
   case class Search(fs: EOFetchSpecification, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
-  case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
-  case class NewEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
-  case class UpdateEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
 
   case class DeleteEO(eo: EO, requester: ActorRef) // : Future[EO]
 
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
-  case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]])
+  case class CompletedEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO], ruleResults: Option[List[RuleResult]])
 
-  case class SavingResponse(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]])
+  case class SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
   case class DeletingResponse(eo: EO)
 
   def valueMapWithJsonFields(eomodel: EOModel, fields : Seq[(String,JsValue)]): Map[String,EOValue] = {
@@ -631,7 +631,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(entityName, rrs, ruleResults)
       )
 
-    case CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get CompleteEO")
       hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs => {
         println("Hydrate gives " + rrs)
@@ -640,13 +640,13 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       }
       )
 
-    case NewEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get NewEO")
       val entityName = d2wContext.entityName.get
       newEO(entityName, eo).map(rrs =>
         requester ! SavingResponse(d2wContext, rrs, ruleResults)
       )
-    case UpdateEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get UpdateEO")
       updateEO(eo).map(rrs =>
         requester ! SavingResponse(d2wContext, rrs, ruleResults)

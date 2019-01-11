@@ -107,7 +107,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
     result
   }
 
-  def updatedRuleResultsWithEntityMetaData(d2wContext: D2WContext, entityMetaData: EntityMetaData) = {
+  def updatedRuleResultsWithEntityMetaData(d2wContext: PageContext, entityMetaData: EntityMetaData) = {
     // convert data from entityMetaData to ruleResults
     val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
     val entityName = d2wContext.entityName.get
@@ -262,7 +262,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       }
 
 
-    case FireActions(d2wContext: D2WContext, actions: List[D2WAction]) =>
+    case FireActions(d2wContext: PageContext, actions: List[D2WAction]) =>
       log.finest("RuleResultsHandler | FireActions | count: " + actions.size)
       for (action <- actions) {
         action match {
@@ -568,7 +568,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
 
-    case SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+    case SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO " + eo)
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO | cache " + value)
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO | d2wContext " + d2wContext)

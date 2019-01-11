@@ -23,7 +23,7 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 
 object ERDList {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
   // destinationEntityName:
   // contains a switch component (ERD2WSwitchComponent)
@@ -60,8 +60,8 @@ object ERDList {
       D2SpaLogger.logfinest(entityName, "ERDList mounted " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
       val ruleResultsModel = p.proxy.value.ruleResults
 
-      val listConfigurationNameOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
-      val destinationEntityOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
+      val listConfigurationNameOpt = RuleUtils.potentialFireRuleResultPot(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
+      val destinationEntityOpt = RuleUtils.potentialFireRuleResultPot(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
 
       val fireActions =
         List(
@@ -178,6 +178,6 @@ object ERDList {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }

@@ -12,7 +12,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 object ERD2WInspect {
 
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
   class Backend($: BackendScope[Props, Unit]) {
 
@@ -83,9 +83,9 @@ object ERD2WInspect {
 
 
           // Fire "isEditAllowed" ?
-          val fireIsEditAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isEditAllowed)
-          val fireIsInspectAllowedOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.isInspectAllowed)
-          val fireDisplayNameForEntityOpt = RuleUtils.potentialFireRule(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+          val fireIsEditAllowedOpt = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.isEditAllowed)
+          val fireIsInspectAllowedOpt = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.isInspectAllowed)
+          val fireDisplayNameForEntityOpt = RuleUtils.potentialFireRuleResultPot(p.proxy.value.ruleResults, d2wContext, RuleKeys.displayNameForEntity)
           val fireComponentNamesOpt = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultOpt, RuleKeys.componentName)
           val fireDisplayNameForPropertiesOpt = RuleUtils.potentialFireRules(p.proxy.value.ruleResults, d2wContext, displayPropertyKeysRuleResultOpt, RuleKeys.displayNameForProperty)
 
@@ -292,7 +292,7 @@ object ERD2WInspect {
     .componentDidMount(scope => scope.backend.willmounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 
 }

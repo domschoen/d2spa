@@ -19,7 +19,7 @@ import d2spa.shared.PropertyMetaInfo
 object ERD2WDisplayToOne  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   /*
@@ -90,7 +90,7 @@ object ERD2WDisplayToOne  {
               val propertyName = d2wContext.propertyKey.get
 
               val ruleResultsModel = p.proxy.value.ruleResults
-              val keyWhenRelationshipOpt = RuleUtils.potentialFireRule(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+              val keyWhenRelationshipOpt = RuleUtils.potentialFireRuleResultPot(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
 
 
               val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
@@ -208,7 +208,7 @@ object ERD2WDisplayToOne  {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext,  proxy: ModelProxy[MegaContent]) =
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) =
     component(Props(ctl, d2wContext,  proxy))
 
 }

@@ -12,7 +12,7 @@ import d2spa.client.SPAMain.{ListPage, QueryPage, TaskAppPage}
 import d2spa.client.components.Bootstrap.{Button, CommonStyle}
 import d2spa.client.components.Icon
 import d2spa.client.logger.log
-import d2spa.shared.{EOEntity, TaskDefine}
+import d2spa.shared.{EOEntity, TaskDefine, D2WContext}
 
 
 
@@ -32,7 +32,7 @@ object MenuHeader {
 
     def selectMenu(entityName: String) = {
       //log.finest("selectMenu")
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some("query"))
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(entityName), task = Some("query")))
 
       Callback.log(s"Menu selected: $entityName") >>
         $.props >>= (_.proxy.dispatchCB(GetMetaDataForSetPage(d2wContext)))
@@ -40,7 +40,7 @@ object MenuHeader {
 
     def newEO(entity: EOEntity) = {
       log.finest("new EO for entity " + entity)
-      val d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit), eo = None)
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit), eo = None))
 
       Callback.log(s"New EO for: $entity") >>
         $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))

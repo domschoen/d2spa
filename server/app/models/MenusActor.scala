@@ -40,9 +40,9 @@ case class MenuItem(
 object MenusActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new MenusActor(eomodelActor, ws))
 
-  case class MenusResponse(menus: Menus, d2wContext: D2WContextFullFledged)
+  case class MenusResponse(menus: Menus, d2wContext: D2WContext)
 
-  case class GetMenus(d2wContext: D2WContextFullFledged, requester: ActorRef)
+  case class GetMenus(d2wContext: D2WContext, requester: ActorRef)
 
 }
 

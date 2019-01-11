@@ -11,24 +11,26 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object AfterEffectRouter {
   val singleton = new AfterEffectRouter()
 
-  def setPageForTaskAndEOAndEntity(d2WContext: D2WContext): Future[diode.NoAction.type] = {
+  def setPageForTaskAndEOAndEntity(pageContext: PageContext): Future[diode.NoAction.type] = {
 
 
-    log.finest("AfterEffectRouter " + d2WContext)
-    val entityName = d2WContext.entityName.get
-    d2WContext.task.get match {
+    log.finest("AfterEffectRouter " + pageContext)
+    val d2wContext = pageContext.d2wContext
+    val entityName = d2wContext.entityName.get
+    d2wContext.task.get match {
       case "query" => setRouterToPage(QueryPage(entityName))
       case "list" => setRouterToPage(ListPage(entityName))
-      case "edit" => setEOPageWithContext(d2WContext)
-      case "inspect" => setEOPageWithContext(d2WContext)
+      case "edit" => setEOPageWithContext(pageContext)
+      case "inspect" => setEOPageWithContext(pageContext)
       case _ => setRouterToPage(QueryPage(entityName))
     }
   }
 
-  def setEOPageWithContext(d2WContext: D2WContext): Future[diode.NoAction.type] = {
-    val entityName = d2WContext.entityName.get
-    val taskName = d2WContext.task.get
-    d2WContext.eo match {
+  def setEOPageWithContext(pageContext: PageContext): Future[diode.NoAction.type] = {
+    val d2wContext = pageContext.d2wContext
+    val entityName = d2wContext.entityName.get
+    val taskName = d2wContext.task.get
+    d2wContext.eo match {
       case Some(eo) =>
         val pk = eo.pk.pks.head
         if (pk < 0) {

@@ -2,7 +2,7 @@ package d2spa.client.components
 
 
 import d2spa.client.EOCacheUtils
-import d2spa.client.D2WContext
+import d2spa.client.PageContext
 import d2spa.shared.{EmptyValue, StringValue}
 import diode.react.ModelProxy
 import diode.Action
@@ -25,7 +25,7 @@ import d2spa.client.logger._
 object ERD2WEditString  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -62,6 +62,6 @@ object ERD2WEditString  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }

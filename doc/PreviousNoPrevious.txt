@@ -113,8 +113,41 @@ Search
                 ShowResults (MyCircuit.PreviousPageHandler)
                     RegisterPreviousPageAndSetPage
         
+
+Search with criteria
+    SearchAction (MyCircuit)
+        PrepareSearchForServer ((MyCircuit.PreviousPageHandler)
+            socket.Search
+
     
-    
+Get Rules
+    GetMetaData
+        RuleActor ! GetRulesForMetaData
+            WebSocketActor ! MetaDataResponse
+                   
+   
+
+Why InitMetaDataForList ? and not just InitMetaData
+NVListComponent
+    InitMetaDataForList (it creates the D2WContext with list inside)
+        socket.GetMetaData
+            RulesActor ! GetRulesForMetaData
+                WebSocketActor ! MetaDataResponse
+                    out ! MetaDataResponseMsg
+    SetMetaData    
+        RegisterPreviousPageAndSetPage
+            RegisterPreviousPageAndSetPageRemoveMemEO
+                RegisterPreviousPageAndSetPagePure
+                    SetPage
+                        AfterEffectRouter.setPageForTaskAndEOAndEntity             
+-> wrong             
+
+NVListComponent.willMount
+    SendRuleRequest
+        socket.ExecuteRuleRequest
+
+
+   
     
 Should we avoid cache for new EO ? 
 @@ -539,7 +539,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode

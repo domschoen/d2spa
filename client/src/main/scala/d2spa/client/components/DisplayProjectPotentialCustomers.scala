@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.D2WContext
+import d2spa.client.PageContext
 import d2spa.client.logger.D2SpaLogger
 import d2spa.shared.{EO, EOValue, PropertyMetaInfo}
 import diode.react.ModelProxy
@@ -24,7 +24,7 @@ object DisplayProjectPotentialCustomers {
 
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($: BackendScope[Props, Unit]) {
@@ -44,6 +44,6 @@ object DisplayProjectPotentialCustomers {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }

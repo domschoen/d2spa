@@ -17,7 +17,7 @@ import japgolly.scalajs.react.component.Scala
 
 
 object D2WComponentInstaller  {
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -72,5 +72,5 @@ object D2WComponentInstaller  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]): Scala.Unmounted[D2WComponentInstaller.Props, Unit, D2WComponentInstaller.Backend] = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]): Scala.Unmounted[D2WComponentInstaller.Props, Unit, D2WComponentInstaller.Backend] = component(Props(ctl, d2wContext, proxy))
 }

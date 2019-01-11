@@ -8,7 +8,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.ext.KeyCode
-import d2spa.client.D2WContext
+import d2spa.client.PageContext
 
 import scalacss.ScalaCssReact._
 //import d2spa.client.css.GlobalStyle
@@ -22,7 +22,7 @@ import d2spa.client.{MegaContent, UpdateEOValueForProperty}
 object ERD2WEditNumber {
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -59,7 +59,7 @@ object ERD2WEditNumber {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 
 }
 

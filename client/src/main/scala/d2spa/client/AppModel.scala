@@ -3,9 +3,8 @@ package d2spa.client
 import diode._
 import diode.data.{Pot, _}
 import diode.util._
-import d2spa.shared.{D2WContextFullFledged, EntityMetaData, _}
+import d2spa.shared.{D2WContext, EntityMetaData, _}
 import boopickle.DefaultBasic._
-import d2spa.client.EOCacheUtils.eoEntityMapOpt
 import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared.WebSocketMessages.RuleToFire
 import jdk.nashorn.internal.ir.PropertyKey
@@ -23,7 +22,7 @@ sealed trait RulesContainer {
 
 case class AppConfiguration(serverAppConf: DebugConf = DebugConf(true), isDebugMode: Boolean = false, fetchMenus: Boolean = true, socketReady: Boolean = false)
 
-case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), metaDataFetched: Boolean = false, properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
+case class PageConfigurationRuleResults(override val ruleResults: List[RuleResult] = List(), properties: Map[String,PropertyRuleResults] = Map()) extends RulesContainer
 case class PropertyRuleResults(override val ruleResults: List[RuleResult] = List(), typeV: String = "stringV") extends RulesContainer
 object PageConfiguration {
   val NoPageConfiguration = "NoPageConfiguration"
@@ -57,7 +56,7 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 // concept of qualifier / Batch number --> eos
 
 sealed trait EOCacheEntityElement
-case class EODBCacheEntityElement(data : Pot[Map[EOPk,EO]]) extends EOCacheEntityElement
+case class EODBCacheEntityElement(data : Pot[Map[EOPk,EO]], hasAllRecords: Boolean = false) extends EOCacheEntityElement
 case class EOMemCacheEntityElement(data : Map[EOPk,EO]) extends EOCacheEntityElement
 
 
@@ -75,58 +74,58 @@ case object HideBusyIndicator extends Action
 case class SearchWithBusyIndicator(entityName: String) extends Action
 
 case object SocketReady extends Action
-case class InitAppSpecificClient(d2wContext: D2WContextFullFledged) extends Action
+case class InitAppSpecificClient(d2wContext: D2WContext) extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
-case class SetMenus(menus: Menus, d2wContext: D2WContextFullFledged) extends Action
+case class SetMenus(menus: Menus, d2wContext: D2WContext) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
 case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: PageContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
-case class FetchEOModelAndMenus(d2wContext: D2WContextFullFledged) extends Action
+case class FetchEOModelAndMenus(d2wContext: D2WContext) extends Action
 
 
-case class SetEOModelThenFetchMenu(eomodel: EOModel, d2wContext: D2WContextFullFledged) extends Action
+case class SetEOModelThenFetchMenu(eomodel: EOModel, d2wContext: D2WContext) extends Action
 case class SetEOModel(eomodel: EOModel) extends Action
-case class FetchMenu(d2wContext: D2WContextFullFledged) extends Action
+case class FetchMenu(d2wContext: D2WContext) extends Action
 
 case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class CompletedEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
-case class SetPageForSocketReady(d2wContext: D2WContext) extends Action
+case class CompletedEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
+case class SetPageForSocketReady(d2wContext: PageContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
 
-case class InitMetaData(d2wContext: D2WContext) extends Action
-case class InitMetaDataForList(entityName: String) extends Action
+case class InitMetaData(d2wContext: PageContext) extends Action
+case class SendRuleRequest(ruleRequest: RuleRequest) extends Action
 //case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
-case class SetMetaData(d2wContext: D2WContextFullFledged, ruleResults: Option[List[RuleResult]]) extends Action
+case class SetMetaData(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
-case class NewAndRegisteredEO(d2wContext: D2WContext) extends Action
-case class RegisteredExistingEO(d2wContext: D2WContext) extends Action
+case class NewAndRegisteredEO(d2wContext: PageContext) extends Action
+case class RegisteredExistingEO(d2wContext: PageContext) extends Action
 
 
-case class NewEOCreated(eo: EO, d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class NewEOCreated(eo: EO, d2wContext: PageContext, actions: List[D2WAction]) extends Action
 case class NewEOCreatedForEdit(eo: EO) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
 
-case class PrepareEODisplay(d2wContext: D2WContext) extends Action
-case class PrepareEditPage(d2wContext: D2WContext) extends Action
+case class PrepareEODisplay(d2wContext: PageContext) extends Action
+case class PrepareEditPage(d2wContext: PageContext) extends Action
 
 
-case class PrepareEODisplayRules(d2wContext: D2WContext, cache: EOCache, needsHydration: Boolean) extends Action
+case class PrepareEODisplayRules(d2wContext: PageContext, cache: EOCache, needsHydration: Boolean) extends Action
 
-case class RegisterPreviousPage(d2wContext: D2WContext) extends Action
-case class RegisterPreviousPageAndSetPage(d2wContext: D2WContext) extends Action
-case class RegisterPreviousPageAndSetPagePure(d2wContext: D2WContext) extends Action
-case class RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext: D2WContext, eo: EO) extends Action
+case class RegisterPreviousPage(d2wContext: PageContext) extends Action
+case class RegisterPreviousPageAndSetPage(d2wContext: PageContext) extends Action
+case class RegisterPreviousPageAndSetPagePure(d2wContext: PageContext) extends Action
+case class RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext: PageContext, eo: EO) extends Action
 
-case class SetPage(d2WContext: D2WContext) extends Action
+case class SetPage(d2WContext: PageContext) extends Action
 case class UpdateCurrentContextWithEO(eo: EO) extends Action
 case object InitMenuSelection extends Action
 
@@ -137,13 +136,13 @@ case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
 case class GoSaving(entityName: String, eo: EO) extends Action
 
-case class SavingEO(d2wContext: D2WContextFullFledged, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
+case class SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
-case class PrepareSearchForServer(d2wContext: D2WContext, isMetaDataFetched: Boolean) extends Action
+case class PrepareSearchForServer(d2wContext: PageContext, isMetaDataFetched: Boolean) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
-case class UpdateEOValueForProperty(eo: EO, d2wContext: D2WContext, value: EOValue) extends Action
+case class UpdateEOValueForProperty(eo: EO, d2wContext: PageContext, value: EOValue) extends Action
 
 case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
@@ -155,14 +154,14 @@ case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EO]) extends
 // similar to:
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
-case class SavedEO(dw2Context: D2WContext) extends Action
-case class SavedEOWithResults(fromTask: String, eo: EO, dw2Context: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
+case class SavedEO(dw2Context: PageContext) extends Action
+case class SavedEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
 
 case class DeleteEO(fromTask: String, eo: EO) extends Action
 case class DeleteEOFromList(eo: EO) extends Action
 case class DeletingEO(eo: EO) extends Action
-case class EditEO(dw2Context: D2WContext) extends Action
-case class EditEOWithResults(fromTask: String, eo: EO, dw2Context: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
+case class EditEO(dw2Context: PageContext) extends Action
+case class EditEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
 case class InspectEO(fromTask: String, eo: EO, isOneRecord: Boolean = false) extends Action
 
 case class SaveError(eo: EO) extends Action
@@ -171,18 +170,15 @@ case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
 
 trait D2WAction extends diode.Action
-case class FireRule(rhs: D2WContext, key: String) extends D2WAction
 
 // Typical case:
 // key : componentName
 // keysSubstrate: displayPropertyKeys either defined by a rule result or a rule to fire
 // In that case the FireRules will trigger RuleToFire action to the server for as many entries in dipslayPropertyKeys
-case class FireRules(propertyKeys: List[String], rhs: D2WContext, key: String) extends D2WAction
-case class Hydration(drySubstrate: DrySubstrate,  wateringScope: WateringScope) extends D2WAction
 case class CreateMemID(entityName: String) extends D2WAction
-case class GetMetaDataForSetPage(d2wContext: D2WContext) extends Action
+case class GetMetaDataForSetPage(d2wContext: PageContext) extends Action
 
-case class FireActions(d2wContext: D2WContext, actions: List[D2WAction]) extends Action
+case class FireActions(d2wContext: PageContext, actions: List[D2WAction]) extends Action
 
 
 object Hydration {
@@ -191,7 +187,7 @@ object Hydration {
 
   // case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
   def entityName(drySubstrate: DrySubstrate) = drySubstrate match {
-    case DrySubstrate(Some(eosAtKeyPath), _ , _) => eosAtKeyPath.eo.entityName
+    case DrySubstrate(Some(eosFault), _ , _) => eosFault.entityName
     case DrySubstrate(_, Some(eoFault) , _) => eoFault.entityName
     case DrySubstrate(_, _ , Some(fs)) => EOFetchSpecification.entityName(fs)
   }
@@ -208,30 +204,61 @@ object Hydration {
 
   }
 
+  def needsHydration(drySubstrateOpt: Option[DrySubstrate], displayPropertyKeysRuleResultPot: PotFiredRuleResult, cache: EOCache, eomodel: EOModel) :Boolean = {
+    drySubstrateOpt match {
+      case Some(drySubstrate) =>
+
+        val displayPropertyKeysOpt = RuleUtils.ruleListValueFromPotFiredRuleResult(displayPropertyKeysRuleResultPot)
+        displayPropertyKeysOpt match {
+          case Some(displayPropertyKeys) =>
+            val isHydrated = Hydration.isHydratedForPropertyKeys(eomodel, cache, drySubstrate, displayPropertyKeys)
+            !isHydrated
+          case None =>
+            true
+        }
+
+      case None =>
+        false
+    }
+
+
+  }
+
+
+  def drySubstrateFromDataRep(dataRep: Option[DataRep]) :Option[DrySubstrate]  = {
+    dataRep match {
+      case Some(DataRep(Some(fetchSpecification), _)) =>
+        Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
+
+      case Some(DataRep(_, Some(eoakp))) => {
+        val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
+        eovalueOpt match {
+          case Some(eovalue) =>
+            eovalue match {
+              case ObjectsValue(pks) =>
+                val entityName = eoakp.destinationEntityName
+                val eosFault =  EOsFault(entityName, pks)
+                Some(DrySubstrate(eos = Some(eosFault)))
+              case _ => None
+            }
+          case None => None
+        }
+      }
+      case _ => None
+    }
+  }
+
+
+
   // EOs are supposed to exists in cache but not hydrated correctly in scope
   def isHydratedForPropertyKeys(eomodel: EOModel, cache: EOCache, drySubstrate: DrySubstrate, propertyKeys: List[String]): Boolean = {
     drySubstrate match {
       case DrySubstrate(_, Some(eoFault), _) =>
         isEOHydrated(cache,eoFault.entityName, eoFault.pk, propertyKeys)
-      case DrySubstrate(Some(eoakp), _, _) =>
-        //log.finest("Hydration DrySubstrate " + eoakp.eo.entity.name + " for key " + eoakp.keyPath)
-        val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
-        //log.finest("Hydration DrySubstrate valueForKey " + eovalueOpt)
-
-        eovalueOpt match {
-          case Some(eovalue) =>
-            eovalue match {
-              case ObjectsValue(pks) =>
-                //log.finest("NVListComponent render pks " + pks)
-                val destinationEntityName = eoakp.destinationEntityName
-                val nonHydrated = pks.find(pk => !isEOHydrated(cache, destinationEntityName, pk, propertyKeys))
-                log.finest("AppModel | Hydration | isHydratedForPropertyKeys " + destinationEntityName + " at path: " + eoakp.keyPath + " any non hydrated " + nonHydrated)
-                nonHydrated.isEmpty
-
-              case _ => false
-            }
-          case _ => false
-        }
+      case DrySubstrate(Some(eosFault), _, _) =>
+        val destinationEntityName = eosFault.entityName
+        val nonHydrated = eosFault.pks.find(pk => !isEOHydrated(cache, destinationEntityName, pk, propertyKeys))
+        nonHydrated.isEmpty
       case DrySubstrate(_, _, Some(fs)) =>
         val eos = EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache,fs)
         val nonHydrated = eos.find(eo => !isEOHydrated(cache, eo.entityName, eo.pk, propertyKeys))
@@ -279,27 +306,16 @@ object QueryValue {
 
 // The D2WContext will contains also the queryValues
 // it should contain everything needed to redisplay a page
-case class D2WContext(entityName: Option[String],
-                      task: Option[String],
-                      previousTask: Option[D2WContext] = None,
-                      //pageCounter: Int = 0,
-                      eo: Option[EO] = None,
-                      queryValues: Map[String, QueryValue] = Map(),
-                      dataRep: Option[DataRep] = None,
-                      propertyKey:  Option[String] = None,
-
-                      // Either
-                      // - defined by a rule not yet fired (RuleFault). It is a action which is before in the list
-                      // - a value
-                      // - None
-                      pageConfiguration: PotFiredKey = PotFiredKey(Right(None))
+case class PageContext(previousTask: Option[PageContext] = None,
+                       queryValues: Map[String, QueryValue] = Map(),
+                       dataRep: Option[DataRep] = None,
+                       d2wContext: D2WContext
                       )
 
 // Right = Some
 // here right is an result which could be Some or None
 // left is not yet a result because it is a rule to be fired
 case class PotFiredKey (value: Either[FireRule, Option[String]])
-case class PotFiredRuleResult (value: Either[FireRule, RuleResult])
 
 case class DataRep (fetchSpecification: Option[EOFetchSpecification] = None, eosAtKeyPath: Option[EOsAtKeyPath] = None)
 
@@ -326,12 +342,6 @@ object EOQualifierType {
 case class KeysSubstrate(ruleResult: PotFiredRuleResult)
 
 
-case class DrySubstrate(
-                          eosAtKeyPath: Option[EOsAtKeyPath] = None,
-                          eo: Option[EOFault] = None,
-                          fetchSpecification: Option[EOFetchSpecification] = None
-                       )
-case class WateringScope(ruleResult: PotFiredRuleResult)
 //case class EORefsDefinition()
 case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 //case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
@@ -341,191 +351,62 @@ case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 
 object RuleUtils {
 
-  def metaDataFetched(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Boolean  = {
-    val ruleContainerOpt = RuleUtils.pageConfigurationRuleResultsForContext(ruleResults,d2wContext)
-    ruleContainerOpt match {
-      case Some(rulesContainer) => rulesContainer.metaDataFetched
-      case None => false
-    }
+
+  def metaDataFiringRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],d2wContext: D2WContext) = {
+    val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
+    val displayNameForEntityRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
+
+    val componentNameFireRulesOpt = RuleUtils.potentialFireRules(ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.componentName)
+    val displayNameForPropertyFireRulesOpt = RuleUtils.potentialFireRules(ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.displayNameForProperty)
+    val attributeTypeFireRulesOpt = RuleUtils.potentialFireRules(ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.attributeType)
+
+    val fireSingleRulesPots = List(displayPropertyKeysRuleResultPot, displayNameForEntityRuleResultPot)
+    val fireSingleRules = firingRulesFromPotFiredRuleResult(fireSingleRulesPots)
+
+    val fireRulesOpts = List(componentNameFireRulesOpt, displayNameForPropertyFireRulesOpt, attributeTypeFireRulesOpt)
+    val fireRules = firingRulesFromFireRules(fireRulesOpts)
+
+    fireSingleRules ::: fireRules
   }
 
-  def potentialFireRule(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String) : Option[FireRule] = {
-    val ruleResultOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, key)
+  def firingRulesFromFireRules(fireRulesOpts: List[Option[FireRules]]) = fireRulesOpts.flatten
+
+
+    def firingRulesFromPotFiredRuleResult(fireSingleRulesPots: List[PotFiredRuleResult]) = {
+    val fireSingleRulesOpts = fireSingleRulesPots.map(pot => pot match {
+      case PotFiredRuleResult(Left(fireRule)) => Some(fireRule)
+      case _ => None
+    })
+    fireSingleRulesOpts.flatten
+  }
+
+  def potentialFireRuleResultPot(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String): PotFiredRuleResult = {
+    val ruleResultOpt: Option[RuleResult] = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, key)
     ruleResultOpt match {
-      case Some(_) => None
-      case None =>
-        Some(FireRule(d2wContext, key))
+      case Some(ruleResult) => PotFiredRuleResult(Right(ruleResult))
+      case None => PotFiredRuleResult(Left(FireRule(key)))
+    }
+  }
+
+  def potentialFireRule(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String): Option[FireRule] = {
+    val ruleResultOpt: Option[RuleResult] = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, key)
+    ruleResultOpt match {
+      case Some(ruleResult) => None
+      case None => Some(FireRule(key))
     }
   }
 
 
-
-
-  def potentialFireRules(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
-                         d2wContext: D2WContext,
-                         displayPropertyKeysRuleResultOpt: Option[RuleResult],
-                         key: String) : Option[FireRules] = {
-
-    displayPropertyKeysRuleResultOpt match {
-      case Some(displayPropertyKeysRuleResult) =>
-        val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(displayPropertyKeysRuleResultOpt)
-        if (displayPropertyKeys.size == 0) {
-          None
-        } else {
-          val propertyD2WContext = d2wContext.copy(propertyKey = Some(displayPropertyKeys.head))
-          val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
-          ruleResultOpt match {
-            case Some(_) => None
-            case None =>
-              Some(FireRules(displayPropertyKeys, d2wContext, key))
-          }
-        }
-      case None => None
-    }
-  }
-
-  /*
-    RuleFault(
-        D2WContext(
-            Some(Project),Some(list),None,None,Map(),None,None,
-            // Page Configuration
-            Some(
-                Left(
-                    RuleFault(
-                        D2WContext(
-                            Some(Project),Some(list),None,None,Map(),
-                            Some(
-                                DataRep(None,
-                                    Some(
-                                        EOsAtKeyPath(
-                                            EO(
-                                              EOEntity(
-                                                Customer,id,List(EORelationship(projects,Project))
-                                              ),
-                                              Map(
-                                                acronym -> StringValue(Some(8)),
-                                                name -> StringValue(Some(8)),
-                                                id -> IntValue(Some(8)),
-                                                address -> StringValue(Some(8)),
-                                                projects -> ObjectsValue(Vector(1)),
-                                                type -> StringValue(Some(Customer))
-                                              ),8,None)
-                                            ,projects
-                                        )
-                                    )
-                                )
-                            ),
-                            None,
-                            None
-                        )
-                        ,listConfigurationName
-                    )
-                )
-            )
-        )
-        ,displayPropertyKeys
-    )
-   */
-
-  /*def fireRuleFault(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleFault: RuleFault): Option[RuleResult] = {
-    val ruleKey = ruleFault.key
-    val ruleRhs = D2WContextUtils.d2wContextByResolvingRuleFaults(ruleResults,ruleFault.rhs)
-    RuleUtils.ruleResultForContextAndKey(ruleResults,ruleRhs,ruleKey)
-  }*/
-
-
-
-
-  def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {D2WContextUtils.isD2WContextEquals(r.rhs,rhs) && r.key.equals(key)})
-  //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
-
-  def ruleStringValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[String] = {
-    val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
-    ruleStringValueWithRuleResult(ruleResult)
-  }
-
-  def ruleBooleanValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Boolean = {
-    val booleanAsStringOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, key)
-    booleanAsStringOpt match {
-      case Some(boolVal) => boolVal.equals("true")
-      case None => false
-    }
-  }
-
-  def ruleListValueForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): List[String] = {
-    val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
-    RulesUtilities.ruleListValueWithRuleResult(ruleResult)
-  }
-
-  def pageConfigurationWithRuleResult(propertyKeyOpt: Option[String],ruleResult: RuleResult) = {
-    propertyKeyOpt match {
-      case Some(propertyKey) => {
-        PageConfigurationRuleResults(properties = Map(propertyKey -> PropertyRuleResults(ruleResults = List(ruleResult))))
-      }
-      case _ => {
-        PageConfigurationRuleResults(ruleResults = List(ruleResult))
-      }
-    }
-  }
-
-
-  def registerRuleResult(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], ruleResult: RuleResult): Map[String,Map[String,Map[String,PageConfigurationRuleResults]]] = {
-    val d2wContext = ruleResult.rhs
+  def pageConfigurationRuleResultsForContext(
+                                              ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],
+                                              d2wContext: D2WContext
+                                            ): Option[PageConfigurationRuleResults] = {
     val entityName = d2wContext.entityName.get
     val task = d2wContext.task.get
-    val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get else PageConfiguration.NoPageConfiguration
-
-
-    val taskSubTree = if (ruleResults.contains(entityName)) {
-      val existingTaskSubTree = ruleResults(entityName)
-      val pageConfigurationSubTree = if (existingTaskSubTree.contains(task)) {
-        val existingPageConfigurationSubTree = existingTaskSubTree(task)
-        val pageConfigurationRuleResults = if (existingPageConfigurationSubTree.contains(pageConfiguration)) {
-          val existingPageConfigurationRuleResults = existingPageConfigurationSubTree(pageConfiguration)
-          d2wContext.propertyKey match {
-            case Some(propertyKey) => {
-              val propertyRuleResults = if (existingPageConfigurationRuleResults.properties.contains(propertyKey)) {
-                val existingPropertyRuleResults = existingPageConfigurationRuleResults.properties(propertyKey)
-                existingPropertyRuleResults.copy(ruleResults = ruleResult :: existingPropertyRuleResults.ruleResults )
-              } else {
-                PropertyRuleResults(ruleResults = List(ruleResult))
-              }
-              val newProperties = existingPageConfigurationRuleResults.properties + (propertyKey -> propertyRuleResults)
-              existingPageConfigurationRuleResults.copy(properties = newProperties)
-            }
-            case _ => {
-              existingPageConfigurationRuleResults.copy(ruleResults = ruleResult :: existingPageConfigurationRuleResults.ruleResults)
-            }
-          }
-        } else {
-          pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
-        }
-        val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
-        existingPageConfigurationSubTree + (pageConfiguration -> flaggedPageConfigurationRuleResults)
-      } else {
-        val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
-        val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
-        Map(pageConfiguration -> flaggedPageConfigurationRuleResults)
-      }
-      existingTaskSubTree + (task -> pageConfigurationSubTree)
-    } else {
-      val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey,ruleResult)
-      val flaggedPageConfigurationRuleResults = if (ruleResult.key.equals(RuleKeys.displayNameForEntity)) pageConfigurationRuleResults.copy(metaDataFetched = true) else pageConfigurationRuleResults
-
-      Map(task -> Map(pageConfiguration -> flaggedPageConfigurationRuleResults))
+    val pageConfiguration: String = d2wContext.pageConfiguration match {
+      case Some(pc) => pc
+      case None => PageConfiguration.NoPageConfiguration
     }
-    ruleResults + (entityName -> taskSubTree)
-  }
-
-  def pageConfigurationRuleResultsForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[PageConfigurationRuleResults] = {
-    val entityName = d2wContext.entityName.get
-    val task = d2wContext.task.get
-    val pageConfiguration: String = if (d2wContext.pageConfiguration.value.isRight) {
-      d2wContext.pageConfiguration.value.right.get match {
-        case Some(pc) => pc
-        case None => PageConfiguration.NoPageConfiguration
-      }
-    } else PageConfiguration.NoPageConfiguration
     if (ruleResults.contains(entityName)) {
       val entitySubTree = ruleResults(entityName)
       if (entitySubTree.contains(task)) {
@@ -538,8 +419,8 @@ object RuleUtils {
     } else None
   }
 
-  def ruleContainerForContext(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[RulesContainer] = {
-    val pageConfigurationRuleResultsOpt = pageConfigurationRuleResultsForContext(ruleResults,d2wContext)
+  def ruleContainerForContext(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext): Option[RulesContainer] = {
+    val pageConfigurationRuleResultsOpt = pageConfigurationRuleResultsForContext(ruleResults, d2wContext)
     pageConfigurationRuleResultsOpt match {
       case Some(pageConfigurationRuleResults) =>
         d2wContext.propertyKey match {
@@ -558,231 +439,317 @@ object RuleUtils {
     }
   }
 
-  def ruleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String): Option[RuleResult] = {
-    val ruleContainerOpt = ruleContainerForContext(ruleResults,d2wContext)
+
+  def ruleResultForContextAndKey(
+                                  ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],
+                                  d2wContext: D2WContext,
+                                  key: String): Option[RuleResult] = {
+    val ruleContainerOpt = ruleContainerForContext(ruleResults, d2wContext)
     ruleContainerOpt match {
       case Some(rulesContainer) => {
-        ruleResultForContextAndKey(rulesContainer.ruleResults,d2wContext,key)
+        ruleResultFromRuleResultsForContextAndKey(rulesContainer.ruleResults, d2wContext, key)
       }
       case _ => None
     }
   }
 
 
-  def ruleStringValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
-    ruleResultOpt match {
-      case Some(ruleResult) => ruleResult.value.stringV
-      case _ => None
-    }
-  }
-
-  def existsRuleResultForContextAndKey(ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]], d2wContext: D2WContext, key:String) =
-    ruleResultForContextAndKey(ruleResults, d2wContext, key).isDefined
-
-
-}
-
-object D2WContextUtils {
-
-
-  def queryValueForKey(d2wContext: D2WContext, key: String) = {
-    val queryValues = d2wContext.queryValues
-    if (queryValues.contains(key)) Some(queryValues(key).value) else None
-  }
-
-  def queryValueAsStringForKey(d2wContext: D2WContext, key: String) = {
-    val value = D2WContextUtils.queryValueForKey(d2wContext, key)
-    val strValue = value match {
-      case Some(StringValue(str)) => str
-      case _ => ""
-    }
-  }
-
-  def convertToPotFiringKey(potFiredKey: PotFiredKey): PotFiringKey = {
-    potFiredKey.value match {
-      case Right(b) => PotFiringKey(Right(b))
-      case Left(fireRule) => {
-        val newRhs = D2WContextUtils.convertFromD2WContextToFiringD2WContext(fireRule.rhs)
-        PotFiringKey(Left(RuleToFire(newRhs,fireRule.key)))
-      }
-    }
-  }
-
-
-
-
-  def convertFromD2WContextToFiringD2WContext(d2wContext: D2WContext): FiringD2WContext = {
-    FiringD2WContext(
-        d2wContext.entityName,
-        d2wContext.task,
-        d2wContext.propertyKey,
-        convertToPotFiringKey(d2wContext.pageConfiguration)
-    )
-  }
-
-  def convertD2WContextToFullFledged(d2wContext: D2WContext): D2WContextFullFledged = {
-    //log.finest("D2WContextUtils.convertD2WContextToFullFledged : " + d2wContext.pageConfiguration)
-    /*if(d2wContext.pageConfiguration.isDefined) {
-      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get " + d2wContext.pageConfiguration.get)
-      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right " + d2wContext.pageConfiguration.get.right)
-      log.finest("D2WContextUtils.convertD2WContextToFullFledged : d2wContext.pageConfiguration.get.right.get " + d2wContext.pageConfiguration.get.right.get)
-
-    }*/
-
-    D2WContextFullFledged(
-      d2wContext.entityName,
-      d2wContext.task,
-      d2wContext.propertyKey,
-      d2wContext.pageConfiguration.value.right.get,
-      d2wContext.eo
-    )
-  }
-
-  def convertFullFledgedToD2WContext(d2wContext: D2WContextFullFledged) = D2WContext(
-    d2wContext.entityName,
-    d2wContext.task,
-    None,
-    d2wContext.eo,
-    Map(),
-    None,
-    d2wContext.propertyKey,
-    PotFiredKey(Right(d2wContext.pageConfiguration))
-  )
-
-
-  def isD2WContextEquals(a: D2WContextFullFledged, b: D2WContext): Boolean  = {
-    if (!a.entityName.equals(b.entityName)) return false
-    if (!a.task.equals(b.task)) return false
-    if (!a.propertyKey.equals(b.propertyKey)) return false
-    if (!(b.pageConfiguration.value.isRight && a.pageConfiguration.equals(b.pageConfiguration.value.right.get))) return false
-    return true
-  }
-
-}
-
-
-case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: D2WContext, actions: List[D2WAction]) extends Action
-case class SetJustRuleResults(ruleResults: List[RuleResult]) extends Action
-case class SetPreviousWithResults(ruleResults: List[RuleResult], d2wContext: D2WContext) extends Action
-
-
-
-case class FireRelationshipData(property: PropertyMetaInfo) extends Action
-
-case class ShowPage(entity: EOEntity, task: String) extends Action
-case class SetupQueryPageForEntity(entityName: String) extends Action
-
-case object SwithDebugMode extends Action
-case class FetchShowD2WDebugButton(d2wContext: D2WContext) extends Action
-case class SetDebugConfiguration(debugConf: DebugConf, d2wContext: D2WContextFullFledged) extends Action
-
-object EOCacheUtils {
-
-
-  def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
-    val pk = eo.pk
-    Some((pk, eo))
-  }).flatten.toMap
-
-
-  def readyEODBCacheEntityElement(eos: List[EO]): EODBCacheEntityElement = {
-    // we create a Map with eo and id
-    // From eos to update, we create a map of key ->
-    val refreshedEOs = refreshedEOMap(eos)
-    EODBCacheEntityElement(Ready(refreshedEOs))
-  }
-
-  /*def memCacheEntityElement(eos: List[EO]): EOMemCacheEntityElement = {
-    val refreshedEOs = refreshedEOMap(eos)
-    EOMemCacheEntityElement(refreshedEOs)
-  }*/
-
-
-  def updatedEOMap(entityMap: Map[EOPk, EO], updatedEOSubset: List[EO]): Map[EOPk, EO] = {
-    val refreshedEOs = refreshedEOMap(updatedEOSubset)
-    // work with new and eo to be updated
-    val refreshedPks = refreshedEOs.keySet
-    val existingPks = entityMap.keySet
-
-    val newPks = refreshedPks -- existingPks
-
-    // Iterate on eos
-    val newAndUpdateMap = refreshedPks.map(id => {
-      //log.finest("Refresh " + entityName + "[" + id + "]")
-      val refreshedEO = refreshedEOs(id)
-      //log.finest("Refreshed " + refreshedEO)
-
-      // 2 cases:
-      // new
-      if (newPks.contains(id)) {
-        (id, refreshedEO)
-      } else {
-        // existing -> to be updated
-        // Complete EOs !
-        val existingEO = entityMap(id)
-        (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
-      }
-    }).toMap
-    entityMap ++ newAndUpdateMap
-  }
-
-
-  //EOValueUtils.pk(eo)
-  def newUpdatedEntityCache(entityName: String, cache: Map[String, EOCacheEntityElement], entityCacheElement: EOCacheEntityElement): Map[String, EOCacheEntityElement] = {
-    cache + (entityName -> entityCacheElement)
-  }
-
-
-  // Returns None if nothing registered in the cache for that entityName
-  def dbEOsForEntityNamed(cache: EOCache, entityName: String): Option[List[EO]] = {
-    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache.eos, entityName)
-    eoCacheEntityElementOpt match {
-      case Some(eoCacheEntityElement) =>
-        eoEntityMapOpt(eoCacheEntityElement) match {
-          case Some(entityMap) =>
-            Some(entityMap.values.toList)
-          case None =>
-            None
-        }
+  def ruleStringValueFromPotFiredRuleResult(potFiredRuleResult: PotFiredRuleResult): Option[String] = {
+    ruleResultValueFromPotFiredRuleResult(potFiredRuleResult) match {
+      case Some(ruleResult) => ruleStringValueWithRuleResult(Some(ruleResult))
       case None =>
         None
     }
   }
 
-
-  def eoCacheEntityElementEos(eoCacheEntityElement: EOCacheEntityElement): List[EO] =
-    eoEntityMap(eoCacheEntityElement).values.toList
-
-  def eoEntityMap(eoCacheEntityElement: EOCacheEntityElement): Map[EOPk, EO] =
-    eoEntityMapOpt(eoCacheEntityElement) match {
-      case Some(entityMap) =>
-        entityMap
+  def ruleListValueFromPotFiredRuleResult(potFiredRuleResult: PotFiredRuleResult) = {
+    ruleResultValueFromPotFiredRuleResult(potFiredRuleResult) match {
+      case Some(ruleResult) => ruleListValueWithRuleResult(Some(ruleResult))
       case None =>
-        Map()
+        None
+    }
+  }
+    def ruleResultValueFromPotFiredRuleResult(potFiredRuleResult: PotFiredRuleResult) = {
+      potFiredRuleResult match {
+        case PotFiredRuleResult(Right(ruleResult)) => Some(ruleResult)
+        case _ => None
+      }
     }
 
 
-  def eoEntityMapOpt(eoCacheEntityElement: EOCacheEntityElement): Option[Map[EOPk, EO]] =
-    eoCacheEntityElement match {
-      case EODBCacheEntityElement(data) =>
-        if (data.isEmpty) None else Some(data.get)
-      case EOMemCacheEntityElement(data) =>
-        Some(data)
+    // in case the PotFiredRuleResult is non empty, we look for each property and return a list of only those missing
+    def potentialFireRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],
+                           d2wContext: D2WContext,
+                           propertyKeysRuleResultPot: PotFiredRuleResult,
+                           key: String): Option[FireRules] = {
+
+      propertyKeysRuleResultPot match {
+        case PotFiredRuleResult(Right(ruleResult)) =>
+          val propertyKeys: List[String] = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
+          val missingPropertyKeys: List[String] = propertyKeys.filter(propertyKey => {
+            val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+            val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
+            //ruleResultOpt.isEmpty
+            true
+          })
+
+
+          if (missingPropertyKeys.size == 0) {
+            None
+          } else {
+            Some(FireRules(PotFiredRulePropertyKeys(Right(missingPropertyKeys)), key))
+          }
+        case _ => None
+      }
     }
 
 
 
-  def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) Some(cache(entityName)) else None
 
-  def allEOsForEntityNamed(cache: EOCache, entityName: String) : List[EO] = {
-    val entityElements = List(
-      eoCacheEntityElementForEntityNamed(cache.insertedEOs,entityName),
-      eoCacheEntityElementForEntityNamed(cache.eos,entityName)
-    )
-    entityElements.flatten.flatMap(eoCacheEntityElementEos(_))
+
+    //def ruleResultForContextAndKey(ruleResults: List[RuleResult], rhs: D2WContext, key: String) = ruleResults.find(r => {r.key.equals(key)})
+
+    def ruleStringValueForContextAndKey(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String): Option[String] = {
+      val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
+      ruleStringValueWithRuleResult(ruleResult)
+    }
+
+    def ruleBooleanValueForContextAndKey(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String): Boolean = {
+      val booleanAsStringOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, key)
+      booleanAsStringOpt match {
+        case Some(boolVal) => boolVal.equals("true")
+        case None => false
+      }
+    }
+
+    def ruleListValueForContextAndKey(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String): List[String] = {
+      val ruleResult = ruleResultForContextAndKey(ruleResults, d2wContext, key)
+      RulesUtilities.ruleListValueWithRuleResult(ruleResult)
+    }
+
+
+
+    def pageConfigurationWithRuleResult(propertyKeyOpt: Option[String], ruleResult: RuleResult) = {
+      propertyKeyOpt match {
+        case Some(propertyKey) => {
+          PageConfigurationRuleResults(properties = Map(propertyKey -> PropertyRuleResults(ruleResults = List(ruleResult))))
+        }
+        case _ => {
+          PageConfigurationRuleResults(ruleResults = List(ruleResult))
+        }
+      }
+    }
+
+
+    def registerRuleResult(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], ruleResult: RuleResult): Map[String, Map[String, Map[String, PageConfigurationRuleResults]]] = {
+      val d2wContext = ruleResult.rhs
+      val entityName = d2wContext.entityName.get
+      val task = d2wContext.task.get
+      val pageConfiguration: String = if (d2wContext.pageConfiguration.isDefined) d2wContext.pageConfiguration.get else PageConfiguration.NoPageConfiguration
+
+
+      val taskSubTree = if (ruleResults.contains(entityName)) {
+        val existingTaskSubTree = ruleResults(entityName)
+        val pageConfigurationSubTree = if (existingTaskSubTree.contains(task)) {
+          val existingPageConfigurationSubTree = existingTaskSubTree(task)
+          val pageConfigurationRuleResults = if (existingPageConfigurationSubTree.contains(pageConfiguration)) {
+            val existingPageConfigurationRuleResults = existingPageConfigurationSubTree(pageConfiguration)
+            d2wContext.propertyKey match {
+              case Some(propertyKey) => {
+                val propertyRuleResults = if (existingPageConfigurationRuleResults.properties.contains(propertyKey)) {
+                  val existingPropertyRuleResults = existingPageConfigurationRuleResults.properties(propertyKey)
+                  existingPropertyRuleResults.copy(ruleResults = ruleResult :: existingPropertyRuleResults.ruleResults)
+                } else {
+                  PropertyRuleResults(ruleResults = List(ruleResult))
+                }
+                val newProperties = existingPageConfigurationRuleResults.properties + (propertyKey -> propertyRuleResults)
+                existingPageConfigurationRuleResults.copy(properties = newProperties)
+              }
+              case _ => {
+                existingPageConfigurationRuleResults.copy(ruleResults = ruleResult :: existingPageConfigurationRuleResults.ruleResults)
+              }
+            }
+          } else {
+            pageConfigurationWithRuleResult(d2wContext.propertyKey, ruleResult)
+          }
+          existingPageConfigurationSubTree + (pageConfiguration -> pageConfigurationRuleResults)
+        } else {
+          val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey, ruleResult)
+          Map(pageConfiguration -> pageConfigurationRuleResults)
+        }
+        existingTaskSubTree + (task -> pageConfigurationSubTree)
+      } else {
+        val pageConfigurationRuleResults = pageConfigurationWithRuleResult(d2wContext.propertyKey, ruleResult)
+        Map(task -> Map(pageConfiguration -> pageConfigurationRuleResults))
+      }
+      ruleResults + (entityName -> taskSubTree)
+    }
+
+
+
+
+    def ruleStringValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
+      ruleResultOpt match {
+        case Some(ruleResult) => ruleResult.value.stringV
+        case _ => None
+      }
+    }
+
+
+    def existsRuleResultForContextAndKey(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, key: String) =
+      ruleResultForContextAndKey(ruleResults, d2wContext, key).isDefined
+
+
   }
 
-/*
+  object D2WContextUtils {
+
+
+    def queryValueForKey(d2wContext: PageContext, key: String) = {
+      val queryValues = d2wContext.queryValues
+      if (queryValues.contains(key)) Some(queryValues(key).value) else None
+    }
+
+    def queryValueAsStringForKey(d2wContext: PageContext, key: String) = {
+      val value = D2WContextUtils.queryValueForKey(d2wContext, key)
+      val strValue = value match {
+        case Some(StringValue(str)) => str
+        case _ => ""
+      }
+    }
+
+
+
+
+
+  }
+
+
+  case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: PageContext, actions: List[D2WAction]) extends Action
+
+  case class SetJustRuleResults(ruleResults: List[RuleResult]) extends Action
+
+  case class SetPreviousWithResults(ruleResults: List[RuleResult], d2wContext: PageContext) extends Action
+
+
+  case class FireRelationshipData(property: PropertyMetaInfo) extends Action
+
+  case class ShowPage(entity: EOEntity, task: String) extends Action
+
+  case class SetupQueryPageForEntity(entityName: String) extends Action
+
+  case object SwithDebugMode extends Action
+
+  case class FetchShowD2WDebugButton(d2wContext: PageContext) extends Action
+
+  case class SetDebugConfiguration(debugConf: DebugConf, d2wContext: D2WContext) extends Action
+
+  object EOCacheUtils {
+
+
+    def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
+      val pk = eo.pk
+      Some((pk, eo))
+    }).flatten.toMap
+
+
+    def readyEODBCacheEntityElement(eos: List[EO]): EODBCacheEntityElement = {
+      // we create a Map with eo and id
+      // From eos to update, we create a map of key ->
+      val refreshedEOs = refreshedEOMap(eos)
+      EODBCacheEntityElement(Ready(refreshedEOs))
+    }
+
+    /*def memCacheEntityElement(eos: List[EO]): EOMemCacheEntityElement = {
+    val refreshedEOs = refreshedEOMap(eos)
+    EOMemCacheEntityElement(refreshedEOs)
+  }*/
+
+
+    def updatedEOMap(entityMap: Map[EOPk, EO], updatedEOSubset: List[EO]): Map[EOPk, EO] = {
+      val refreshedEOs = refreshedEOMap(updatedEOSubset)
+      // work with new and eo to be updated
+      val refreshedPks = refreshedEOs.keySet
+      val existingPks = entityMap.keySet
+
+      val newPks = refreshedPks -- existingPks
+
+      // Iterate on eos
+      val newAndUpdateMap = refreshedPks.map(id => {
+        //log.finest("Refresh " + entityName + "[" + id + "]")
+        val refreshedEO = refreshedEOs(id)
+        //log.finest("Refreshed " + refreshedEO)
+
+        // 2 cases:
+        // new
+        if (newPks.contains(id)) {
+          (id, refreshedEO)
+        } else {
+          // existing -> to be updated
+          // Complete EOs !
+          val existingEO = entityMap(id)
+          (id, EOValue.completeEoWithEo(existingEO, refreshedEO))
+        }
+      }).toMap
+      entityMap ++ newAndUpdateMap
+    }
+
+
+    //EOValueUtils.pk(eo)
+    def newUpdatedEntityCache(entityName: String, cache: Map[String, EOCacheEntityElement], entityCacheElement: EOCacheEntityElement): Map[String, EOCacheEntityElement] = {
+      cache + (entityName -> entityCacheElement)
+    }
+
+
+    // Returns None if nothing registered in the cache for that entityName
+    def dbEOsForEntityNamed(cache: EOCache, entityName: String): Option[List[EO]] = {
+      val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache.eos, entityName)
+      eoCacheEntityElementOpt match {
+        case Some(eoCacheEntityElement) =>
+          eoEntityMapOpt(eoCacheEntityElement) match {
+            case Some(entityMap) =>
+              Some(entityMap.values.toList)
+            case None =>
+              None
+          }
+        case None =>
+          None
+      }
+    }
+
+
+    def eoCacheEntityElementEos(eoCacheEntityElement: EOCacheEntityElement): List[EO] =
+      eoEntityMap(eoCacheEntityElement).values.toList
+
+    def eoEntityMap(eoCacheEntityElement: EOCacheEntityElement): Map[EOPk, EO] =
+      eoEntityMapOpt(eoCacheEntityElement) match {
+        case Some(entityMap) =>
+          entityMap
+        case None =>
+          Map()
+      }
+
+
+    def eoEntityMapOpt(eoCacheEntityElement: EOCacheEntityElement): Option[Map[EOPk, EO]] =
+      eoCacheEntityElement match {
+        case EODBCacheEntityElement(data, _) =>
+          if (data.isEmpty) None else Some(data.get)
+        case EOMemCacheEntityElement(data) =>
+          Some(data)
+      }
+
+
+    def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) Some(cache(entityName)) else None
+
+    def allEOsForEntityNamed(cache: EOCache, entityName: String): List[EO] = {
+      val entityElements = List(
+        eoCacheEntityElementForEntityNamed(cache.insertedEOs, entityName),
+        eoCacheEntityElementForEntityNamed(cache.eos, entityName)
+      )
+      entityElements.flatten.flatMap(eoCacheEntityElementEos(_))
+    }
+
+    /*
   def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetchSpecification) : Option[List[EO]] = {
     val entityNameEOs = dbEOsForEntityNamed(eos,EOFetchSpecification.entityName(fs))
     //log.finest("EOCacheUtils.objectsWithFetchSpecification : " + entityNameEOs)
@@ -793,195 +760,189 @@ object EOCacheUtils {
     }
   }*/
 
-  def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
-    eos.map(eo => outOfCacheEOUsingPkFromEO(cache,entityName,eo)).flatten
-  }
-
-
-
-
-  def objectsFromAllCachesWithFetchSpecification(cache: EOCache, fs: EOFetchSpecification): List[EO] = {
-    val entityName = EOFetchSpecification.entityName(fs)
-    val eos = allEOsForEntityNamed(cache,entityName)
-    EOFetchSpecification.objectsWithFetchSpecification(eos,fs)
-  }
-
-
-  def outOfCacheEOUsingPkFromEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
-    outOfCacheEOUsingPk(cache, entityName, eo.pk)
-  }
-
-  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: List[EOPk]): Seq[EO] = {
-    pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
-  }
-
-  def outOfCacheEOUsingPk(eoCache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
-    val isInMemory = EOValue.isNew(pk)
-    val cache = if (isInMemory) eoCache.insertedEOs else eoCache.eos
-    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
-    eoCacheEntityElementOpt match {
-      case Some(eoCacheEntityElement) =>
-        val entityMap = eoEntityMap(eoCacheEntityElement)
-        if (entityMap.contains(pk)) Some(entityMap(pk)) else None
-
-      case None =>
-        None
+    def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
+      eos.map(eo => outOfCacheEOUsingPkFromEO(cache, entityName, eo)).flatten
     }
-  }
 
 
-  def dbEntityMapForEntityNamed(eoCache : EOCache, entityName: String) : Option[Map[EOPk, EO]] = {
-    entityMapForEntityNamed(eoCache.eos, entityName)
-  }
-
-  def memEntityMapForEntityNamed(eoCache : EOCache, entityName: String) : Option[Map[EOPk, EO]] = {
-    entityMapForEntityNamed(eoCache.insertedEOs, entityName)
-  }
-
-  def entityMapForEntityNamed(cache : Map[String, EOCacheEntityElement], entityName: String) : Option[Map[EOPk, EO]] = {
-    val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
-    eoCacheEntityElementOpt match {
-      case Some(eoCacheEntityElement) =>
-        Some(EOCacheUtils.eoEntityMap(eoCacheEntityElement))
-      case None => None
+    def objectsFromAllCachesWithFetchSpecification(cache: EOCache, fs: EOFetchSpecification): List[EO] = {
+      val entityName = EOFetchSpecification.entityName(fs)
+      val eos = allEOsForEntityNamed(cache, entityName)
+      EOFetchSpecification.objectsWithFetchSpecification(eos, fs)
     }
-  }
 
-  // We speak DB Cache here
-  def updatedDBCacheByDeletingEO(eoCache : EOCache, deletedEO: EO) : EOCache = {
-    val entityName = deletedEO.entityName
-    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, deletedEO.entityName)
-    entitMapOpt match {
-      case Some(entityMap) =>
-        //val eoPk = EOValue.pk(value.eomodel.get, deletedEO).get
-        val eoPk = deletedEO.pk
-        val newEntityMap = entityMap - eoPk
-        updatedCacheForDb(eoCache,entityName,newEntityMap)
-      case None =>
-        // should never happen
-        eoCache
+
+    def outOfCacheEOUsingPkFromEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
+      outOfCacheEOUsingPk(cache, entityName, eo.pk)
     }
-  }
 
-  def updatedCacheForDb(eoCache : EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
-    val newCache = newUpdatedEntityCache(entityName, eoCache.eos, EODBCacheEntityElement(Ready(entityMap)))
-    eoCache.copy(eos = newCache)
-  }
-
-  def updatedCacheForMem(eoCache : EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
-    val newCache = newUpdatedEntityCache(entityName, eoCache.insertedEOs, EOMemCacheEntityElement(entityMap))
-    eoCache.copy(insertedEOs = newCache)
-  }
-
-
-  def updatedDBCacheWithEO(eoCache : EOCache, eo: EO) : EOCache = {
-    val entityName = eo.entityName
-    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, eo.entityName)
-    val eoPk = eo.pk
-
-    val innerMap = Map(eoPk -> eo)
-
-    val newEntityMap = entitMapOpt match {
-      case Some(entityMap) =>
-        entityMap ++ innerMap
-      case None =>
-        innerMap
+    def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: List[EOPk]): Seq[EO] = {
+      pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
     }
-    updatedCacheForDb(eoCache,entityName,newEntityMap)
-  }
 
+    def outOfCacheEOUsingPk(eoCache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
+      val isInMemory = EOValue.isNew(pk)
+      val cache = if (isInMemory) eoCache.insertedEOs else eoCache.eos
+      val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
+      eoCacheEntityElementOpt match {
+        case Some(eoCacheEntityElement) =>
+          val entityMap = eoEntityMap(eoCacheEntityElement)
+          if (entityMap.contains(pk)) Some(entityMap(pk)) else None
 
-
-  def updatedMemCacheWithEOsForEntityNamed(eoCache : EOCache, eos: List[EO], entityName: String): EOCache = {
-    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
-    val newEntityMap = entitMapOpt match {
-      case Some(entityMap) =>
-        EOCacheUtils.updatedEOMap(entityMap, eos)
-      case None =>
-        refreshedEOMap(eos)
+        case None =>
+          None
+      }
     }
-    updatedCacheForMem(eoCache,entityName,newEntityMap)
-  }
 
-  def updatedDBCacheWithEOsForEntityNamed(eoCache : EOCache, eos: List[EO], entityName: String): EOCache = {
-    val entitMapOpt = dbEntityMapForEntityNamed(eoCache, entityName)
-    val newEntityMap = entitMapOpt match {
-      case Some(entityMap) =>
-        EOCacheUtils.updatedEOMap(entityMap, eos)
-      case None =>
-        refreshedEOMap(eos)
+
+    def dbEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EO]] = {
+      entityMapForEntityNamed(eoCache.eos, entityName)
     }
-    updatedCacheForDb(eoCache,entityName,newEntityMap)
-  }
 
-
-  def removeEOFromCache(eo: EO, entityCache: Map[EOPk, EO]): Map[EOPk, EO] = {
-    val entityName = eo.entityName
-    val id = eo.pk
-    val updatedEntityCache = entityCache - id
-    updatedEntityCache
-  }
-
-  def updatedMemCacheByRemovingEO(eoCache : EOCache, eo: EO): EOCache = {
-    val entityName = eo.entityName
-    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
-    entitMapOpt match {
-      case Some(entityMap) =>
-        val newEntityMap = removeEOFromCache(eo, entityMap)
-        updatedCacheForMem(eoCache,entityName,newEntityMap)
-      case None =>
-        eoCache
+    def memEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EO]] = {
+      entityMapForEntityNamed(eoCache.insertedEOs, entityName)
     }
-  }
 
-  def updatedCachesForSavedEO(eoCache : EOCache, eo: EO, memEO: Option[EO]) : EOCache = {
-    // Adjust the insertedEOs cache
-    val entityName = eo.entityName
-    val newCache = if (memEO.isDefined) updatedMemCacheByRemovingEO(eoCache, memEO.get) else eoCache
-    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | removed if new  " + memEO)
-    D2SpaLogger.logfinest(entityName,"CacheHandler | SavedEO | register eo  " + eo)
-
-    // Adjust the db cache
-    updatedDBCacheWithEO(newCache, eo)
-  }
-
-  def updatedMemCacheWithEO(eoCache : EOCache, eo: EO) : EOCache = {
-    val entityName = eo.entityName
-    updatedMemCacheWithEOsForEntityNamed(eoCache, List(eo), entityName)
-  }
-
-
-  def newMemIdWithLastId(memID: Option[Int]) = {
-    memID match {
-      case Some(min) => min -1
-      case None => -1
+    def entityMapForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String): Option[Map[EOPk, EO]] = {
+      val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
+      eoCacheEntityElementOpt match {
+        case Some(eoCacheEntityElement) =>
+          Some(EOCacheUtils.eoEntityMap(eoCacheEntityElement))
+        case None => None
+      }
     }
-  }
 
-  def newEOWithLastMemID(entityName: String, memID: Option[Int]) = {
-    val newMemID = newMemIdWithLastId(memID)
-    val newPk = EOPk(List(newMemID))
-    EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
-  }
-
-  def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache : EOCache, entityName: String): (EOCache, EO) = {
-    val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
-    val entityMap = entitMapOpt match {
-      case Some(entityMap) => entityMap
-      case None => Map.empty[EOPk, EO]
+    // We speak DB Cache here
+    def updatedDBCacheByDeletingEO(eoCache: EOCache, deletedEO: EO): EOCache = {
+      val entityName = deletedEO.entityName
+      val entitMapOpt = dbEntityMapForEntityNamed(eoCache, deletedEO.entityName)
+      entitMapOpt match {
+        case Some(entityMap) =>
+          //val eoPk = EOValue.pk(value.eomodel.get, deletedEO).get
+          val eoPk = deletedEO.pk
+          val newEntityMap = entityMap - eoPk
+          updatedCacheForDb(eoCache, entityName, newEntityMap)
+        case None =>
+          // should never happen
+          eoCache
+      }
     }
-    val existingPks = entityMap.keySet.map(_.pks.head)
-    val lastMemIDOpt = if (existingPks.isEmpty) None else Some(existingPks.min)
-    val newEO = newEOWithLastMemID(entityName, lastMemIDOpt)
-    val newPk = newEO.pk
 
-    val newEntityMap = entityMap + (newPk -> newEO)
+    def updatedCacheForDb(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+      val newCache = newUpdatedEntityCache(entityName, eoCache.eos, EODBCacheEntityElement(Ready(entityMap)))
+      eoCache.copy(eos = newCache)
+    }
 
-    (updatedCacheForMem(eoCache,entityName,newEntityMap), newEO)
-  }
+    def updatedCacheForMem(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+      val newCache = newUpdatedEntityCache(entityName, eoCache.insertedEOs, EOMemCacheEntityElement(entityMap))
+      eoCache.copy(insertedEOs = newCache)
+    }
 
 
+    def updatedDBCacheWithEO(eoCache: EOCache, eo: EO): EOCache = {
+      val entityName = eo.entityName
+      val entitMapOpt = dbEntityMapForEntityNamed(eoCache, eo.entityName)
+      val eoPk = eo.pk
 
+      val innerMap = Map(eoPk -> eo)
+
+      val newEntityMap = entitMapOpt match {
+        case Some(entityMap) =>
+          entityMap ++ innerMap
+        case None =>
+          innerMap
+      }
+      updatedCacheForDb(eoCache, entityName, newEntityMap)
+    }
+
+
+    def updatedMemCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EO], entityName: String): EOCache = {
+      val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+      val newEntityMap = entitMapOpt match {
+        case Some(entityMap) =>
+          EOCacheUtils.updatedEOMap(entityMap, eos)
+        case None =>
+          refreshedEOMap(eos)
+      }
+      updatedCacheForMem(eoCache, entityName, newEntityMap)
+    }
+
+    def updatedDBCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EO], entityName: String): EOCache = {
+      val entitMapOpt = dbEntityMapForEntityNamed(eoCache, entityName)
+      val newEntityMap = entitMapOpt match {
+        case Some(entityMap) =>
+          EOCacheUtils.updatedEOMap(entityMap, eos)
+        case None =>
+          refreshedEOMap(eos)
+      }
+      updatedCacheForDb(eoCache, entityName, newEntityMap)
+    }
+
+
+    def removeEOFromCache(eo: EO, entityCache: Map[EOPk, EO]): Map[EOPk, EO] = {
+      val entityName = eo.entityName
+      val id = eo.pk
+      val updatedEntityCache = entityCache - id
+      updatedEntityCache
+    }
+
+    def updatedMemCacheByRemovingEO(eoCache: EOCache, eo: EO): EOCache = {
+      val entityName = eo.entityName
+      val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+      entitMapOpt match {
+        case Some(entityMap) =>
+          val newEntityMap = removeEOFromCache(eo, entityMap)
+          updatedCacheForMem(eoCache, entityName, newEntityMap)
+        case None =>
+          eoCache
+      }
+    }
+
+    def updatedCachesForSavedEO(eoCache: EOCache, eo: EO, memEO: Option[EO]): EOCache = {
+      // Adjust the insertedEOs cache
+      val entityName = eo.entityName
+      val newCache = if (memEO.isDefined) updatedMemCacheByRemovingEO(eoCache, memEO.get) else eoCache
+      D2SpaLogger.logfinest(entityName, "CacheHandler | SavedEO | removed if new  " + memEO)
+      D2SpaLogger.logfinest(entityName, "CacheHandler | SavedEO | register eo  " + eo)
+
+      // Adjust the db cache
+      updatedDBCacheWithEO(newCache, eo)
+    }
+
+    def updatedMemCacheWithEO(eoCache: EOCache, eo: EO): EOCache = {
+      val entityName = eo.entityName
+      updatedMemCacheWithEOsForEntityNamed(eoCache, List(eo), entityName)
+    }
+
+
+    def newMemIdWithLastId(memID: Option[Int]) = {
+      memID match {
+        case Some(min) => min - 1
+        case None => -1
+      }
+    }
+
+    def newEOWithLastMemID(entityName: String, memID: Option[Int]) = {
+      val newMemID = newMemIdWithLastId(memID)
+      val newPk = EOPk(List(newMemID))
+      EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
+    }
+
+    def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache: EOCache, entityName: String): (EOCache, EO) = {
+      val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
+      val entityMap = entitMapOpt match {
+        case Some(entityMap) => entityMap
+        case None => Map.empty[EOPk, EO]
+      }
+      val existingPks = entityMap.keySet.map(_.pks.head)
+      val lastMemIDOpt = if (existingPks.isEmpty) None else Some(existingPks.min)
+      val newEO = newEOWithLastMemID(entityName, lastMemIDOpt)
+      val newPk = newEO.pk
+
+      val newEntityMap = entityMap + (newPk -> newEO)
+
+      (updatedCacheForMem(eoCache, entityName, newEntityMap), newEO)
+    }
 
 
 }

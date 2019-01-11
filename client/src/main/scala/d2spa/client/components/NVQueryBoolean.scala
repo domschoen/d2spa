@@ -20,7 +20,7 @@ import d2spa.shared.{EOValue, EOKeyValueQualifier, PropertyMetaInfo, RuleKeys}
 
 object NVQueryBoolean {
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($: BackendScope[Props, Unit]) {
@@ -71,6 +71,6 @@ object NVQueryBoolean {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 }
 

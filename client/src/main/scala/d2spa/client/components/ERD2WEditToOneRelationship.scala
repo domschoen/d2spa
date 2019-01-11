@@ -28,7 +28,7 @@ object ERD2WEditToOneRelationship {
   // shorthand for styles
   @inline private def bss = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
   def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
     println("eoWith | entity name " + entity.name + " id " + id + " eos " + eos )
@@ -300,5 +300,5 @@ object ERD2WEditToOneRelationship {
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: D2WContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
 }

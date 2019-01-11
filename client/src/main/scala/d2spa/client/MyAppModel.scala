@@ -23,7 +23,7 @@ case class MegaContent(
     menuModel: Pot[Menus],
     ruleResults: Map[String,Map[String,Map[String,PageConfigurationRuleResults]]],
     cache: EOCache,
-    previousPage: Option[D2WContext]
+    previousPage: Option[PageContext]
 )
 
 
