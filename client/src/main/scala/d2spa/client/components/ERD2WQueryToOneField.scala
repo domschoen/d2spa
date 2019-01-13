@@ -33,25 +33,29 @@ object ERD2WQueryToOneField  {
 
 
     def mounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
       val ruleResultsModel = p.proxy.value.ruleResults
 
-      val dataNotFetched = !RuleUtils.existsRuleResultForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(
-        FireActions(
-          d2wContext,
-          List(
-            FireRule(d2wContext, RuleKeys.keyWhenRelationship),
-            FireRule(d2wContext, RuleKeys.displayNameForKeyWhenRelationship)
-          )
-        )
-      ))
+      val ruleResults = p.proxy.value.ruleResults
+
+      val metaDataRules = RuleUtils.metaDataFiringRules(p.proxy.value.ruleResults, d2wContext)
+      val keyWhenRelationshipRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+      val additionalRulesPots = List(keyWhenRelationshipRuleResultPot)
+      val additionalRules = RuleUtils.firingRulesFromPotFiredRuleResult(additionalRulesPots)
+
+
+      val rules = metaDataRules ::: additionalRules
+
+      val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
+      Callback.when(!ruleRequestOpt.isEmpty)(p.proxy.dispatchCB(SendRuleRequest(ruleRequestOpt.get)))
     }
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
       val ruleResultsModel = p.proxy.value.ruleResults
@@ -68,7 +72,7 @@ object ERD2WQueryToOneField  {
 
           val queryKey = propertyName + "." + keyWhenRelationship
           val pretext = "where " + whereDisplayText + " is "
-          val value = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
+          val value = D2WContextUtils.queryValueAsStringForKey(pageContext, propertyName)
           <.div(
             <.span(pretext),
             <.input(^.id := "toOneTextField", ^.value := value,

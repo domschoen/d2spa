@@ -28,10 +28,11 @@ object ERD2WEditNumber {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val faultOpt = p.d2wContext.eo
+      val faultOpt = d2wContext.eo
       faultOpt match {
         case Some(eo) =>
 

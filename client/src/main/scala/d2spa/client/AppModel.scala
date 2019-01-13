@@ -119,6 +119,7 @@ case class PrepareEditPage(d2wContext: PageContext) extends Action
 
 
 case class PrepareEODisplayRules(d2wContext: PageContext, cache: EOCache, needsHydration: Boolean) extends Action
+case class HydrationRequest(hydration: Hydration, ruleRequest: Option[RuleRequest]) extends  Action
 
 case class RegisterPreviousPage(d2wContext: PageContext) extends Action
 case class RegisterPreviousPageAndSetPage(d2wContext: PageContext) extends Action
@@ -181,7 +182,7 @@ case class GetMetaDataForSetPage(d2wContext: PageContext) extends Action
 case class FireActions(d2wContext: PageContext, actions: List[D2WAction]) extends Action
 
 
-object Hydration {
+object HydrationUtils {
 
   def toFault(eo:EO) = EOFault(eo.entityName, eo.pk)
 
@@ -211,7 +212,7 @@ object Hydration {
         val displayPropertyKeysOpt = RuleUtils.ruleListValueFromPotFiredRuleResult(displayPropertyKeysRuleResultPot)
         displayPropertyKeysOpt match {
           case Some(displayPropertyKeys) =>
-            val isHydrated = Hydration.isHydratedForPropertyKeys(eomodel, cache, drySubstrate, displayPropertyKeys)
+            val isHydrated = HydrationUtils.isHydratedForPropertyKeys(eomodel, cache, drySubstrate, displayPropertyKeys)
             !isHydrated
           case None =>
             true
@@ -351,8 +352,14 @@ case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 
 object RuleUtils {
 
+  def ruleRequestWithRules(d2wContext: D2WContext, rules: List[FiringRules]) : Option[RuleRequest] =
+    if (rules.isEmpty) {
+      None
+    } else {
+      Some(RuleRequest(d2wContext,rules))
+    }
 
-  def metaDataFiringRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],d2wContext: D2WContext) = {
+  def metaDataFiringRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],d2wContext: D2WContext): List[FiringRules] = {
     val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
     val displayNameForEntityRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
 
@@ -372,7 +379,7 @@ object RuleUtils {
   def firingRulesFromFireRules(fireRulesOpts: List[Option[FireRules]]) = fireRulesOpts.flatten
 
 
-    def firingRulesFromPotFiredRuleResult(fireSingleRulesPots: List[PotFiredRuleResult]) = {
+    def firingRulesFromPotFiredRuleResult(fireSingleRulesPots: List[PotFiredRuleResult]): List[FiringRules] = {
     val fireSingleRulesOpts = fireSingleRulesPots.map(pot => pot match {
       case PotFiredRuleResult(Left(fireRule)) => Some(fireRule)
       case _ => None
@@ -447,7 +454,7 @@ object RuleUtils {
     val ruleContainerOpt = ruleContainerForContext(ruleResults, d2wContext)
     ruleContainerOpt match {
       case Some(rulesContainer) => {
-        ruleResultFromRuleResultsForContextAndKey(rulesContainer.ruleResults, d2wContext, key)
+        RulesUtilities.ruleResultFromRuleResultsForContextAndKey(rulesContainer.ruleResults, d2wContext, key)
       }
       case _ => None
     }
@@ -464,9 +471,8 @@ object RuleUtils {
 
   def ruleListValueFromPotFiredRuleResult(potFiredRuleResult: PotFiredRuleResult) = {
     ruleResultValueFromPotFiredRuleResult(potFiredRuleResult) match {
-      case Some(ruleResult) => ruleListValueWithRuleResult(Some(ruleResult))
-      case None =>
-        None
+      case Some(ruleResult) => Some(RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult)))
+      case None => None
     }
   }
     def ruleResultValueFromPotFiredRuleResult(potFiredRuleResult: PotFiredRuleResult) = {

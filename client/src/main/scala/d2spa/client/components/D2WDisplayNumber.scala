@@ -23,7 +23,8 @@ object D2WDisplayNumber {
   class Backend($: BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val eoOpt = d2wContext.eo
       eoOpt match {
         case Some(eo) =>

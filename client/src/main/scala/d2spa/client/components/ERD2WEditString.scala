@@ -33,10 +33,11 @@ object ERD2WEditString  {
 
     def render(p: Props) = {
       //log.finest("eo: " + p.eo)
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val faultOpt = p.d2wContext.eo
+      val faultOpt = d2wContext.eo
       faultOpt match {
         case Some(eo) =>
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eo)
@@ -46,7 +47,7 @@ object ERD2WEditString  {
               <.div(
                 <.input(^.className := "form-control", ^.id := "description", ^.value := value,
                   ^.placeholder := "write description", ^.onChange ==> { e: ReactEventFromInput =>
-                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.eoValueWithString(e.target.value)))
+                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.eoValueWithString(e.target.value)))
                   })
               )
             case None => <.div("No eo out of cache")

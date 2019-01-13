@@ -1,6 +1,6 @@
 package d2spa.client.components
 
-import d2spa.client.{FireRule, _}
+import d2spa.client._
 import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared._
@@ -54,32 +54,25 @@ object ERDList {
     // We need to fire rule for Destination Entity (in case it is not given by the eomodel
     // But be careful, the rule can return nothing and it shouldn't be an error
     def mounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
 
       D2SpaLogger.logfinest(entityName, "ERDList mounted " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
-      val ruleResultsModel = p.proxy.value.ruleResults
 
-      val listConfigurationNameOpt = RuleUtils.potentialFireRuleResultPot(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
-      val destinationEntityOpt = RuleUtils.potentialFireRuleResultPot(ruleResultsModel, d2wContext, RuleKeys.destinationEntity)
+      val ruleResults = p.proxy.value.ruleResults
+      val listConfigurationNameRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.listConfigurationName)
+      val destinationEntityRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.destinationEntity)
+      val rulesPots = List(listConfigurationNameRuleResultPot, destinationEntityRuleResultPot)
+      val rules = RuleUtils.firingRulesFromPotFiredRuleResult(rulesPots)
+      val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
-      val fireActions =
-        List(
-          listConfigurationNameOpt, // standard FieRule
-          destinationEntityOpt // standard FieRule
-        ).flatten
-
-
-      Callback.when(!fireActions.isEmpty)(p.proxy.dispatchCB(
-        FireActions(
-          d2wContext,
-          fireActions
-        )
-      ))
+      Callback.when(!ruleRequestOpt.isEmpty)(p.proxy.dispatchCB(SendRuleRequest(ruleRequestOpt.get)))
     }
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       D2SpaLogger.logfinest(entityName,"ERDList render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
@@ -96,8 +89,12 @@ object ERDList {
 
               eomodelOpt match {
                 case Ready(eomodel) =>
-                  d2wContext.pageConfiguration match {
-                    case PotFiredKey(Right(_)) =>
+                  val ruleResults = p.proxy.value.ruleResults
+
+                  val listDestinationEntityOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.listConfigurationName)
+
+                  listDestinationEntityOpt match {
+                    case Some(pageConfiguration) =>
 
 
                       val ruleResultsModel = p.proxy.value.ruleResults
@@ -122,43 +119,22 @@ object ERDList {
                           val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
                           D2SpaLogger.logfinest(entityName,"ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
-                          val potPageConf = listConfigurationNameOpt match {
-                            case Some(_) =>
-                              PotFiredKey(Right(listConfigurationNameOpt))
-                            case None =>
-                              val fireListConfiguration = FireRule(d2wContext, RuleKeys.listConfigurationName)
-                              PotFiredKey(Left(fireListConfiguration))
-                          }
-
-
-                          //val eoValueOpt = if (eo.values.contains(propertyName)) Some(eo.values(propertyName)) else None
-
-                          //val size = eoValueOpt match {
-                          //  case Some(ObjectsValue(eos)) => eos.size
-                          //  case _ => 0
-                          //}
-                          //val size = 1
-
-
-                          // D2WContext with
-                          // - Entity (destinationEntity)
-                          // - task = list
-                          // - DataRep
-                          // (the rest is None: previousTask, eo, queryValues, propertyKey, pageConfiguration)
                           D2SpaLogger.logfinest(entityName,"ERDList render | dataRep " + eo.entityName + " propertyName: " + propertyName + " destinationEntityName: " + destinationEntityName)
 
-                          val embeddedListD2WContext = D2WContext(
-                            entityName = Some(destinationEntityName),
-                            task = Some(TaskDefine.list),
+                          val embeddedListD2WContext = PageContext (
                             dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),
-                            pageConfiguration = potPageConf
+                            d2wContext = D2WContext(
+                              entityName = Some(destinationEntityName),
+                              task = Some(TaskDefine.list),
+                              pageConfiguration = Some(pageConfiguration)
+                            )
                           )
                           //log.finest("ERDList render embedded list with context " + embeddedListD2WContext)
                           <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
 
                         case None => <.div("No destinaton Entity name")
                       }
-                    case PotFiredKey(Left(_)) =>
+                    case None =>
                       <.div("page configuration not yet fired")
                   }
 

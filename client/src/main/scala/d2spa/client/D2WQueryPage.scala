@@ -84,7 +84,8 @@ object D2WQueryPage {
 
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("Render Query page for entity: " + entityName)
       val ruleResultsModel = p.proxy.value.ruleResults
@@ -125,7 +126,8 @@ object D2WQueryPage {
                                 displayPropertyKeys toTagMod (
                                   propertyKey =>
                                   {
-                                    val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                                    val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext)
                                     <.tr(^.className := "attribute",
                                       <.th(^.className := "propertyName query",
                                         {
@@ -138,7 +140,7 @@ object D2WQueryPage {
                                       ),
                                       // Component part
                                       <.td(^.className := "query d2wAttributeValueCell",
-                                        D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
+                                        D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
                                       )
                                     )
                                   }

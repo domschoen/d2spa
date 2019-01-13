@@ -44,13 +44,13 @@ object NVQueryBoolean {
     }
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
-      val propertyD2WContext = p.d2wContext
-      val entityName = propertyD2WContext.entityName.get
-      val propertyName = propertyD2WContext.propertyKey.get
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
+      val entityName = d2wContext.entityName.get
+      val propertyName = d2wContext.propertyKey.get
 
-      log.finest("NVQueryBoolean " + propertyName + " query values " + d2wContext.queryValues)
-      val (dontCare, isYes, isNo) = D2WContextUtils.queryValueForKey(d2wContext, propertyName) match {
+      log.finest("NVQueryBoolean " + propertyName + " query values " + pageContext.queryValues)
+      val (dontCare, isYes, isNo) = D2WContextUtils.queryValueForKey(pageContext, propertyName) match {
         case Some(BooleanValue(value)) =>
           log.finest("NVQueryBoolean value " + value)
           if (value) (false, true, false) else (false, false, true)

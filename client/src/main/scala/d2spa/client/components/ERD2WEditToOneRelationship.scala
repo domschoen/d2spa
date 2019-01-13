@@ -48,7 +48,8 @@ object ERD2WEditToOneRelationship {
       log.finest("ERD2WEditToOneRelationship | willReceiveProps")
 
       val p = nextProps
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val eomodel = p.proxy.value.cache.eomodel.get
       val cache = p.proxy.value.cache
 
@@ -60,14 +61,14 @@ object ERD2WEditToOneRelationship {
           val keyWhenRelationshipOpt = RuleUtils.ruleStringValueWithRuleResult(keyWhenRelationshipRuleResultOpt)
           val keyWhenRelahionship = keyWhenRelationshipOpt.get
           val propertyName = d2wContext.propertyKey.get
-          val entityName = p.d2wContext.entityName.get
+          val entityName = d2wContext.entityName.get
 
           val entity = EOModelUtils.entityNamed(eomodel, entityName).get
 
           val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
           val destinationEntity = destinationEntityOpt.get
 
-          val isHydrated = Hydration.isHydratedForPropertyKeys(
+          val isHydrated = HydrationUtils.isHydratedForPropertyKeys(
             eomodel,
             cache,
             DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
@@ -92,11 +93,12 @@ object ERD2WEditToOneRelationship {
     def mounted(p: Props) = {
       log.finest("ERD2WEditToOneRelationship mounted")
 
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val propertyName = d2wContext.propertyKey.get
 
 
-      val entityName = p.d2wContext.entityName.get
+      val entityName = d2wContext.entityName.get
       val eomodel = p.proxy.value.cache.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
       log.finest("ERD2WEditToOneRelationship mounted: entity " + entity)
@@ -108,50 +110,25 @@ object ERD2WEditToOneRelationship {
       destinationEntityOpt match {
         case Some(destinationEntity) =>
           val ruleResults = p.proxy.value.ruleResults
-          val keyWhenRelationshipRuleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+          val keyWhenRelationshipRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+          val rulesPots = List(keyWhenRelationshipRuleResultPot)
+          val rules = RuleUtils.firingRulesFromPotFiredRuleResult(rulesPots)
+          val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
-          log.finest("ERD2WEditToOneRelationship mounted | keyWhenRelationshipRuleResultOpt is defined " + keyWhenRelationshipRuleResultOpt.isDefined)
 
-          var actions = List()
-          if (!keyWhenRelationshipRuleResultOpt.isDefined) {
-            p.proxy.dispatchCB(
-              FireActions(
-                d2wContext, // rule Container
-                List[D2WAction](
-                  FireRule(d2wContext, RuleKeys.keyWhenRelationship)
-                )
-              )
-            )
-          } else {
-            val eoCache = p.proxy.value.cache
+          val eoCache = p.proxy.value.cache
+          val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
 
-            log.finest("ERD2WEditToOneRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
-            log.finest("ERD2WEditToOneRelationship render eoCache " + eoCache)
-            val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
-            log.finest("ERD2WEditToOneRelationship render destinationEOs " + destinationEOs)
+          destinationEOs match {
+            case Some(eos) =>
+              Callback.when(!ruleRequestOpt.isEmpty)(p.proxy.dispatchCB(SendRuleRequest(ruleRequestOpt.get)))
 
-            destinationEOs match {
-              case Some(eos) => Callback.empty
-              case None => p.proxy.dispatchCB(
-                FireActions(
-                  d2wContext, // rule Container
-                  List[D2WAction](
-                    // Already done at Page level
-                    // Hydration(DrySubstrate(eo = Some(p.eo)),WateringScope(Some(fireDisplayPropertyKeys))),
+            case None =>
 
-                    // Substrate defined by objects to fetch for destination entity name
-                    // Watered by keyWhenRelationship which has to to be looked up in the rules (it will be found because of the above rule firing)
-                    // Example:
-                    //    Hydration(
-                    //      DrySubstrate(None,None,Some(FetchSpecification(Customer,None))),
-                    //      WateringScope(Some(RuleFault(D2WContextFullFledged(Some(Project),Some(edit),Some(customer),None),keyWhenRelationship)))))
-
-                    Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(PotFiredRuleResult(Right(keyWhenRelationshipRuleResultOpt.get))))
-
-                  )
-                )
-              )
-            }
+              val dataRep = pageContext.dataRep
+              val drySubstrateOpt: Option[DrySubstrate] = HydrationUtils.drySubstrateFromDataRep(dataRep)
+              val hydration = Hydration(DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))), WateringScope(keyWhenRelationshipRuleResultPot))
+              p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
           }
 
         case None =>
@@ -185,7 +162,8 @@ object ERD2WEditToOneRelationship {
 
     def render(p: Props) = {
       log.finest("ERD2WEditToOneRelationship render")
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val eomodel = p.proxy.value.cache.eomodel.get
       val entity = EOModelUtils.entityNamed(eomodel, entityName).get
@@ -198,9 +176,6 @@ object ERD2WEditToOneRelationship {
 
       d2wContext.eo match {
         case Some(deo) =>
-
-
-
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, deo)
           eoOpt match {
             case Some(eo) =>
@@ -252,7 +227,7 @@ object ERD2WEditToOneRelationship {
 
                                 <.div(
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, d2wContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                                   },
                                     {
                                       val tuples = eos map (deo => {
@@ -296,7 +271,7 @@ object ERD2WEditToOneRelationship {
 
   private val component = ScalaComponent.builder[Props]("ERD2WEditToOneRelationship")
     .renderBackend[Backend]
-    .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
+    //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 

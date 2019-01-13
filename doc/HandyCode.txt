@@ -1,0 +1,25 @@
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
+
+                                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                                    val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext))
+
+
+        val ruleResults = p.proxy.value.ruleResults
+        val isEditAllowedRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.isEditAllowed)
+        val isInspectAllowedRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.isInspectAllowed)
+        val additionalRulesPots = List(isEditAllowedRuleResultPot, isInspectAllowedRuleResultPot)
+        val additionalRules = RuleUtils.firingRulesFromPotFiredRuleResult(additionalRulesPots)
+
+      val rules = if (p.isEmbedded) {
+        val metaDataRules = RuleUtils.metaDataFiringRules(p.proxy.value.ruleResults, d2wContext)
+        metaDataRules ::: additionalRules
+      } else {
+        additionalRules
+      }
+
+      val ruleRequestOpt =  if (rules.isEmpty) {
+        None
+      } else {
+        Some(RuleRequest(d2wContext,rules))
+        Callback.when(!ruleRequestOpt.isEmpty)(p.proxy.dispatchCB(SendRuleRequest(ruleRequestOpt.get)))

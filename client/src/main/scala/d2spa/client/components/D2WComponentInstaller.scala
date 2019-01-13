@@ -23,7 +23,8 @@ object D2WComponentInstaller  {
   class Backend($ : BackendScope[Props, Unit]) {
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       //log.finest("D2WComponentInstaller | Render with d2wContext: " + d2wContext)
       //log.finest("D2WComponentInstaller | Render")
 
@@ -37,26 +38,26 @@ object D2WComponentInstaller  {
           case Some(componentName) => {
             val displayedComponentName = if (p.proxy.value.appConfiguration.isDebugMode) propertyName + " - " + componentName else ""
             componentName match {
-              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "DisplayToOne" => <.span(ERD2WDisplayToOne(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WDisplayToOne" => <.span(ERD2WDisplayToOne(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WEditString" => <.span(ERD2WEditString(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, d2wContext, p.proxy), displayedComponentName)
+              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, pageContext, p.proxy), displayedComponentName)
+              case "DisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WDisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WEditString" => <.span(ERD2WEditString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, pageContext, p.proxy), displayedComponentName)
+              case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, pageContext, p.proxy), displayedComponentName)
 
-              case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WDisplayStringWithLineBreaks" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WDisplayDateOrNull" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "NVD2WDisplayFixedFontString" => <.span(ERD2WDisplayString(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERDList" => <.span(ERDList(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "DisplayBoolean" => <.span(DisplayBoolean(p.router, d2wContext, p.proxy), displayedComponentName)
-              case "QueryNameOrAliases" => <.span(ERD2WQueryStringOperator (p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, d2wContext, p.proxy), displayedComponentName)
-              case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, d2wContext, p.proxy), displayedComponentName)
-              case "NVQueryBoolean" => <.span(NVQueryBoolean (p.router, d2wContext, p.proxy), displayedComponentName)
+              case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WDisplayStringWithLineBreaks" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WDisplayDateOrNull" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "NVD2WDisplayFixedFontString" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERDList" => <.span(ERDList(p.router, pageContext, p.proxy), displayedComponentName)
+              case "DisplayBoolean" => <.span(DisplayBoolean(p.router, pageContext, p.proxy), displayedComponentName)
+              case "QueryNameOrAliases" => <.span(ERD2WQueryStringOperator (p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, pageContext, p.proxy), displayedComponentName)
+              case "NVQueryBoolean" => <.span(NVQueryBoolean (p.router, pageContext, p.proxy), displayedComponentName)
 
               // Custom Component
-              case "DisplayProjectPotentialCustomers" => <.span(DisplayProjectPotentialCustomers(p.router, d2wContext, p.proxy), displayedComponentName)
+              case "DisplayProjectPotentialCustomers" => <.span(DisplayProjectPotentialCustomers(p.router, pageContext, p.proxy), displayedComponentName)
 
               // application specific components
               case _ => <.span("Component not found: " + componentName)

@@ -45,12 +45,13 @@ object ERD2WQueryStringOperator  {
 
 
     def render(p: Props) = {
-          val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
           val entityName = d2wContext.entityName.get
           val propertyName = d2wContext.propertyKey.get
 
           //log.finest("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
-          val strValue = D2WContextUtils.queryValueAsStringForKey(d2wContext, propertyName)
+          val strValue = D2WContextUtils.queryValueAsStringForKey(pageContext, propertyName)
           // set id but make it unique: ^.id := "description",
           <.div(
             <.input(^.value := strValue, ^.className := "form-control",
