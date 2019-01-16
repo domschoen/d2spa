@@ -1,7 +1,7 @@
 package d2spa.client.components
 
+import d2spa.client.{PageContext, RuleUtils, SendRuleRequest}
 import d2spa.client.logger.log
-import d2spa.client.{FireRule, _}
 import d2spa.shared._
 import diode.data.Ready
 import diode.react.ModelProxy
@@ -30,8 +30,8 @@ object ERDQuery {
   class Backend($: BackendScope[Props, Unit]) {
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
-      val cEntityName = currentProps.d2wContext.entityName
-      val nEntityName = nextProps.d2wContext.entityName
+      val cEntityName = currentProps.d2wContext.d2wContext.entityName
+      val nEntityName = nextProps.d2wContext.d2wContext.entityName
       val entityNameChanged = !cEntityName.equals(nEntityName)
 
       val cIsDebugMode = currentProps.proxy.value.appConfiguration.isDebugMode
@@ -52,20 +52,22 @@ object ERDQuery {
 
 
     def mounted(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("PageRepetition | mounted | entityName " + entityName)
 
       val ruleResults = p.proxy.value.ruleResults
-      val dataNotFetched = !RuleUtils.metaDataFetched(ruleResults, d2wContext)
-      Callback.when(dataNotFetched)(p.proxy.dispatchCB(InitMetaData(d2wContext)))
+      val ruleRequest = RuleUtils.metaDataRuleRequest(ruleResults, d2wContext)
+      Callback.when(!RulesUtilities.isEmptyRuleRequest(ruleRequest))(p.proxy.dispatchCB(SendRuleRequest(ruleRequest)))
     }
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       log.finest("ERDQuery render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
-      PageRepetition(p.router,d2wContext, p.proxy)
+      PageRepetition(p.router,pageContext, p.proxy)
 
     }
   }

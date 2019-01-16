@@ -41,6 +41,36 @@ Inspect Url (working)
                         SetPreviousWithResults
                            RegisterPreviousPage
 
+Enter application with: http://localhost:9000/#task/query/entity/Project
+    setSocket
+        socket.onopn
+            SetPageForSocketReady (socket ready = true)
+                FetchShowD2WDebugButton
+                    AppConfigurationHandler (AppConfigurationHandler)
+                        socket.GetDebugConfiguration
+                            out ! DebugConfMsg
+    SetDebugConfiguration (AppConfigurationHandler)
+        FetchEOModelAndMenus (EOCacheHandler)
+            socket.FetchEOModel
+                EOModelActor ! GetEOModel
+                    WebSocketActor ! EOModelResponse
+                        out ! FetchedEOModel
+    SetEOModelThenFetchMenu
+        FetchMenu (MenuHandler)
+            socket.FetchMenus
+                MenusActor ! GetMenus
+                   WebSocketActor ! MenusResponse
+                      out ! FetchedMenus                    
+    SetMenus (MenuHandler)
+        InitAppSpecificClient (MyCircuit.PreviousPageHandler)
+            GetMetaDataForSetPage
+                socket.AppInitMsgIn
+                    RuleActor ! GetRulesForAppInit
+                        WebSocketActor ! RuleRequestForAppInitResponse
+                            out ! RuleRequestForAppInitResponseMsg
+    SetMetaData
+        RegisterPreviousPageAndSetPage                        
+    
 QueryPage
     InitAppSpecificClient
         FetchMetaData

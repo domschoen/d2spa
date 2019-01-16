@@ -10,6 +10,8 @@ import d2spa.shared.WebSocketMessages._
 object WebSocketMessages {
 
   // Client ---> Server
+  // __________________
+
   sealed trait WebSocketMsgIn
   final case class StringMsgIn(string: String) extends WebSocketMsgIn
   final case class GetDebugConfiguration(d2wContext: D2WContext) extends WebSocketMsgIn
@@ -22,18 +24,23 @@ object WebSocketMessages {
   //final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   //final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   //final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class Search(fs: EOFetchSpecification, isMetaDataFetched: Boolean) extends WebSocketMsgIn
-  final case class Hydrate(hydration: Option[Hydration], ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class Search(fs: EOFetchSpecification, ruleRequest: RuleRequest) extends WebSocketMsgIn
+
+  final case class Hydrate(hydration: Hydration, ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   // D2W Context is needed for the fetch of rules
-  final case class NewEO(d2wContext: D2WContext, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
-  final case class UpdateEO(d2wContext: D2WContext, eo: EO, isMetaDataFetched: Boolean) extends WebSocketMsgIn
+  final case class NewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class AppInitMsgIn(ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   // Server ---> Client
+  // __________________
+
   sealed trait WebSocketMsgOut
 
   final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
-  final case class MetaDataResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
   final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContext) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus, d2wContext: D2WContext) extends WebSocketMsgOut
@@ -89,13 +96,16 @@ case class DrySubstrate(
                          fetchSpecification: Option[EOFetchSpecification] = None
                        )
 case class WateringScope(ruleResult: PotFiredRuleResult)
+// case class WateringScope(ruleResult: String)
 case class Hydration(drySubstrate: DrySubstrate, wateringScope: WateringScope)
-case class PotFiredRuleResult (value: Either[FireRule, RuleResult])
-case class PotFiredRulePropertyKeys (value: Either[FireRule, List[String]])
+case class PotFiredRuleResult (value: Either[String, RuleResult])
+//case class PotFiredRulePropertyKeys (value: Either[FireRule, List[String]])
 
 sealed trait FiringRules
 case class FireRule(key: String) extends FiringRules
-case class FireRules(propertyKeys: PotFiredRulePropertyKeys, key: String) extends FiringRules
+case class FireRules(propertyKeys: List[String], key: String) extends FiringRules
+case class GappedFireRules(fromRuleKey: String, key: String) extends FiringRules
+
 case class RuleRequest(d2wContext: D2WContext, rules: List[FiringRules])
 
 //case class DateValue(value: java.util.Date) extends EOValue
@@ -126,6 +136,7 @@ object Test3 extends MaterializePicklerFallback {
 
   def serializer(c: EO) = Pickle.intoBytes(c)
 }
+
 
 
 
@@ -218,20 +229,131 @@ object Test10 extends MaterializePicklerFallback {
   implicit val fetchedEOModelPicker: Pickler[FetchedEOModel] = generatePickler[FetchedEOModel]
   implicit val fetchedMenusPicker: Pickler[FetchedMenus] = generatePickler[FetchedMenus]
   implicit val ruleResultsPicker: Pickler[RuleResults] = generatePickler[RuleResults]
+  implicit val ruleRequestResponseMsgPicker: Pickler[RuleRequestResponseMsg] = generatePickler[RuleRequestResponseMsg]
+  implicit val ruleRequestForAppInitResponseMsgPicker: Pickler[RuleRequestForAppInitResponseMsg] = generatePickler[RuleRequestForAppInitResponseMsg]
+  implicit val completedEOMsgOutPicker: Pickler[CompletedEOMsgOut] = generatePickler[CompletedEOMsgOut]
   implicit val fetchedObjectsPicker: Pickler[FetchedObjectsMsgOut] = generatePickler[FetchedObjectsMsgOut]
+  implicit val fetchedObjectsForListMsgOutPicker: Pickler[FetchedObjectsForListMsgOut] = generatePickler[FetchedObjectsForListMsgOut]
   implicit val savingResponseMsgOutPicker: Pickler[SavingResponseMsgOut] = generatePickler[SavingResponseMsgOut]
   implicit val deletingResponseMsgOutPicker: Pickler[DeletingResponseMsgOut] = generatePickler[DeletingResponseMsgOut]
+
+
+
 
   webSocketMsgOutPickler.addConcreteType[DebugConfMsg]
     .addConcreteType[FetchedEOModel]
     .addConcreteType[FetchedMenus]
     .addConcreteType[RuleResults]
+    .addConcreteType[RuleRequestResponseMsg]
+    .addConcreteType[RuleRequestForAppInitResponseMsg]
+    .addConcreteType[CompletedEOMsgOut]
     .addConcreteType[FetchedObjectsMsgOut]
+    .addConcreteType[FetchedObjectsForListMsgOut]
     .addConcreteType[SavingResponseMsgOut]
     .addConcreteType[DeletingResponseMsgOut]
 
 
   def serializer(c: WebSocketMsgOut) = Pickle.intoBytes(c)
+}
+
+object Test11 extends MaterializePicklerFallback {
+
+  import boopickle.Default._
+  implicit val ruleResultPicker: Pickler[RuleResult] = generatePickler[RuleResult]
+  implicit val ruleRequestPicker: Pickler[RuleRequest] = generatePickler[RuleRequest]
+  //implicit val potFiredRulePropertyKeysPicker: Pickler[PotFiredRulePropertyKeys] = generatePickler[PotFiredRulePropertyKeys]
+  implicit val potFiredRuleResultPicker: Pickler[PotFiredRuleResult] = generatePickler[PotFiredRuleResult]
+  implicit val wateringScopePicker: Pickler[WateringScope] = generatePickler[WateringScope]
+  implicit val ruleValuePicker: Pickler[RuleValue] = generatePickler[RuleValue]
+
+
+
+  implicit val firingRulesPickler = compositePickler[FiringRules]
+
+  implicit val fireRulePickler: Pickler[FireRule] = generatePickler[FireRule]
+  implicit val fireRulesPickler: Pickler[FireRules] = generatePickler[FireRules]
+  implicit val gappedFireRulesPickler: Pickler[GappedFireRules] = generatePickler[GappedFireRules]
+
+  firingRulesPickler.addConcreteType[FireRule].addConcreteType[FireRules].addConcreteType[GappedFireRules]
+
+  def serializer(c: FiringRules) = Pickle.intoBytes(c)
+}
+
+object Test12 extends MaterializePicklerFallback {
+
+  import boopickle.Default._
+  implicit val eoPkPicker: Pickler[EOPk] = generatePickler[EOPk]
+  implicit val eoSortOrderingPickler = generatePickler[EOSortOrdering]
+  implicit val eoQualifierPickler = generatePickler[EOQualifier]
+
+  implicit val eoFetchSpecificationPickler = compositePickler[EOFetchSpecification]
+
+  implicit val eoFetchAllPickler: Pickler[EOFetchAll] = generatePickler[EOFetchAll]
+  implicit val eoQualifiedFetchPickler: Pickler[EOQualifiedFetch] = generatePickler[EOQualifiedFetch]
+
+  eoFetchSpecificationPickler.addConcreteType[EOFetchAll].addConcreteType[EOQualifiedFetch]
+
+  def serializer(c: EOFetchSpecification) = Pickle.intoBytes(c)
+}
+
+object Test13 extends MaterializePicklerFallback {
+
+  import boopickle.Default._
+  implicit val eoFetchSpecifactionPicker: Pickler[EOFetchSpecification] = generatePickler[EOFetchSpecification]
+  implicit val eoPkPicker: Pickler[EOPk] = generatePickler[EOPk]
+  implicit val eoPicker: Pickler[EO] = generatePickler[EO]
+  implicit val eoFaultPicker: Pickler[EOFault] = generatePickler[EOFault]
+  implicit val ruleResultPicker: Pickler[RuleResult] = generatePickler[RuleResult]
+  implicit val potFiredRuleResultPicker: Pickler[PotFiredRuleResult] = generatePickler[PotFiredRuleResult]
+  implicit val wateringScopePicker: Pickler[WateringScope] = generatePickler[WateringScope]
+  implicit val drySubstratePicker: Pickler[DrySubstrate] = generatePickler[DrySubstrate]
+
+  implicit val hydrationPicker: Pickler[Hydration] = generatePickler[Hydration]
+}
+
+
+object Test14 extends MaterializePicklerFallback {
+  import boopickle.Default._
+
+  implicit val eoPkPicker: Pickler[EOPk] = generatePickler[EOPk]
+  implicit val eoPicker: Pickler[EO] = generatePickler[EO]
+  implicit val eoValuePicker: Pickler[EOValue] = generatePickler[EOValue]
+  //implicit val eo2Picker: Pickler[EO2] = generatePickler[EO2]
+  implicit val ruleRequestPicker: Pickler[RuleRequest] = generatePickler[RuleRequest]
+  implicit val hydrationPicker: Pickler[Hydration] = generatePickler[Hydration]
+
+
+
+  implicit val webSocketMsgInPickler = compositePickler[WebSocketMsgIn]
+
+  implicit val debugConfMsgPicker: Pickler[StringMsgIn] = generatePickler[StringMsgIn]
+  implicit val fetchedEOModelPicker: Pickler[GetDebugConfiguration] = generatePickler[GetDebugConfiguration]
+  implicit val fetchedMenusPicker: Pickler[FetchEOModel] = generatePickler[FetchEOModel]
+  implicit val ruleResultsPicker: Pickler[FetchMenus] = generatePickler[FetchMenus]
+  implicit val ruleRequestResponseMsgPicker: Pickler[ExecuteRuleRequest] = generatePickler[ExecuteRuleRequest]
+  implicit val ruleRequestForAppInitResponseMsgPicker: Pickler[RuleToFire] = generatePickler[RuleToFire]
+  implicit val completedEOMsgOutPicker: Pickler[DeleteEOMsgIn] = generatePickler[DeleteEOMsgIn]
+  implicit val fetchedObjectsPicker: Pickler[Search] = generatePickler[Search]
+  implicit val hydratePicker: Pickler[Hydrate] = generatePickler[Hydrate]
+  implicit val savingResponseMsgOutPicker: Pickler[NewEO] = generatePickler[NewEO]
+  implicit val deletingResponseMsgOutPicker: Pickler[UpdateEO] = generatePickler[UpdateEO]
+  implicit val appInitMsgInPicker: Pickler[AppInitMsgIn] = generatePickler[AppInitMsgIn]
+
+  webSocketMsgInPickler.addConcreteType[StringMsgIn]
+    .addConcreteType[GetDebugConfiguration]
+    .addConcreteType[FetchEOModel]
+    .addConcreteType[FetchMenus]
+    .addConcreteType[ExecuteRuleRequest]
+    .addConcreteType[RuleToFire]
+    .addConcreteType[DeleteEOMsgIn]
+    .addConcreteType[Search]
+    .addConcreteType[Hydrate]
+    .addConcreteType[NewEO]
+    .addConcreteType[UpdateEO]
+    .addConcreteType[AppInitMsgIn]
+
+
+  def serializer(c: WebSocketMsgIn) = Pickle.intoBytes(c)
 }
 
 
@@ -340,6 +462,15 @@ object EOValue {
       case IntValue(value) => value == 1
       case ObjectValue(eo) => false
       case _ => false
+    }
+
+  def juiceEO(v: EOValue): Option[EO] =
+    v match {
+      case BooleanValue(value) => None
+      case StringValue(value) => None
+      case IntValue(value) => None
+      case ObjectValue(eo) => Some(eo)
+      case _ => None
     }
 
   def isDefined(value: EOValue): Boolean =
@@ -576,6 +707,7 @@ case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
 case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
 
 object RulesUtilities {
+  def isEmptyRuleRequest(ruleRequest: RuleRequest) = ruleRequest.rules.isEmpty
 
   def ruleResultForKey(ruleResults: List[RuleResult], key: String) =
     ruleResults.find(r => {r.key.equals(key)})

@@ -34,6 +34,8 @@ object D2WComponentInstaller  {
         val ruleResults = p.proxy.value.ruleResults
 
         val componentNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.componentName)
+        //log.finest("Render D2WComponentInstaller | D2WContext " + d2wContext)
+        //log.finest("Render D2WComponentInstaller | component name " + componentNameFound)
         componentNameFound match {
           case Some(componentName) => {
             val displayedComponentName = if (p.proxy.value.appConfiguration.isDebugMode) propertyName + " - " + componentName else ""

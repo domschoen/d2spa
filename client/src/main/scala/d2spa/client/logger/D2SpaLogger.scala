@@ -15,8 +15,9 @@ object D2SpaLogger {
         log.finest(entityName + " -> " + text)
     }
 
-    def logDebugWithD2WContext(d2WContext: PageContext, text: String) = {
-        val entityFilter: String = d2WContext.entityName match {
+    def logDebugWithD2WContext(pageContext: PageContext, text: String) = {
+        val d2wContext = pageContext.d2wContext
+        val entityFilter: String = d2wContext.entityName match {
             case Some(entityName) => entityName
             case None => ALL
         }

@@ -36,23 +36,25 @@ object RulesActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new RulesActor(eomodelActor, ws))
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
-  case class MetaDataResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
+  case class RuleRequestResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
+  case class RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
 
   case class GetRule(d2wContext: D2WContext, key: String, requester: ActorRef)
 
   case class GetRulesForRequest(ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetRulesForAppInit(ruleRequest: RuleRequest, requester: ActorRef)
 
   case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContext, pks: Seq[EOPk], requester: ActorRef)
 
   case class GetMetaDataForEOCompletion(d2wContext: D2WContext, eoFault: EOFault, requester: ActorRef)
 
-  case class GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, requester: ActorRef)
-  case class GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO, requester: ActorRef)
+  case class GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO,ruleRequest: RuleRequest, requester: ActorRef)
 
-  case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
+  case class GetMetaDataForSearch(fs: EOFetchSpecification, ruleRequest: RuleRequest, requester: ActorRef)
 
 
-  case class GetMetaData(d2wContext: D2WContext, requester: ActorRef)
+  case class GetRulesForMetaData(ruleRequest: RuleRequest, requester: ActorRef)
 
 }
 
@@ -68,13 +70,13 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
   def unGappedRuleRequest(ruleRequest: RuleRequest): RuleRequest = {
     val d2wContext = ruleRequest.d2wContext
+
+    // Only rules to fire to bridge the gaps
     val fireRulesOpt: List[Option[FireRule]] = ruleRequest.rules.map(r => r match {
-      case FireRule(k) => None
-      case FireRules(potRule, key) =>
-        val ruleEither = potRule.value
-        if (ruleEither.isLeft) {
-          Some(ruleEither.left.get)
-        } else None
+      case GappedFireRules(keyToFire, key) =>
+        Some(FireRule(keyToFire))
+      case _ =>
+        None
     })
     val fireRules =  fireRulesOpt.flatten
     if (fireRules.isEmpty) {
@@ -88,74 +90,62 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       val futureOfList = Future sequence fireRuleFutures
       val ruleFiringWSResponses = Await result(futureOfList, 2 seconds)
       val ruleResults = ruleFiringWSResponses.map( wsresponse => {
-        val (key, value) = fromRuleResponseToKeyAndString(wsresponse)
-        RuleResult(d2wContext, key, RuleValue(Some(value)))
+        ruleResultWithResponse(d2wContext,wsresponse)
       })
+
+      println("unGappedRuleRequest | ruleResults " + ruleResults)
+
+
+      // Rules Results available for gaps
+      // Re-create the RuleRequest
       val newRules = ruleRequest.rules.map(r => r match {
+
         case fr: FireRule => fr
-        case frs : FireRules =>
-          val propertyKeysPot = frs.propertyKeys
-          val ruleEither = propertyKeysPot.value
-          if (ruleEither.isLeft) {
-            val potRule = ruleEither.left.get
-            val key = potRule.key
-            val ruleResultOpt = RulesUtilities.ruleResultFromRuleResultsForContextAndKey(ruleResults, d2wContext, key)
-            val propertyKeys = RulesUtilities.ruleListValueWithRuleResult(ruleResultOpt)
-            val unGappedPot = PotFiredRulePropertyKeys(Right(propertyKeys))
-            FireRules(unGappedPot,frs.key)
-          } else frs
+        case frs : FireRules => frs
+        case gfr: GappedFireRules =>
+          val ruleResultOpt = RulesUtilities.ruleResultFromRuleResultsForContextAndKey(ruleResults, d2wContext, gfr.fromRuleKey)
+          val propertyKeys = RulesUtilities.ruleListValueWithRuleResult(ruleResultOpt)
+          FireRules(propertyKeys,gfr.key)
       })
       ruleRequest.copy(rules = newRules)
     }
   }
 
   def getRuleResultsForRuleRequest(ruleRequest: RuleRequest): Future[List[RuleResult]] = {
+    println("getRuleResultsForRuleRequest | ruleRequest: " + ruleRequest)
     val ruleRequestUG = unGappedRuleRequest(ruleRequest)
+    println("getRuleResultsForRuleRequest | ungapped ruleRequest: " + ruleRequestUG)
     val d2wContext = ruleRequestUG.d2wContext
-    val fireRuleFutures = ruleRequestUG.rules.map(fr =>
+    val fireRuleFutures: List[Future[List[RuleResult]]] = ruleRequestUG.rules.map(fr =>
       fr match {
-        case fr : FireRule =>
-          val wsresponse = fireRuleFuture(d2wContext,fr.key)
-          
-          val (key, value) = fromRuleResponseToKeyAndString(wsresponse)
-          List(RuleResult(d2wContext, key, RuleValue(Some(value))))
-
-        case frs : FireRules=>
-          val propertyKeys = frs.propertyKeys.value.right.get
-          propertyKeys.map( propertyKey => {
-
+        case fr: FireRule =>
+          val wsresponse = fireRuleFuture(d2wContext, fr.key)
+          val toto = wsresponse.map(wsr => {
+            List(ruleResultWithResponse(d2wContext, wsr))
           })
+          toto
+
+        case frs: FireRules =>
+          val propertyKeys = frs.propertyKeys
+          val toto: List[Future[List[RuleResult]]] = propertyKeys.map(propertyKey => {
+            val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+            val wsresponse = fireRuleFuture(propertyD2WContext, frs.key)
+            wsresponse.map(wsr => {
+              List(ruleResultWithResponse(propertyD2WContext, wsr))
+            })
+          })
+          val unflats: Future[List[List[RuleResult]]] = Future sequence toto
+          val titi: Future[List[RuleResult]] = unflats.map(unflat => unflat.flatten)
+          titi
+          //Future(List.empty[RuleResult])
+        //case gfr: GappedFireRules =>
+
       }
-
-      fireRuleFuture(d2wContext,fr.key)
     )
-    val futureOfList = Future sequence fireRuleFutures
-
-
-
-    val d2wContext = ruleRequest.d2wContext
-    val entityDisplayNameFuture = fireRuleFuture(fD2WContext, RuleKeys.displayNameForEntity)
-    val displayPropertyKeysFuture = fireRuleFuture(fD2WContext, RuleKeys.displayPropertyKeys)
-
-    val result = for {
-      r1 <- entityDisplayNameFuture
-      r2 <- displayPropertyKeysFuture
-    } yield {
-      val entityDisplayName = fromRuleResponseToKeyAndString(r1)
-      val displayPropertyKeys = fromRuleResponseToKeyAndArray(r2)
-      val entityName = d2wContext.entityName.get
-      Logger.debug("LOOK for " + entityName + " into eomodel " + fetchedEOModel)
-
-      val propertiesRuleResults =  propertyMetaInfosForTask(fD2WContext, displayPropertyKeys._2).flatten
-
-      List(
-        RuleResult(d2wContext, entityDisplayName._1, RuleValue(Some(entityDisplayName._2))),
-        RuleResult(d2wContext, displayPropertyKeys._1, RuleValue(stringsV = displayPropertyKeys._2.toList))
-      ) ::: propertiesRuleResults
-    }
-    result
-
-
+    val futureOfListOfList = Future sequence fireRuleFutures
+    futureOfListOfList.map(ll => {
+      ll.flatten
+    })
   }
 
 
@@ -180,18 +170,18 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     request.get()
   }
 
-  private def lift[T](futures: Seq[Future[T]]) =
+  /*private def lift[T](futures: Seq[Future[T]]) =
     futures.map(_.map {
       Success(_)
-    }.recover { case t => Failure(t) })
+    }.recover { case t => Failure(t) })*/
 
-
+/*
   def waitAll[T](futures: Seq[Future[T]]) =
     Future.sequence(lift(futures)) // having neutralized exception completions through the lifting, .sequence can now be used
+*/
 
 
-
-  def fireRule(rhs: FiringD2WContext, key: String): Future[RuleResult] = {
+  def fireRule(rhs: D2WContext, key: String): Future[RuleResult] = {
     Logger.debug("Fire rule for key " + key + " and d2wContext: " + rhs)
     val f = fireRuleFuture(rhs, key)
     f.map(ruleResultWithResponse(rhs, _))
@@ -199,7 +189,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
 
 
-  def ruleResultWithResponse(rhs: FiringD2WContext, response: WSResponse) = {
+  def ruleResultWithResponse(rhs: D2WContext, response: WSResponse) = {
     val jsObj = response.json.asInstanceOf[JsObject]
     val key = jsObj.keys.toSeq(0)
 
@@ -228,9 +218,8 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         RuleValue(Some(value))
     }
 
-    val fullFledged = RulesUtilities.convertD2WContextToFullFledged(rhs)
 
-    val result = RuleResult(fullFledged, key, ruleValue)
+    val result = RuleResult(rhs, key, ruleValue)
     Logger.debug("Result " + result)
     result
     //RuleResult(RuleUtils.convertD2WContextToFullFledged(rhs), key, ruleValue.stringV.get)
@@ -241,7 +230,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
   // - displayNameForProperty
   // - componentName
   // - attributeType
-  def propertyMetaInfosForTask(d2wContext: FiringD2WContext, displayPropertyKeys: Seq[String]) = {
+  def propertyMetaInfosForTask(d2wContext: D2WContext, displayPropertyKeys: Seq[String]) = {
     val propertiesFutures = displayPropertyKeys.map(propertyKey => {
       val rhs = d2wContext.copy(propertyKey = Some(propertyKey))
 
@@ -259,12 +248,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         val attributeType = fromRuleResponseToKeyAndString(ptype)
 
         //Logger.debug("<" + propertyComponentName + ">")
-        val fullFledged = RulesUtilities.convertD2WContextToFullFledged(rhs)
 
           List(
-            RuleResult(fullFledged, attributeType._1, RuleValue(Some(attributeType._2))),
-            RuleResult(fullFledged, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2))),
-            RuleResult(fullFledged, propertyComponentName._1, RuleValue(Some(propertyComponentName._2)))
+            RuleResult(rhs, attributeType._1, RuleValue(Some(attributeType._2))),
+            RuleResult(rhs, propertyDisplayName._1, RuleValue(Some(propertyDisplayName._2))),
+            RuleResult(rhs, propertyComponentName._1, RuleValue(Some(propertyComponentName._2)))
           )
 
       }
@@ -321,10 +309,20 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
      // - attributeType
     case GetRulesForRequest(ruleRequest, requester) =>
       println("Get GetRulesForRequest")
-
-      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
-        requester ! MetaDataResponse(d2wContext, rrs)
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+          println("GetRulesForRequest | rule results: " + rrs)
+          requester ! RuleRequestResponse(ruleRequest.d2wContext, rrs)
+        }
       )
+
+    case GetRulesForAppInit(ruleRequest: RuleRequest, requester: ActorRef) =>
+      println("Get GetRulesForAppInit")
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+        println("GetRulesForRequest | rule results: " + rrs)
+        requester ! RuleRequestForAppInitResponse(ruleRequest.d2wContext, rrs)
+      }
+      )
+
 
     case GetRule(d2wContext, key, requester) => {
       println("Get Rule")
@@ -333,18 +331,16 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       )
     }
     case HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], requester) =>
-      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
-      fireRule(fD2WContext, "displayPropertyKeys").map(rr => {
+      fireRule(d2wContext, "displayPropertyKeys").map(rr => {
 
           val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(rr))
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.HydrateEOs(fD2WContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), requester) //: Future[Seq[EO]]
+            EORepoActor.HydrateEOs(d2wContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), requester) //: Future[Seq[EO]]
         }
       )
 
-    case GetMetaDataForEOCompletion(d2wContext: D2WContext, eoFault: EOFault, requester: ActorRef) =>
+/*    case GetMetaDataForEOCompletion(d2wContext: D2WContext, eoFault: EOFault, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForEOCompletion")
-      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
       getRuleResultsForMetaData(d2wContext).map(rr => {
         val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
         val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
@@ -357,48 +353,38 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
             EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), requester) //: Future[Seq[EO]]
         }
       }
-      )
+      )*/
 
-    case GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, requester: ActorRef) =>
+    case GetRulesForMetaData(ruleRequest, requester) =>
+      println("Rule Actor Receive GetRulesForMetaData")
+
+    case GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForNewEO")
-      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
-      getRuleResultsForMetaData(d2wContext).map(
-        rr => {
-          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
-          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
-          context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.NewEO(d2wContext, eo, Some(rr), requester) //: Future[Seq[EO]]
-        }
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
+          EORepoActor.NewEO(d2wContext, eo, Some(rrs), requester) //: Future[Seq[EO]]
       )
 
-    case GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO, requester: ActorRef) =>
+
+    case GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO, ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForUpdatedEO")
-      val fD2WContext = RulesUtilities.convertFullFledgedToFiringD2WContext(d2wContext)
-      getRuleResultsForMetaData(d2wContext).map(
-        rr => {
-          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
-          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
-          context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.UpdateEO(d2wContext, eo, Some(rr), requester)
-        }
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
+          EORepoActor.UpdateEO(d2wContext, eo, Some(rrs), requester)
       )
 
-    case GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef) =>
+    case GetMetaDataForSearch(fs: EOFetchSpecification, ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForSearch")
       val entityName = EOFetchSpecification.entityName(fs)
       val d2wContext = D2WContext (
         entityName = Some(entityName),
         task = Some(TaskDefine.list)
       )
-
-      getRuleResultsForMetaData(d2wContext).map(
-        rr => {
-          val ruleResult = RulesUtilities.ruleResultForKey(rr, RuleKeys.displayPropertyKeys)
-          val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult.get))
-          context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.Search(fs, Some(rr), requester) //: Future[Seq[EO]]
-        }
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
+          EORepoActor.Search(fs, Some(rrs), requester) //: Future[Seq[EO]]
       )
+
 
   }
 

@@ -71,7 +71,8 @@ object ERD2WEditToOneRelationship {
           val isHydrated = HydrationUtils.isHydratedForPropertyKeys(
             eomodel,
             cache,
-            DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
+            // Materialooze DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
+            DrySubstrate(),
             List(keyWhenRelahionship))
           log.finest("ERD2WEditToOneRelationship | willReceiveProps | key when relathionship but isHydrated " + isHydrated)
 

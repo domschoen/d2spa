@@ -81,23 +81,25 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
   }
 
   override def handle = {
-    case InitAppSpecificClient(ffd2wContext) =>
-      log.finest("PreviousPageHandler | InitAppSpecificClient: " + ffd2wContext)
-      val d2wContext = D2WContextUtils.convertFullFledgedToD2WContext(ffd2wContext)
+    case InitAppSpecificClient(pageContext) =>
+      val d2wContext = pageContext.d2wContext
+      log.finest("PreviousPageHandler | InitAppSpecificClient: " + d2wContext)
       val allowedTasks = Set(TaskDefine.edit, TaskDefine.inspect)
-      val task = ffd2wContext.task.get
+      val task = d2wContext.task.get
       if (allowedTasks.contains(task)) {
-        effectOnly(Effect.action(PrepareEODisplay(d2wContext)))
+        effectOnly(Effect.action(PrepareEODisplay(pageContext)))
       } else {
-        effectOnly(Effect.action(GetMetaDataForSetPage(d2wContext)))
+        effectOnly(Effect.action(GetMetaDataForSetPage(pageContext)))
       }
 
 
     case ShowResults(fs) =>
       log.finest("PreviousPageHandler | ShowResults: " + fs)
       val entityName = EOFetchSpecification.entityName(fs)
-      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list), dataRep = Some(DataRep(Some(fs))))
-      effectOnly(Effect.action(RegisterPreviousPageAndSetPage(d2wContext)))
+      val pageContext = PageContext (
+        dataRep = Some(DataRep(Some(fs))),
+        d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list)))
+      effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContext)))
 
 
     case  SendRuleRequest (ruleRequest) =>
@@ -105,24 +107,23 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       WebSocketClient.send(WebSocketMessages.ExecuteRuleRequest(ruleRequest))
       noChange
 
-    case InitMetaData(d2wContext) =>
-      log.finest("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
-      val fullFledged = D2WContextUtils.convertD2WContextToFullFledged(d2wContext)
-
-      WebSocketClient.send(WebSocketMessages.GetMetaData(fullFledged)) // reply with RuleResults and then action SetJustRuleResults
-      noChange
 
     case UpdateCurrentContextWithEO(eo) =>
-      val newContext = value.get.copy(eo = Some(eo))
-      updated(Some(newContext))
+      val d2wContext = value.get.d2wContext
+      val d2wContextUpdated = d2wContext.copy(eo = Some(eo))
+      val pageContextUpdated = RuleUtils.pageContextWithD2WContext(d2wContextUpdated)
+      updated(Some(pageContextUpdated))
 
 
-    case RegisterPreviousPageAndSetPage(d2wContext) =>
+    case RegisterPreviousPageAndSetPage(pageContext) =>
+      val d2wContext = pageContext.d2wContext
+
       log.finest("PreviousPageHandler | RegisterPreviousPageAndSetPage: " + d2wContext.entityName)
       val newEOToBeRemovedFromCache = value match {
         case Some(currentPage) =>
-          if (currentPage.task.get.equals(TaskDefine.edit)) {
-            val eoOpt = currentPage.eo
+          val currentPageD2WContext = currentPage.d2wContext
+          if (currentPageD2WContext.task.get.equals(TaskDefine.edit)) {
+            val eoOpt = currentPageD2WContext.eo
             eoOpt match {
               case Some(eo) =>
                 val isNewEO = EOValue.isNewEO(eo)
@@ -139,10 +140,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       }
       newEOToBeRemovedFromCache match {
         case Some(eo) =>
-          effectOnly(Effect.action(RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext, eo)))
+          effectOnly(Effect.action(RegisterPreviousPageAndSetPageRemoveMemEO(pageContext, eo)))
 
         case None =>
-          effectOnly(Effect.action(RegisterPreviousPageAndSetPagePure(d2wContext)))
+          effectOnly(Effect.action(RegisterPreviousPageAndSetPagePure(pageContext)))
       }
 
 
@@ -205,9 +206,10 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
-    case PrepareSearchForServer(d2wContext, isMetaDataFetched) =>
+    case PrepareSearchForServer(pageContext, ruleRequest) =>
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      log.finest("PreviousPageHandler | PrepareSearchForServer | entityName: " + entityName + " | isMetaDataFetched: " + isMetaDataFetched)
+      log.finest("PreviousPageHandler | PrepareSearchForServer | entityName: " + entityName)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
           val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)
@@ -226,7 +228,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       //val  stack = stackD2WContext(d2wContext)
       //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
-      WebSocketClient.send(WebSocketMessages.Search(fs, isMetaDataFetched))
+      WebSocketClient.send(WebSocketMessages.Search(fs, ruleRequest))
       noChange
 
       //updated(

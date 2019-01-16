@@ -28,7 +28,8 @@ object PageRepetition {
 
 
     def render(p: Props) = {
-      val d2wContext = p.d2wContext
+      val pageContext = p.d2wContext
+      val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity: " + d2wContext)
       D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity | object exists: " + d2wContext.eo.isDefined)
@@ -57,7 +58,8 @@ object PageRepetition {
                                 displayPropertyKeys toTagMod (
                                   propertyKey =>
                                   {
-                                    val propertyD2WContext = p.d2wContext.copy(propertyKey = Some(propertyKey))
+                                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                                    val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext)
                                     <.tr(^.className := "attribute",
                                       <.th(^.className := "propertyName " + taskName,
                                         {
@@ -70,7 +72,7 @@ object PageRepetition {
                                       ),
                                       // Component part
                                       <.td(^.className := taskName + " d2wAttributeValueCell",
-                                        D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
+                                        D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
                                       )
                                     )
                                   }

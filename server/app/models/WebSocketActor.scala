@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.NodeActor.SetItUp
-import models.RulesActor.{GetRule, GetRulesForMetaData, MetaDataResponse, HydrateEOsForDisplayPropertyKeys, RuleResultsResponse}
+import models.RulesActor._
 import play.api.Configuration
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.ws.WSClient
@@ -48,9 +48,14 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-    case MetaDataResponse(d2wContext: D2WContext, ruleResults) =>
+    case RuleRequestResponse(d2wContext: D2WContext, ruleResults) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
-      out ! MetaDataResponseMsg(d2wContext, Some(ruleResults))
+      out ! RuleRequestResponseMsg(d2wContext, Some(ruleResults))
+
+    case RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults) =>
+      println("Receive RuleResultsResponse ---> sending RuleResults")
+      out ! RuleRequestForAppInitResponseMsg(d2wContext, Some(ruleResults))
+
 
     case EORepoActor.CompletedEO(d2wContext, eo, ruleResultsOpt) =>
       println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
@@ -81,48 +86,51 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case DeleteEOMsgIn(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.DeleteEO(eo, self)
 
-      case NewEO(d2wContext, eo, isMetaDataFetched) =>
+      case NewEO(d2wContext, eo, ruleRequest) =>
         val entityName = d2wContext.entityName.get
-        if (isMetaDataFetched) {
+        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+        if (isEmptyRuleRequest) {
           println("Receive NewEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.NewEO(d2wContext, eo, None, self)
         } else {
           println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForNewEO(d2wContext, eo, self)
+            RulesActor.GetMetaDataForNewEO(d2wContext, eo, ruleRequest, self)
         }
 
-      case UpdateEO(d2wContext, eo, isMetaDataFetched) =>
-        if (isMetaDataFetched) {
+      case UpdateEO(d2wContext, eo, ruleRequest) =>
+        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+
+        if (isEmptyRuleRequest) {
           println("Receive UpdateEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.UpdateEO(d2wContext, eo, None, self)
         } else {
           println("Receive UpdateEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, self)
+            RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, ruleRequest, self)
         }
 
 
-      case HydrateAll(fs) =>
-        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
+      //case HydrateAll(fs) =>
+      //  context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
 
-      case CompleteEO(d2wContext, eoFault, missingKeys, isMetaDataFetched) =>
-        val entityName = d2wContext.entityName.get
-        if (!isMetaDataFetched) {
-          println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
-          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
-        } else {
+     /* case CompleteEO(d2wContext, eoFault, missingKeys, ruleRequest) =>
+        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+        if (isEmptyRuleRequest) {
           println("Receive CompleteEO ---> sending EORepoActor CompleteEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.CompleteEO(d2wContext, eoFault, missingKeys, None, self) //: Future[Seq[EO]]
-        }
+        } else {
+          println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
+        }*/
 
 
 
-      case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
+     /* case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
         val entityName = d2wContext.entityName.get
         if (missingKeys.isEmpty) {
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
@@ -130,18 +138,23 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
         } else {
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
-        }
+        }*/
 
-      case Search(fs, isMetaDataFetched) =>
-        if (isMetaDataFetched) {
+      case Search(fs, ruleRequest) =>
+        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+        if (isEmptyRuleRequest) {
           println("Receive Search ---> sending EORepoActor Search")
           context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, None, self)
         } else {
           println("Receive Search ---> sending EORepoActor GetMetaDataForSearch")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForSearch(fs, self)
+            RulesActor.GetMetaDataForSearch(fs, ruleRequest, self)
 
         }
+
+      case AppInitMsgIn(ruleRequest) =>
+        println("Receive InitAppMsgIn")
+        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForAppInit(ruleRequest, self)
 
       case GetDebugConfiguration(d2wContext) =>
         println("Receive GetDebugConfiguration ---> sending DebugConfMsg")
@@ -157,9 +170,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
       case ExecuteRuleRequest(ruleRequest) =>
         println("Receive GetMetaData")
-        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForMetaData(d2wContext,self)
+        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForMetaData(ruleRequest, self)
 
-      case RuleToFire(d2wContext: FiringD2WContext, key: String) =>
+      case RuleToFire(d2wContext: D2WContext, key: String) =>
         println("Receive RuleToFire")
         context.actorSelection("akka://application/user/node-actor/rulesFetcher")  ! GetRule(d2wContext, key, self)
 

@@ -74,12 +74,12 @@ case object HideBusyIndicator extends Action
 case class SearchWithBusyIndicator(entityName: String) extends Action
 
 case object SocketReady extends Action
-case class InitAppSpecificClient(d2wContext: D2WContext) extends Action
+case class InitAppSpecificClient(d2wContext: PageContext) extends Action
 case class InitMenuAndEO(eo: EO, missingKeys: Set[String]) extends Action
 case class SetMenus(menus: Menus, d2wContext: D2WContext) extends Action
 case class SetMenusAndEO(menus: Menus, eo: EO, missingKeys: Set[String]) extends Action
-case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
-case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: PageContext, actions: List[D2WAction]) extends Action
+//case class RefreshEO(eo:EO, rulesContainer: RulesContainer, actions: List[D2WAction]) extends Action
+//case class UpdateRefreshEOInCache(eos: Seq[EO], d2wContext: PageContext, actions: List[D2WAction]) extends Action
 case class UpdateEOInCache(eo:EO) extends Action
 case object FetchEOModel extends Action
 case class FetchEOModelAndMenus(d2wContext: D2WContext) extends Action
@@ -95,7 +95,7 @@ case class SetPageForSocketReady(d2wContext: PageContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
 
-case class InitMetaData(d2wContext: PageContext) extends Action
+case class InitMetaData(pageContext: PageContext) extends Action
 case class SendRuleRequest(ruleRequest: RuleRequest) extends Action
 //case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
@@ -107,7 +107,7 @@ case class NewAndRegisteredEO(d2wContext: PageContext) extends Action
 case class RegisteredExistingEO(d2wContext: PageContext) extends Action
 
 
-case class NewEOCreated(eo: EO, d2wContext: PageContext, actions: List[D2WAction]) extends Action
+//case class NewEOCreated(eo: EO, d2wContext: PageContext, actions: List[D2WAction]) extends Action
 case class NewEOCreatedForEdit(eo: EO) extends Action
 
 case class InstallEditPage(fromTask: String, eo:EO) extends Action
@@ -139,7 +139,7 @@ case class GoSaving(entityName: String, eo: EO) extends Action
 
 case class SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
-case class PrepareSearchForServer(d2wContext: PageContext, isMetaDataFetched: Boolean) extends Action
+case class PrepareSearchForServer(d2wContext: PageContext, ruleRequest: RuleRequest) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
@@ -170,16 +170,15 @@ object ListEOs extends Action
 case class DeletedEO(eo:EO) extends Action
 case class UpdateEOsForEOOnError(eo:EO) extends Action
 
-trait D2WAction extends diode.Action
+//trait D2WAction extends diode.Action
 
 // Typical case:
 // key : componentName
 // keysSubstrate: displayPropertyKeys either defined by a rule result or a rule to fire
 // In that case the FireRules will trigger RuleToFire action to the server for as many entries in dipslayPropertyKeys
-case class CreateMemID(entityName: String) extends D2WAction
+// case class CreateMemID(entityName: String) extends D2WAction
 case class GetMetaDataForSetPage(d2wContext: PageContext) extends Action
 
-case class FireActions(d2wContext: PageContext, actions: List[D2WAction]) extends Action
 
 
 object HydrationUtils {
@@ -187,6 +186,7 @@ object HydrationUtils {
   def toFault(eo:EO) = EOFault(eo.entityName, eo.pk)
 
   // case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
+
   def entityName(drySubstrate: DrySubstrate) = drySubstrate match {
     case DrySubstrate(Some(eosFault), _ , _) => eosFault.entityName
     case DrySubstrate(_, Some(eoFault) , _) => eoFault.entityName
@@ -229,7 +229,8 @@ object HydrationUtils {
   def drySubstrateFromDataRep(dataRep: Option[DataRep]) :Option[DrySubstrate]  = {
     dataRep match {
       case Some(DataRep(Some(fetchSpecification), _)) =>
-        Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
+        // Materialooze Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
+        None
 
       case Some(DataRep(_, Some(eoakp))) => {
         val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
@@ -239,7 +240,8 @@ object HydrationUtils {
               case ObjectsValue(pks) =>
                 val entityName = eoakp.destinationEntityName
                 val eosFault =  EOsFault(entityName, pks)
-                Some(DrySubstrate(eos = Some(eosFault)))
+                // Materialooze Some(DrySubstrate(eos = Some(eosFault)))
+                Some(DrySubstrate())
               case _ => None
             }
           case None => None
@@ -253,6 +255,10 @@ object HydrationUtils {
 
   // EOs are supposed to exists in cache but not hydrated correctly in scope
   def isHydratedForPropertyKeys(eomodel: EOModel, cache: EOCache, drySubstrate: DrySubstrate, propertyKeys: List[String]): Boolean = {
+    true
+  }
+  /* Materialooze
+  def isHydratedForPropertyKeys(eomodel: EOModel, cache: EOCache, drySubstrate: DrySubstrate, propertyKeys: List[String]): Boolean = {
     drySubstrate match {
       case DrySubstrate(_, Some(eoFault), _) =>
         isEOHydrated(cache,eoFault.entityName, eoFault.pk, propertyKeys)
@@ -265,7 +271,7 @@ object HydrationUtils {
         val nonHydrated = eos.find(eo => !isEOHydrated(cache, eo.entityName, eo.pk, propertyKeys))
         !nonHydrated.isDefined
     }
-  }
+  }*/
 
 }
 
@@ -351,6 +357,16 @@ case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
 
 
 object RuleUtils {
+  def pageContextWithD2WContext(d2wContext: D2WContext) = {
+    PageContext(d2wContext = d2wContext)
+  }
+
+
+  def metaDataRuleRequest(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],d2wContext: D2WContext) = {
+    val rules = RuleUtils.metaDataFiringRules(ruleResults, d2wContext)
+    RuleRequest(d2wContext,rules)
+  }
+
 
   def ruleRequestWithRules(d2wContext: D2WContext, rules: List[FiringRules]) : Option[RuleRequest] =
     if (rules.isEmpty) {
@@ -376,12 +392,12 @@ object RuleUtils {
     fireSingleRules ::: fireRules
   }
 
-  def firingRulesFromFireRules(fireRulesOpts: List[Option[FireRules]]) = fireRulesOpts.flatten
+  def firingRulesFromFireRules(fireRulesOpts: List[Option[FiringRules]]): List[FiringRules] = fireRulesOpts.flatten
 
 
-    def firingRulesFromPotFiredRuleResult(fireSingleRulesPots: List[PotFiredRuleResult]): List[FiringRules] = {
+  def firingRulesFromPotFiredRuleResult(fireSingleRulesPots: List[PotFiredRuleResult]): List[FiringRules] = {
     val fireSingleRulesOpts = fireSingleRulesPots.map(pot => pot match {
-      case PotFiredRuleResult(Left(fireRule)) => Some(fireRule)
+      case PotFiredRuleResult(Left(fireRuleKey)) => Some(FireRule(fireRuleKey))
       case _ => None
     })
     fireSingleRulesOpts.flatten
@@ -391,7 +407,7 @@ object RuleUtils {
     val ruleResultOpt: Option[RuleResult] = RuleUtils.ruleResultForContextAndKey(ruleResults, d2wContext, key)
     ruleResultOpt match {
       case Some(ruleResult) => PotFiredRuleResult(Right(ruleResult))
-      case None => PotFiredRuleResult(Left(FireRule(key)))
+      case None => PotFiredRuleResult(Left(key))
     }
   }
 
@@ -487,7 +503,7 @@ object RuleUtils {
     def potentialFireRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],
                            d2wContext: D2WContext,
                            propertyKeysRuleResultPot: PotFiredRuleResult,
-                           key: String): Option[FireRules] = {
+                           key: String): Option[FiringRules] = {
 
       propertyKeysRuleResultPot match {
         case PotFiredRuleResult(Right(ruleResult)) =>
@@ -495,16 +511,17 @@ object RuleUtils {
           val missingPropertyKeys: List[String] = propertyKeys.filter(propertyKey => {
             val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
             val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
-            //ruleResultOpt.isEmpty
-            true
+            !ruleResultOpt.isEmpty
           })
 
 
           if (missingPropertyKeys.size == 0) {
             None
           } else {
-            Some(FireRules(PotFiredRulePropertyKeys(Right(missingPropertyKeys)), key))
+            Some(FireRules(missingPropertyKeys, key))
           }
+        case PotFiredRuleResult(Left(keyToFire)) =>
+          Some(GappedFireRules(keyToFire, key))
         case _ => None
       }
     }
@@ -631,7 +648,7 @@ object RuleUtils {
   }
 
 
-  case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: PageContext, actions: List[D2WAction]) extends Action
+  //case class SetRuleResults(ruleResults: List[RuleResult], d2wContext: PageContext, actions: List[D2WAction]) extends Action
 
   case class SetJustRuleResults(ruleResults: List[RuleResult]) extends Action
 
