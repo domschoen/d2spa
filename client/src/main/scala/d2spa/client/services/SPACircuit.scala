@@ -220,7 +220,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         if (RulesUtilities.isEmptyRuleRequest(ruleRequest)) {
           effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContext)))
         } else {
-          effectOnly(Effect.action(SendRuleRequest(ruleRequest)))
+          WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest))
+          noChange
         }
       }
 
