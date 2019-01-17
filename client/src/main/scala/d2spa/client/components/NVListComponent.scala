@@ -105,7 +105,7 @@ object NVListComponent {
 
     def inspectEO(eo: EO) = {
       //println("NVListCompoennt InspectEO")
-      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect), eo = Some(eo)))
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect)), eo = Some(eo))
 
       Callback.log(s"Inspect: $eo") >>
         //$.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
@@ -114,7 +114,7 @@ object NVListComponent {
 
     def editEO(eo: EO) = {
       //val pk = EOValue.pk(eo)
-      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit), eo = Some(eo)))
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit)), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
         $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))
@@ -261,9 +261,11 @@ object NVListComponent {
                       ).when(showFirstCell),
                       displayPropertyKeys toTagMod (
                         propertyKey => {
-                          val propertyD2WContext = pageContext.copy(d2wContext = d2wContext.copy(propertyKey = Some(propertyKey), eo = Some(eo)))
+                          val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                          val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext, eo = Some(eo))
+                          println("propertyPageContext " + propertyPageContext)
                           <.td(^.className := "",
-                            D2WComponentInstaller(p.router, propertyD2WContext, p.proxy)
+                            D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
                           )
                         }
                         ),

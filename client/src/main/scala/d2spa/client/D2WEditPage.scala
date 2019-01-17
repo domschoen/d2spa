@@ -39,8 +39,8 @@ object D2WEditPage {
       val taskChanged = !cTask.equals(nTask)
 
       // may not be up to date ? (we should take the eo from the proxy)
-      val cPk = currentProps.d2wContext.d2wContext.eo
-      val nPk = nextProps.d2wContext.d2wContext.eo
+      val cPk = currentProps.d2wContext.eo
+      val nPk = nextProps.d2wContext.eo
       val pkChanged = !nPk.equals(nPk)
 
       val cPP = currentProps.proxy.value.previousPage
@@ -63,7 +63,7 @@ object D2WEditPage {
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("D2WEditPage | mounted " + entityName + "state " + s)
-      log.finest("D2WEditPage | mounted eo " + d2wContext.eo)
+      log.finest("D2WEditPage | mounted eo " + pageContext.eo)
       log.finest("D2WEditPage | mounted d2wContext " + d2wContext)
       log.finest("D2WEditPage | mounted proxy d2wContext " + p.proxy.value.previousPage)
       val task = d2wContext.task.get
@@ -128,7 +128,7 @@ object D2WEditPage {
           val d2wContext = pageContext.d2wContext
           log.finest("D2WEditPage: render eo with fresh context : " + d2wContext)
 
-          val eoRefOpt = d2wContext.eo
+          val eoRefOpt = pageContext.eo
           log.finest("D2WEditPage: render eo : " + eoRefOpt)
 
           eoRefOpt match {

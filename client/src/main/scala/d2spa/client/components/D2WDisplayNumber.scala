@@ -25,7 +25,7 @@ object D2WDisplayNumber {
     def render(p: Props) = {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
-      val eoOpt = d2wContext.eo
+      val eoOpt = pageContext.eo
       eoOpt match {
         case Some(eo) =>
 

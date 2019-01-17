@@ -31,8 +31,8 @@ object ERDInspect {
       //log.finest("ERDInspect willReceiveProps | currentProps: " + currentProps)
       //log.finest("ERDInspect willReceiveProps | nextProps: " + nextProps)
 
-      val cEO = currentProps.d2wContext.d2wContext.eo
-      val nEO = nextProps.d2wContext.d2wContext.eo
+      val cEO = currentProps.d2wContext.eo
+      val nEO = nextProps.d2wContext.eo
       val eoChanged = !cEO.equals(nEO)
 
       //log.finest("ERDInspect willReceiveProps | eoChanged: " + eoChanged)
@@ -71,7 +71,7 @@ object ERDInspect {
       //log.finest("ERDInspect render with D2WContext: " + d2wContext)
 
       // to get access to the latest version of the eo we use the previous page context
-      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, d2wContext.eo.get)
+      val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, pageContext.eo.get)
       D2SpaLogger.logfinest(entityName,"ERDInspect render eoOpt " + eoOpt)
 
       eoOpt match {

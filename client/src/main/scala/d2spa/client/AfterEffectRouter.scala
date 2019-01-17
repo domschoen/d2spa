@@ -30,7 +30,7 @@ object AfterEffectRouter {
     val d2wContext = pageContext.d2wContext
     val entityName = d2wContext.entityName.get
     val taskName = d2wContext.task.get
-    d2wContext.eo match {
+    pageContext.eo match {
       case Some(eo) =>
         val pk = eo.pk.pks.head
         if (pk < 0) {

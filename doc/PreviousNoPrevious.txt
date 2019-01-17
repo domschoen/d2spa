@@ -128,7 +128,7 @@ D2WEditPage
 Inspect record from list page
     RegisterPreviousPageAndSetPage            
             
-
+----------------
 Search
     SearchAction (MyCircuit)
         PrepareSearchForServer ((MyCircuit.PreviousPageHandler)

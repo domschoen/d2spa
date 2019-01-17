@@ -36,7 +36,7 @@ object ERD2WDisplayString {
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
 
-      val eoOpt = d2wContext.eo
+      val eoOpt = pageContext.eo
       //D2SpaLogger.logfinest( entityName, "Render ERD2WDisplayString eoOpt: " + eoOpt)
       eoOpt match {
         case Some(eo) =>

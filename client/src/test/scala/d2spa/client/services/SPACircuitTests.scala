@@ -18,26 +18,29 @@ import scala.concurrent.duration._
 
 object SPACircuitTests extends TestSuite {
 
-  val testD2WContext = D2WContext(
+  val testPageContext = PageContext(
+
+    d2wContext = D2WContext(
     Some("CustomerBusiness"), // entity name
     Some(TaskDefine.inspect),
-    None, // previousTask
-    Some(EO("CustomerBusiness",
+    None,
+      Some("InspectEmbeddedCustomerBusinessManufacturer")),
+    eo = Some(EO("CustomerBusiness",
       List("businessUid", "customerUid"),
       List(IntValue(1),IntValue(30)),
       EOPk(List(1,303)), // pk
       None
     )),
-    Map.empty[String, QueryValue], // queryValues
-    None, // Data Rep
-    None, // property Key
-    PotFiredKey(Right(Some("InspectEmbeddedCustomerBusinessManufacturer")))
+    queryValues = Map.empty[String, QueryValue] // queryValues
     )
 
   val cacheBefore = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List(),List(),EOPk(List(-1)),None))))
   val cacheBefore2 = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None))))
 
   def tests = TestSuite {
+    "RuleRequest should be empty when rule cache is populated " - {
+      assert(false)
+    }
     "Create new EO" - {
       val entityName = "Project"
       val newEO = EOCacheUtils.newEOWithLastMemID(entityName, None)
@@ -207,8 +210,8 @@ object SPACircuitTests extends TestSuite {
       val model = Map.empty[String, Map[String, Map[String, PageConfigurationRuleResults]]]
 
 
-
-      val fireDisplayPropertyKeys = FireRule(testD2WContext, RuleKeys.displayPropertyKeys)
+      // testD2WContext
+      val fireDisplayPropertyKeys = FireRule(RuleKeys.displayPropertyKeys)
 
 
       val fireDisplayPropertyKeysRuleResult = List(
@@ -255,7 +258,8 @@ object SPACircuitTests extends TestSuite {
       }*/
       'GetRuleResult - {
         val h = build
-        val result = h.handle(SetRuleResults(fireDisplayPropertyKeysRuleResult, testD2WContext, List()))
+        val testD2WContext = testPageContext.d2wContext
+        val result = h.handle(SetJustRuleResults(fireDisplayPropertyKeysRuleResult))
 
         // We want to test             val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(newValue, AppModel.testD2WContext, RuleKeys.displayPropertyKeys)
         // Let's decompose it
@@ -267,7 +271,7 @@ object SPACircuitTests extends TestSuite {
             val ruleContainerOpt = RuleUtils.ruleContainerForContext(newValue, testD2WContext)
             ruleContainerOpt match {
               case Some(rulesContainer) =>
-                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(rulesContainer.ruleResults, testD2WContext,RuleKeys.displayPropertyKeys)
+                val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(newValue, testD2WContext,RuleKeys.displayPropertyKeys)
                 ruleResultOpt match {
                   case Some(ruleResult) => {
                     println("rule result " + ruleResult)

@@ -116,7 +116,7 @@ object ERD2WInspect {
 
     def editEO(eo: EO) = {
       //val pk = EOValue.pk(eo)
-      val d2wContext = PageContext( d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit), eo = Some(eo)))
+      val d2wContext = PageContext( d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit)), eo = Some(eo))
 
       Callback.log(s"Edit: $eo") >>
         $.props >>= (_.proxy.dispatchCB(RegisterPreviousPage(d2wContext)))
@@ -192,9 +192,9 @@ object ERD2WInspect {
 
           eoOpt match {
             case Some(eo) =>
-              val d2wContextEO =  d2wContext.copy(eo = eoOpt)
-              val pageContextEO = pageContext.copy(d2wContext = d2wContextEO)
-              D2SpaLogger.logfinest(entityName,"ERD2WInspect render | d2w context for repetition: " + d2wContextEO.entityName + " task " + d2wContextEO.task + " propertyKey " + d2wContextEO.propertyKey + " page configuration " + d2wContextEO.pageConfiguration)
+              val pageContextEO = pageContext.copy(eo = eoOpt)
+              val d2wContext = pageContext.d2wContext
+              D2SpaLogger.logfinest(entityName,"ERD2WInspect render | d2w context for repetition: " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
               <.div(PageRepetition(p.router, pageContextEO, p.proxy))
 

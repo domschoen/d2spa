@@ -110,8 +110,8 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
 
     case UpdateCurrentContextWithEO(eo) =>
       val d2wContext = value.get.d2wContext
-      val d2wContextUpdated = d2wContext.copy(eo = Some(eo))
-      val pageContextUpdated = RuleUtils.pageContextWithD2WContext(d2wContextUpdated)
+      val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
+      val pageContextUpdated = pageContext.copy(eo = Some(eo))
       updated(Some(pageContextUpdated))
 
 
@@ -123,7 +123,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
         case Some(currentPage) =>
           val currentPageD2WContext = currentPage.d2wContext
           if (currentPageD2WContext.task.get.equals(TaskDefine.edit)) {
-            val eoOpt = currentPageD2WContext.eo
+            val eoOpt = currentPage.eo
             eoOpt match {
               case Some(eo) =>
                 val isNewEO = EOValue.isNewEO(eo)

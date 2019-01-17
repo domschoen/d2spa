@@ -375,14 +375,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
     case GetMetaDataForSearch(fs: EOFetchSpecification, ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForSearch")
-      val entityName = EOFetchSpecification.entityName(fs)
-      val d2wContext = D2WContext (
-        entityName = Some(entityName),
-        task = Some(TaskDefine.list)
-      )
-      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+        println("GetRulesForRequest | rule results: " + rrs)
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
           EORepoActor.Search(fs, Some(rrs), requester) //: Future[Seq[EO]]
+      }
       )
 
 

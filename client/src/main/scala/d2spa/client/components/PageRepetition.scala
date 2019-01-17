@@ -32,7 +32,7 @@ object PageRepetition {
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity: " + d2wContext)
-      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity | object exists: " + d2wContext.eo.isDefined)
+      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity | object exists: " + pageContext.eo.isDefined)
       val ruleResultsModel = p.proxy.value.ruleResults
 
       val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)

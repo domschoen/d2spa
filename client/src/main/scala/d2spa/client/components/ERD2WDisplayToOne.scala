@@ -79,7 +79,7 @@ object ERD2WDisplayToOne {
 
       val eomodel = p.proxy.value.cache.eomodel.get
 
-      val eoOpt = d2wContext.eo
+      val eoOpt = pageContext.eo
       eoOpt match {
         case Some(eo) =>
 
@@ -129,7 +129,7 @@ object ERD2WDisplayToOne {
 
       val propertyName = d2wContext.propertyKey.get
 
-      val eoOpt = d2wContext.eo
+      val eoOpt = pageContext.eo
       eoOpt match {
         case Some(eo) =>
 

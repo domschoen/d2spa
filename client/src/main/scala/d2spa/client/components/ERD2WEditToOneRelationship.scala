@@ -175,7 +175,7 @@ object ERD2WEditToOneRelationship {
       log.finest("ERD2WEditToOneRelationship render ruleResultsModel " + ruleResultsModel)
 
 
-      d2wContext.eo match {
+      pageContext.eo match {
         case Some(deo) =>
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, deo)
           eoOpt match {

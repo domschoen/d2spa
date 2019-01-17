@@ -698,8 +698,7 @@ case class D2WContext(
                   entityName: Option[String],
                   task: Option[String],
                   propertyKey:  Option[String] = None,
-                  pageConfiguration: Option[String] = None,
-                  eo: Option[EO] = None
+                  pageConfiguration: Option[String] = None
                                 )
 
 
@@ -725,7 +724,7 @@ object RulesUtilities {
   })
 
   def isD2WContextEquals(a: D2WContext, b: D2WContext): Boolean = {
-    return a.equals(b)
+    a.equals(b)
   }
 
 

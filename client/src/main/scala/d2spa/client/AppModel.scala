@@ -316,6 +316,7 @@ object QueryValue {
 case class PageContext(previousTask: Option[PageContext] = None,
                        queryValues: Map[String, QueryValue] = Map(),
                        dataRep: Option[DataRep] = None,
+                       eo: Option[EO] = None,
                        d2wContext: D2WContext
                       )
 

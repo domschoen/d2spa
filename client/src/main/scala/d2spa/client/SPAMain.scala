@@ -109,8 +109,14 @@ object SPAMain   extends  js.JSApp {
                    case Some(previousPage) =>
                      previousPage
                    case None =>
-                     val firstD2WContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit), eo = Some(
-                       EO(entityName = m.entity, pk = EOPk(List(m.pk))))))
+                     val firstD2WContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit)),
+                       eo = Some(
+                        EO(
+                          entityName = m.entity,
+                          pk = EOPk(List(m.pk))
+                        )
+                       )
+                     )
                      firstD2WContext
                  }
                  if (!p.value.appConfiguration.socketReady) {
@@ -126,9 +132,10 @@ object SPAMain   extends  js.JSApp {
 
               menusConnection(p => {
 
-                val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect), eo = Some(
+                val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect)),
+                  eo = Some(
                   EO(entityName = m.entity, pk = EOPk(List(m.pk)))
-                )))
+                ))
                 if (!p.value.appConfiguration.socketReady) {
                   WebSocketClient.setSocket(Some(d2wContext))
                 }
@@ -142,7 +149,8 @@ object SPAMain   extends  js.JSApp {
           (m, ctl) => {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
-              val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit), eo = None))
+              val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entityName), task = Some(TaskDefine.edit)),
+                eo = None)
               if (!p.value.appConfiguration.socketReady) {
                 WebSocketClient.setSocket(Some(d2wContext))
               } else {

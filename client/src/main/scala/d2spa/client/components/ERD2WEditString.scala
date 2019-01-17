@@ -37,7 +37,7 @@ object ERD2WEditString  {
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
-      val faultOpt = d2wContext.eo
+      val faultOpt = pageContext.eo
       faultOpt match {
         case Some(eo) =>
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eo)

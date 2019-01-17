@@ -40,7 +40,7 @@ object MenuHeader {
 
     def newEO(entity: EOEntity) = {
       log.finest("new EO for entity " + entity)
-      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit), eo = None))
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(entity.name), task = Some(TaskDefine.edit)), eo = None)
 
       Callback.log(s"New EO for: $entity") >>
         $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))
