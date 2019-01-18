@@ -1,7 +1,7 @@
 package d2spa.client.services
 
 import d2spa.client.EOCacheUtils.{dbEntityMapForEntityNamed, eoCacheEntityElementForEntityNamed, refreshedEOMap, updatedCacheForDb}
-import d2spa.client.RuleUtils.{ruleContainerForContext, ruleResultForContextAndKey}
+import d2spa.client.RuleUtils.{missingKeysForKey, ruleContainerForContext, ruleResultForContextAndKey}
 import d2spa.client.components.ERD2WEditToOneRelationship
 import d2spa.client.{EOCache, RuleUtils, _}
 import d2spa.client.services.RuleResultsHandler
@@ -38,8 +38,36 @@ object SPACircuitTests extends TestSuite {
   val cacheBefore2 = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None))))
 
   def tests = TestSuite {
+    "missingKeysForKey componentName should be empty" - {
+      val ruleResults = d2spa.client.services.ClientTestData.ruleCache
+      val d2wContext = D2WContext(Some("Project"),Some("edit"),None,None)
+      val propertyKeys = List("descr", "projectNumber", "customer")
+      val key = RuleKeys.componentName
+
+      val propertyD2WContext = d2wContext.copy(propertyKey = Some("descr"))
+      val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
+      assert(ruleResultOpt.isDefined)
+
+
+
+      val missingPropertyKeys = RuleUtils.missingKeysForKey(ruleResults, d2wContext, propertyKeys, key)
+      assert(missingPropertyKeys.isEmpty)
+    }
     "RuleRequest should be empty when rule cache is populated " - {
-      assert(false)
+      val ruleResults = d2spa.client.services.ClientTestData.ruleCache
+      val d2wContext = D2WContext(Some("Project"),Some("edit"),None,None)
+      val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
+      val componentNameFireRulesOpt = RuleUtils.potentialFireRules(ruleResults, d2wContext, displayPropertyKeysRuleResultPot, RuleKeys.componentName)
+
+
+      println("componentNameFireRulesOpt " + componentNameFireRulesOpt)
+//componentNameFireRulesOpt Some(FireRules(List(descr, projectNumber, customer),componentName))
+      val firingRulesReference = FireRules(List("descr", "projectNumber", "customer"), RuleKeys.componentName)
+      assert(componentNameFireRulesOpt.isEmpty)
+
+
+      val ruleRequest = RuleUtils.metaDataRuleRequest(ruleResults,d2wContext)
+      assert(RulesUtilities.isEmptyRuleRequest(ruleRequest))
     }
     "Create new EO" - {
       val entityName = "Project"
@@ -260,18 +288,22 @@ object SPACircuitTests extends TestSuite {
         val h = build
         val testD2WContext = testPageContext.d2wContext
         val result = h.handle(SetJustRuleResults(fireDisplayPropertyKeysRuleResult))
+        println("result " + result)
 
         // We want to test             val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(newValue, AppModel.testD2WContext, RuleKeys.displayPropertyKeys)
         // Let's decompose it
         result match {
-          case ModelUpdateEffect(newValue, effects) =>
+          case ModelUpdate(newValue) =>
             val pageConfOpt = RuleUtils.pageConfigurationRuleResultsForContext(newValue, testD2WContext)
             assert(pageConfOpt.isDefined)
             // println("pageConfOpt " + pageConfOpt)
             val ruleContainerOpt = RuleUtils.ruleContainerForContext(newValue, testD2WContext)
+            println("ruleContainerOpt " + ruleContainerOpt)
             ruleContainerOpt match {
               case Some(rulesContainer) =>
+
                 val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(newValue, testD2WContext,RuleKeys.displayPropertyKeys)
+                println("ruleResultOpt " + ruleResultOpt)
                 ruleResultOpt match {
                   case Some(ruleResult) => {
                     println("rule result " + ruleResult)

@@ -500,6 +500,16 @@ object RuleUtils {
     }
 
 
+
+    def missingKeysForKey(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]], d2wContext: D2WContext, propertyKeys: List[String], key: String) = {
+      val missingPropertyKeys: List[String] = propertyKeys.filter(propertyKey => {
+        val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+        val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
+        ruleResultOpt.isEmpty
+      })
+      missingPropertyKeys
+    }
+
     // in case the PotFiredRuleResult is non empty, we look for each property and return a list of only those missing
     def potentialFireRules(ruleResults: Map[String, Map[String, Map[String, PageConfigurationRuleResults]]],
                            d2wContext: D2WContext,
@@ -509,12 +519,7 @@ object RuleUtils {
       propertyKeysRuleResultPot match {
         case PotFiredRuleResult(Right(ruleResult)) =>
           val propertyKeys: List[String] = RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
-          val missingPropertyKeys: List[String] = propertyKeys.filter(propertyKey => {
-            val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
-            val ruleResultOpt = RuleUtils.ruleResultForContextAndKey(ruleResults, propertyD2WContext, key)
-            !ruleResultOpt.isEmpty
-          })
-
+          val missingPropertyKeys = missingKeysForKey(ruleResults, d2wContext, propertyKeys, key)
 
           if (missingPropertyKeys.size == 0) {
             None
