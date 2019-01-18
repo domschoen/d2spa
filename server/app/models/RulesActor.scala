@@ -37,12 +37,12 @@ object RulesActor {
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
   case class RuleRequestResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
-  case class RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
+  case class RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults: List[RuleResult], eoOpt: Option [EO])
 
   case class GetRule(d2wContext: D2WContext, key: String, requester: ActorRef)
 
   case class GetRulesForRequest(ruleRequest: RuleRequest, requester: ActorRef)
-  case class GetRulesForAppInit(ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetRulesForAppInit(ruleRequest: RuleRequest, eoOpt: Option [EO], requester: ActorRef)
 
   case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContext, pks: Seq[EOPk], requester: ActorRef)
 
@@ -315,11 +315,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         }
       )
 
-    case GetRulesForAppInit(ruleRequest: RuleRequest, requester: ActorRef) =>
+    case GetRulesForAppInit(ruleRequest: RuleRequest, eoOpt, requester: ActorRef) =>
       println("Get GetRulesForAppInit")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
         println("GetRulesForRequest | rule results: " + rrs)
-        requester ! RuleRequestForAppInitResponse(ruleRequest.d2wContext, rrs)
+        requester ! RuleRequestForAppInitResponse(ruleRequest.d2wContext, rrs, eoOpt)
       }
       )
 

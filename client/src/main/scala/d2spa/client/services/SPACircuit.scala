@@ -182,13 +182,6 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       WebSocketClient.send(WebSocketMessages.UpdateEO(d2wContext, purgedEO, ruleRequest))
       noChange
 
-    case InitMetaData(pageContext) =>
-      val d2wContext = pageContext.d2wContext
-      log.finest("PreviousPageHandler | InitMetaData: " + d2wContext.entityName)
-      val ruleRequest = RuleUtils.metaDataRuleRequest(value, d2wContext)
-
-      WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest)) // reply with RuleResults and then action SetJustRuleResults
-      noChange
 
     case SearchAction(entityName) =>
       log.finest("RuleResultsHandler | SearchAction | d2wContext " + entityName)
@@ -220,7 +213,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         if (RulesUtilities.isEmptyRuleRequest(ruleRequest)) {
           effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContext)))
         } else {
-          WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest))
+          WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest, pageContext.eo))
           noChange
         }
       }
@@ -238,7 +231,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         log.finest("PreviousPageHandler | GetMetaDataForSetPage | no rules to fetch " + d2wContext.entityName)
         effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContext)))
       } else {
-        WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest)) // reply with RuleResults and then action SetJustRuleResults
+        WebSocketClient.send(WebSocketMessages.AppInitMsgIn(ruleRequest, pageContext.eo)) // reply with RuleResults and then action SetJustRuleResults
         noChange
       }
 
@@ -257,7 +250,21 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           effectOnly( Effect.action(RegisterPreviousPageAndSetPage(pageContext)))
       }
 
+    case SetRulesForPrepareEO(d2wContext, ruleResultsOpt: Option[List[RuleResult]], eoOpt) =>
 
+      val entityName = d2wContext.entityName.get
+      //D2SpaLogger.logfinest(entityName,"RuleResultsHandler | SetMetaData " + entityMetaData)
+      D2SpaLogger.logfinest(entityName,"RuleResultsHandler | SetMetaData ")
+      val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
+      val pageContextUpdated = pageContext.copy(eo = eoOpt)
+      ruleResultsOpt match {
+        case Some(ruleResults) =>
+          val newRuleResults = updatedRuleResults(value,ruleResults)
+          updated(newRuleResults, Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
+
+        case None =>
+          effectOnly( Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
+      }
 
 
     //case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String,

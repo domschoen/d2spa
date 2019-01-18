@@ -95,12 +95,12 @@ case class SetPageForSocketReady(d2wContext: PageContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
 
-case class InitMetaData(pageContext: PageContext) extends Action
 case class SendRuleRequest(ruleRequest: RuleRequest) extends Action
 //case class SetPageForTaskAndEntity(d2wContext: D2WContext) extends Action
 case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
+case class SetRulesForPrepareEO(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends Action
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewAndRegisteredEO(d2wContext: PageContext) extends Action

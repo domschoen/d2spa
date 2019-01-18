@@ -52,9 +52,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       println("Receive RuleResultsResponse ---> sending RuleResults")
       out ! RuleRequestResponseMsg(d2wContext, Some(ruleResults))
 
-    case RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults) =>
+    case RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults, eoOpt) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
-      out ! RuleRequestForAppInitResponseMsg(d2wContext, Some(ruleResults))
+      out ! RuleRequestForAppInitResponseMsg(d2wContext, Some(ruleResults), eoOpt)
 
 
     case EORepoActor.CompletedEO(d2wContext, eo, ruleResultsOpt) =>
@@ -152,9 +152,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
         }
 
-      case AppInitMsgIn(ruleRequest) =>
+      case AppInitMsgIn(ruleRequest, eoOpt) =>
         println("Receive InitAppMsgIn")
-        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForAppInit(ruleRequest, self)
+        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForAppInit(ruleRequest, eoOpt, self)
 
       case GetDebugConfiguration(d2wContext) =>
         println("Receive GetDebugConfiguration ---> sending DebugConfMsg")

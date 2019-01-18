@@ -31,7 +31,7 @@ object WebSocketMessages {
   // D2W Context is needed for the fetch of rules
   final case class NewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
   final case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
-  final case class AppInitMsgIn(ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class AppInitMsgIn(ruleRequest: RuleRequest, eoOpt: Option[EO]) extends WebSocketMsgIn
 
   // Server ---> Client
   // __________________
@@ -40,7 +40,7 @@ object WebSocketMessages {
 
   final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
   final case class RuleRequestResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends WebSocketMsgOut
 
   final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContext) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus, d2wContext: D2WContext) extends WebSocketMsgOut

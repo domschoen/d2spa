@@ -95,7 +95,7 @@ object WebSocketClient {
               case FetchedMenus(menus, d2wContext) => MyCircuit.dispatch(SetMenus(menus, d2wContext))
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
               case RuleRequestResponseMsg(d2wContext, ruleResults) => MyCircuit.dispatch(client.SetMetaData(d2wContext, ruleResults))
-              case RuleRequestForAppInitResponseMsg(d2wContext, ruleResults) => MyCircuit.dispatch(client.SetMetaData(d2wContext, ruleResults))
+              case RuleRequestForAppInitResponseMsg(d2wContext, ruleResults, eoOpt) => MyCircuit.dispatch(client.SetRulesForPrepareEO(d2wContext, ruleResults, eoOpt))
 
 
               case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
