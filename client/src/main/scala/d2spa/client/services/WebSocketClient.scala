@@ -97,10 +97,10 @@ object WebSocketClient {
               case RuleRequestResponseMsg(d2wContext, ruleResults) => MyCircuit.dispatch(client.SetMetaData(d2wContext, ruleResults))
               case RuleRequestForAppInitResponseMsg(d2wContext, ruleResults, eoOpt) => MyCircuit.dispatch(client.SetRulesForPrepareEO(d2wContext, ruleResults, eoOpt))
 
-
+              case RulesForSearchResultResponseMsgOut(fs,eos,ruleResultsOpt) => MyCircuit.dispatch(client.SearchResultWithRuleResults(fs,eos,ruleResultsOpt))
               case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
-              case FetchedObjectsForListMsgOut(fs, eos, ruleResultsOpt) => MyCircuit.dispatch(client.SearchResult(fs, eos, ruleResultsOpt))
+              case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
                 MyCircuit.dispatch(client.SavingEO(d2wContext, eo, ruleResults))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))

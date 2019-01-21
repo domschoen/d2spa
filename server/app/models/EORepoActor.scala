@@ -33,7 +33,7 @@ object EORepoActor {
   case class HydrateAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
 
 
-  case class Search(fs: EOFetchSpecification, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
+  case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
 
   case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
@@ -46,7 +46,7 @@ object EORepoActor {
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
   case class CompletedEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
-  case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO], ruleResults: Option[List[RuleResult]])
+  case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
   case class DeletingResponse(eo: EO)
@@ -608,7 +608,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(entityName, rrs, None)
       )
 
-    case Search(fs: EOFetchSpecification, ruleResults, requester: ActorRef) =>
+    case Search(fs: EOFetchSpecification, requester: ActorRef) =>
       log.debug("Search")
 
       val entityName = EOFetchSpecification.entityName(fs)
@@ -617,7 +617,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         case fq: EOQualifiedFetch => Some(fq.qualifier)
       }
       searchOnWORepository(entityName, qualifier).map(rrs =>
-        requester ! FetchedObjectsForList(fs,rrs, ruleResults)
+        requester ! FetchedObjectsForList(fs,rrs)
       )
 
     /*case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>

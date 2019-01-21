@@ -24,7 +24,8 @@ object WebSocketMessages {
   //final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   //final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   //final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class Search(fs: EOFetchSpecification, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
+  final case class RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   final case class Hydrate(hydration: Hydration, ruleRequest: RuleRequest) extends WebSocketMsgIn
 
@@ -47,7 +48,10 @@ object WebSocketMessages {
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
   final case class CompletedEOMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RulesForSearchResultResponseMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+
+
+  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }

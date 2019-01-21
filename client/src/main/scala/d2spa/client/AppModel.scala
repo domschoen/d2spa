@@ -114,6 +114,7 @@ case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
 
+case class RegisterAndPrepareEODisplay(eo: EO, d2wContext: PageContext) extends Action
 case class PrepareEODisplay(d2wContext: PageContext) extends Action
 case class PrepareEditPage(d2wContext: PageContext) extends Action
 
@@ -147,7 +148,7 @@ case class UpdateEOValueForProperty(eo: EO, d2wContext: PageContext, value: EOVa
 
 case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
 case class SearchResultWithRuleResults(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
 

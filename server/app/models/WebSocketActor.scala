@@ -68,10 +68,15 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt)
 
 
-    case EORepoActor.FetchedObjectsForList(fs, eos, ruleResultsOpt) =>
+    case RulesForSearchResultResponse(fs, eos, ruleResultsOpt) =>
+      println("Receive RulesForSearchResultResponse ---> sending RulesForSearchResultResponseMsgOut")
+      out ! RulesForSearchResultResponseMsgOut(fs, eos, ruleResultsOpt)
+
+
+    case EORepoActor.FetchedObjectsForList(fs, eos) =>
       println("Receive FetchedObjectsForList ---> sending FetchedObjectsForListMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsForListMsgOut(fs, eos, ruleResultsOpt)
+      out ! FetchedObjectsForListMsgOut(fs, eos)
 
     case EORepoActor.SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
@@ -140,17 +145,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
         }*/
 
-      case Search(fs, ruleRequest) =>
-        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
-        if (isEmptyRuleRequest) {
-          println("Receive Search ---> sending EORepoActor Search")
-          context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, None, self)
-        } else {
-          println("Receive Search ---> sending EORepoActor GetMetaDataForSearch")
-          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForSearch(fs, ruleRequest, self)
+      case Search(fs) =>
+        println("Receive Search ---> sending EORepoActor Search")
+        context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
 
-        }
+
 
       case AppInitMsgIn(ruleRequest, eoOpt) =>
         println("Receive InitAppMsgIn")
@@ -171,6 +170,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case ExecuteRuleRequest(ruleRequest) =>
         println("Receive GetMetaData")
         context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForMetaData(ruleRequest, self)
+
+      case RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) =>
+        println("Receive RuleRequestForSearchResult")
+        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForSearchResult(fs, eos, ruleRequest, self)
+
 
       case RuleToFire(d2wContext: D2WContext, key: String) =>
         println("Receive RuleToFire")

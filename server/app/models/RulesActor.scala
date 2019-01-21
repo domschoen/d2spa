@@ -37,6 +37,8 @@ object RulesActor {
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
   case class RuleRequestResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
+
+  case class RulesForSearchResultResponse(fs: EOFetchSpecification, eos: Seq[EO], ruleResults:  Option[List[RuleResult]])
   case class RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults: List[RuleResult], eoOpt: Option [EO])
 
   case class GetRule(d2wContext: D2WContext, key: String, requester: ActorRef)
@@ -51,10 +53,11 @@ object RulesActor {
   case class GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest, requester: ActorRef)
   case class GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO,ruleRequest: RuleRequest, requester: ActorRef)
 
-  case class GetMetaDataForSearch(fs: EOFetchSpecification, ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
 
 
   case class GetRulesForMetaData(ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetRulesForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest, requester: ActorRef)
 
 }
 
@@ -373,12 +376,13 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           EORepoActor.UpdateEO(d2wContext, eo, Some(rrs), requester)
       )
 
-    case GetMetaDataForSearch(fs: EOFetchSpecification, ruleRequest, requester: ActorRef) =>
-      println("Rule Actor Receive GetMetaDataForSearch")
+
+
+
+    case GetRulesForSearchResult(fs: EOFetchSpecification, eos, ruleRequest, requester: ActorRef) =>
+      println("Rule Actor Receive GetRulesForSearchResult")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
-        println("GetRulesForRequest | rule results: " + rrs)
-        context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.Search(fs, Some(rrs), requester) //: Future[Seq[EO]]
+          requester ! RulesForSearchResultResponse(fs, eos, Some(rrs))
       }
       )
 

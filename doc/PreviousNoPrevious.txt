@@ -96,7 +96,8 @@ New Project (after entering the app with inspect url)
 New Project from Menu
     PrepareEODisplay
         PrepareEODisplayRules
-            socket.CompleteEO
+            AppInitMsgIn
+                socket.CompleteEO
     CompletedEO
         SetPreviousWithResults
             RegisterPreviousPageAndSetPage
@@ -130,8 +131,8 @@ Inspect record from list page
             
 ----------------
 Search
-    SearchAction (MyCircuit)
-        PrepareSearchForServer ((MyCircuit.PreviousPageHandler)
+    SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
+        PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
             socket.Search
                 RulesActor ! GetMetaDataForSearch
                     EORepoActor ! Search
@@ -144,11 +145,19 @@ Search
                     RegisterPreviousPageAndSetPage
         
 
+Search return 1 record
+    SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
+        PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
+            socket.Search    
+    SearchResult
+        PrepareEODisplay
+
+
 Search with criteria
     SearchAction (MyCircuit)
         PrepareSearchForServer ((MyCircuit.PreviousPageHandler)
             socket.Search
-
+    SearchResult
     
 Get Rules
     GetMetaData

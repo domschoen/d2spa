@@ -206,9 +206,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
       updated(Some(newD2wContext))
 
-    case PrepareSearchForServer(pageContext, ruleRequest) =>
-      val d2wContext = pageContext.d2wContext
-      val entityName = d2wContext.entityName.get
+    case SearchAction(entityName) =>
       log.finest("PreviousPageHandler | PrepareSearchForServer | entityName: " + entityName)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
@@ -228,7 +226,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       //val  stack = stackD2WContext(d2wContext)
       //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
-      WebSocketClient.send(WebSocketMessages.Search(fs, ruleRequest))
+      WebSocketClient.send(WebSocketMessages.Search(fs))
       noChange
 
       //updated(

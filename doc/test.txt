@@ -1,0 +1,17 @@
+1) http://localhost:9000/#task/query/entity/Project
+2) Search
+----> No Project 
+3) Return
+----> Search Page
+
++++++++++
+1) http://localhost:9000/#task/query/entity/Project
+2) +
+----> Edit Project 
+3) Enter data and Save
+----> Inspect page with data entered
+X--> No data found
+4) Menu > Project
+5) Search
+---> Inspect page with data entered
+X---> Nothing, stay with Search
