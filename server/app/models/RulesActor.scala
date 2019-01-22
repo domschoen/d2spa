@@ -36,7 +36,7 @@ object RulesActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new RulesActor(eomodelActor, ws))
 
   case class RuleResultsResponse(ruleResults: List[RuleResult])
-  case class RuleRequestResponse(d2wContext: D2WContext, ruleResults: List[RuleResult])
+  case class RuleRequestResponse(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]])
 
   case class RulesForSearchResultResponse(fs: EOFetchSpecification, eos: Seq[EO], ruleResults:  Option[List[RuleResult]])
   case class RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults: List[RuleResult], eoOpt: Option [EO])
@@ -45,6 +45,8 @@ object RulesActor {
 
   case class GetRulesForRequest(ruleRequest: RuleRequest, requester: ActorRef)
   case class GetRulesForAppInit(ruleRequest: RuleRequest, eoOpt: Option [EO], requester: ActorRef)
+  case class GetRulesForHydration(ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef)
+
 
   case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContext, pks: Seq[EOPk], requester: ActorRef)
 
@@ -55,8 +57,6 @@ object RulesActor {
 
   case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
 
-
-  case class GetRulesForMetaData(ruleRequest: RuleRequest, requester: ActorRef)
   case class GetRulesForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest, requester: ActorRef)
 
 }
@@ -313,8 +313,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     case GetRulesForRequest(ruleRequest, requester) =>
       println("Get GetRulesForRequest")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
-          println("GetRulesForRequest | rule results: " + rrs)
-          requester ! RuleRequestResponse(ruleRequest.d2wContext, rrs)
+          requester ! RuleRequestResponse(ruleRequest.d2wContext, Some(rrs))
         }
       )
 
@@ -333,6 +332,17 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         requester ! RuleResultsResponse(List(rr))
       )
     }
+    case GetRulesForHydration(ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef) =>
+      println("Get GetRulesForHydration")
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
+          EORepoActor.Hydrate(ruleRequest.d2wContext, hydration, Some(rrs), requester)
+      }
+      )
+
+
+
+
     case HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], requester) =>
       fireRule(d2wContext, "displayPropertyKeys").map(rr => {
 
@@ -358,8 +368,6 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       }
       )*/
 
-    case GetRulesForMetaData(ruleRequest, requester) =>
-      println("Rule Actor Receive GetRulesForMetaData")
 
     case GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForNewEO")

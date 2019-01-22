@@ -10,8 +10,22 @@
 ----> Edit Project 
 3) Enter data and Save
 ----> Inspect page with data entered
-X--> No data found
 4) Menu > Project
 5) Search
 ---> Inspect page with data entered
-X---> Nothing, stay with Search
+6) Project +
+7) Enter data and Save
+---> Inspect page with data entered
+8) Menu > Project
+---> Search page 
+9) Search
+---> List page with 2 records and their data, edit and inspect button
+19) Click the inspect of one record
+---> inspect page with record data
+
++++++++++ 2 Projects in DB
+1) Search
+---> List page with 2 records and their data, edit and inspect button
+2) Click the inspect of one record
+---> inspect page with record data
+

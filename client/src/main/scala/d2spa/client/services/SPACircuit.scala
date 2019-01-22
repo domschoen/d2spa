@@ -198,7 +198,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         //val needsHydration =  HydrationUtils.needsHydration(Some(drySubstrate), displayPropertyKeysRuleResultPot, p.proxy.value.cache, eomodel)
 
         val hydration = Hydration(drySubstrate, WateringScope(ruleResult = displayPropertyKeysRuleResultPot))
-        WebSocketClient.send(WebSocketMessages.Hydrate(hydration, ruleRequest))
+        WebSocketClient.send(WebSocketMessages.Hydrate(d2wContext, hydration, ruleRequest))
         noChange
 
       } else {
@@ -325,7 +325,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       }
 
     case SearchResult(fs, eoses) =>
-      log.finest("RuleResultsHandler | SearchResult")
+      log.finest("RuleResultsHandler | SearchResult " + eoses.size)
       val entityName = EOFetchSpecification.entityName(fs)
 
       eoses.length match {
@@ -335,17 +335,19 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
           val pageContextUpdated = pageContext.copy(eo = Some(eo))
 
-          effectOnly(Effect.action(RegisterAndPrepareEODisplay(eo, pageContextUpdated)))
+
+          effectOnly(Effect.action(CacheForPrepareEODisplay(eo, pageContextUpdated)))
 
         case _ =>
           val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
           val ruleRequest = RuleUtils.metaDataRuleRequest(value, d2wContext)
           if (RulesUtilities.isEmptyRuleRequest(ruleRequest)) {
-            WebSocketClient.send(WebSocketMessages.RuleRequestForSearchResult(fs, eoses, ruleRequest))
-            noChange
+            effectOnly(Effect.action(SearchResultWithRuleResults(fs, eoses, None)))
 
           } else {
-            effectOnly(Effect.action(SearchResultWithRuleResults(fs, eoses, None)))
+            log.finest("RuleResultsHandler | ruleRequest " + ruleRequest)
+            WebSocketClient.send(WebSocketMessages.RuleRequestForSearchResult(fs, eoses, ruleRequest))
+            noChange
           }
       }
 
@@ -469,6 +471,12 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
         newCache,
           Effect.action(RegisterPreviousPageAndSetPage(updatedPageContext))
       )
+
+    case CacheForPrepareEODisplay(eo: EO, pageContext: PageContext) =>
+      val entityName = eo.entityName
+      D2SpaLogger.logfinest(entityName,"CacheHandler | CacheForPrepareEODisplay | entityName  " + entityName)
+      val newCache = EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName)
+      updated(newCache,Effect.action(PrepareEODisplayRules(pageContext, value, false)))
 
 
     case RegisterAndPrepareEODisplay(eo, pageContext) =>

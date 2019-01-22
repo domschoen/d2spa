@@ -151,6 +151,7 @@ case class SearchAction(entityName: String) extends Action
 case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
 case class SearchResultWithRuleResults(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
+case class CacheForPrepareEODisplay(eo: EO, pageContext: PageContext) extends Action
 
 
 // similar to:

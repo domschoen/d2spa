@@ -127,6 +127,9 @@ D2WEditPage
                         SavingResponseMsgOut
             
 Inspect record from list page
+    PrepareEODisplay
+        PrepareEODisplayRules
+            socket.Hydrate
     RegisterPreviousPageAndSetPage            
             
 ----------------
@@ -150,7 +153,29 @@ Search return 1 record
         PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
             socket.Search    
     SearchResult
-        PrepareEODisplay
+        CacheForPrepareEODisplay
+            PrepareEODisplayRules
+                socket.AppInitMsgIn
+                    RuleActor ! GetRulesForAppInit
+                        WebSocketActor ! RuleRequestForAppInitResponse
+                            out ! RuleRequestForAppInitResponseMsg
+    SetRulesForPrepareEO
+        RegisterPreviousPageAndSetPage
+
+Search return > 1 record
+    SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
+        PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
+            socket.Search    
+    SearchResult
+        socket.RuleRequestForSearchResult
+
+NVListComponent additional rules
+    willmounted
+        SendRuleRequest (MyCircuit.PreviousPageHandler)
+            socket.ExecuteRuleRequest
+                RuleActor ! GetRulesForRequest
+                    WebSocketActor ! RuleRequestResponse
+                        out ! RuleRequestResponseMsg
 
 
 Search with criteria

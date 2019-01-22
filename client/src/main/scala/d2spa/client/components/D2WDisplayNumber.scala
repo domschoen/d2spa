@@ -32,6 +32,10 @@ object D2WDisplayNumber {
 
           val entityName = d2wContext.entityName.get
           val propertyName = d2wContext.propertyKey.get
+
+          println("D2WDisplayNumber " + eo)
+          println("D2WDisplayNumber entityName " + entityName + " propertyName " + propertyName)
+
           if (eo.keys.contains(propertyName)) {
 
             // We expect a value for that property. Either:

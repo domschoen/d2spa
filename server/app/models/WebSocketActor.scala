@@ -48,9 +48,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, RuleResults(ruleResults))
       out ! RuleResults(ruleResults)
 
-    case RuleRequestResponse(d2wContext: D2WContext, ruleResults) =>
+    case RuleRequestResponse(d2wContext: D2WContext, ruleResultsOpt) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
-      out ! RuleRequestResponseMsg(d2wContext, Some(ruleResults))
+      out ! RuleRequestResponseMsg(d2wContext, ruleResultsOpt)
 
     case RuleRequestForAppInitResponse(d2wContext: D2WContext, ruleResults, eoOpt) =>
       println("Receive RuleResultsResponse ---> sending RuleResults")
@@ -117,6 +117,17 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, ruleRequest, self)
         }
 
+      case Hydrate(d2wContext, hydration, ruleRequest) =>
+        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+        if (isEmptyRuleRequest) {
+          println("Receive Hydrate ---> sending EORepoActor CompleteEO")
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
+            EORepoActor.Hydrate(d2wContext, hydration, None, self) //: Future[Seq[EO]]
+        } else {
+          println("Receive Hydrate ---> sending RulesActor GetRulesForHydration")
+          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+            RulesActor.GetRulesForHydration(ruleRequest, hydration, self)
+        }
 
       //case HydrateAll(fs) =>
       //  context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
@@ -168,8 +179,8 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
         context.actorSelection("akka://application/user/node-actor/menusFetcher") ! GetMenus(d2wContext, self)
 
       case ExecuteRuleRequest(ruleRequest) =>
-        println("Receive GetMetaData")
-        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForMetaData(ruleRequest, self)
+        println("Receive ExecuteRuleRequest")
+        context.actorSelection("akka://application/user/node-actor/rulesFetcher") ! GetRulesForRequest(ruleRequest, self)
 
       case RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) =>
         println("Receive RuleRequestForSearchResult")

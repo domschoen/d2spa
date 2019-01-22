@@ -9,7 +9,7 @@ import d2spa.shared._
 import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.EORepoActor._
-import models.RulesActor.{GetRule, GetRulesForMetaData, RuleResultsResponse}
+import models.RulesActor.{GetRule, RuleResultsResponse}
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.libs.concurrent.InjectedActorSupport
@@ -35,8 +35,9 @@ object EORepoActor {
 
   case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
 
-  case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  //case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
+  case class Hydrate(d2wContext: D2WContext, hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
   case class NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
@@ -574,6 +575,25 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   }
 
+  def missingKeysWith(wateringScope: WateringScope, ruleResultsOpt: Option[List[RuleResult]]) = {
+     // 2 cases:
+    // 1) the PotFiredRuleResult is a left(string) -> we will find the value in the rule result
+    // 2) the PotFiredRuleResult is a left(RuleResult) -> the rule result is the value
+    val ruleResultOpt = wateringScope.ruleResult.value match {
+      case Left(keyToFire) =>
+        ruleResultsOpt match {
+          case Some(ruleResults) =>
+            RulesUtilities.ruleResultForKey(ruleResults,keyToFire)
+          case _ => None
+        }
+      case Right(ruleResult) => Some(ruleResult)
+    }
+    ruleResultOpt match {
+      case Some(ruleResult) =>
+        RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
+      case None => List()
+    }
+  }
 
   def handleException(error: String, eo: EO): EO = {
     Logger.debug("error " + error + " with eo " + eo)
@@ -631,14 +651,23 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         requester ! FetchedObjects(entityName, rrs, ruleResults)
       )
 
-    case CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
-      log.debug("Get CompleteEO")
-      hydrateEOs(eo.entityName, List(eo.pk), missingKeys).map(rrs => {
-        println("Hydrate gives " + rrs)
-        println("Hydrate send to " + requester)
-        requester ! CompletedEO(d2wContext, rrs.head, ruleResults)
+
+    case Hydrate(d2wContext, hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+      log.debug("Get Hydrate")
+      hydration.drySubstrate match {
+        case DrySubstrate(_, Some(eoFault), _) =>
+          val missingKeys = missingKeysWith(hydration.wateringScope, ruleResults)
+
+          hydrateEOs(eoFault.entityName, List(eoFault.pk), missingKeys.toSet).map(rrs => {
+            println("Hydrate gives " + rrs)
+            println("Hydrate send to " + requester)
+            requester ! CompletedEO(d2wContext, rrs.head, ruleResults)
+          }
+          )
       }
-      )
+
+
+
 
     case NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get NewEO")

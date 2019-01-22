@@ -27,7 +27,7 @@ object WebSocketMessages {
   final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
   final case class RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
 
-  final case class Hydrate(hydration: Hydration, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class Hydrate(d2wContext: D2WContext, hydration: Hydration, ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   // D2W Context is needed for the fetch of rules
   final case class NewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn

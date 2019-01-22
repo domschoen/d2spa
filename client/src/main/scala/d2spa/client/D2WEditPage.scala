@@ -116,17 +116,17 @@ object D2WEditPage {
 
     def render(p: Props, s: State) = {
 
-      val pageContext = p.d2wContext
-      val d2wContext = pageContext.d2wContext
+      val shallowPageContext = p.d2wContext
+      val d2wContext = shallowPageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      log.finest("D2WEditPage: render eo for entity Name: " + pageContext)
+      log.finest("D2WEditPage: render eo for entity Name: " + shallowPageContext)
 
       log.finest("D2WEditPage: render | eocache : " + p.proxy.value.cache)
       log.finest("D2WEditPage: render | p.proxy.value.previousPage : " + p.proxy.value.previousPage)
 
       log.finest("D2WEditPage: render eo with fresh context : " + d2wContext)
 
-      val eoRefOpt = pageContext.eo
+      val eoRefOpt = shallowPageContext.eo
       log.finest("D2WEditPage: render eo : " + eoRefOpt)
 
       eoRefOpt match {
@@ -134,13 +134,14 @@ object D2WEditPage {
           //log.finest("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
           //log.finest("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
 
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, d2wContext.entityName.get, eoRef)
+          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eoRef)
           log.finest("D2WEditPage: render eo out of cache: " + eoOpt)
 
           eoOpt match {
             case Some(eo) =>
-              val entityName = d2wContext.entityName.get
               val ruleResults = p.proxy.value.ruleResults
+              val pageContext = shallowPageContext.copy(eo = Some(eo))
+
 
               log.finest("D2WEditPage: render check meta data fetched with d2wContext " + d2wContext)
               log.finest("D2WEditPage: render check meta data fetched in rules " + ruleResults)
