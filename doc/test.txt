@@ -29,3 +29,19 @@
 2) Click the inspect of one record
 ---> inspect page with record data
 
+
++++++++++
+1) http://localhost:9000/#task/query/entity/Project
+2) +
+3) Enter data and Save
+---> Inspect page with data entered
+4) return
+X---> Object not found in cache
+
+
+
+
+Problems
+---------
+
+1) Socket can be closed and not reopened transparently

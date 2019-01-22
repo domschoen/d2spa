@@ -57,10 +57,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! RuleRequestForAppInitResponseMsg(d2wContext, Some(ruleResults), eoOpt)
 
 
-    case EORepoActor.CompletedEO(d2wContext, eo, ruleResultsOpt) =>
+    case EORepoActor.CompletedEOs(d2wContextOpt, eos, ruleResultsOpt) =>
       println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt)
+      out ! CompletedEOMsgOut(d2wContextOpt, eos, ruleResultsOpt)
 
     case EORepoActor.FetchedObjects(entityName, eos, ruleResultsOpt) =>
       println("Receive FetchedObjects ---> sending FetchedObjectsMsgOut")
@@ -117,16 +117,16 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, ruleRequest, self)
         }
 
-      case Hydrate(d2wContext, hydration, ruleRequest) =>
-        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+      case Hydrate(d2wContextOpt, hydration, ruleRequestOpt) =>
+        val isEmptyRuleRequest = ruleRequestOpt.isEmpty || RulesUtilities.isEmptyRuleRequest(ruleRequestOpt.get)
         if (isEmptyRuleRequest) {
           println("Receive Hydrate ---> sending EORepoActor CompleteEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.Hydrate(d2wContext, hydration, None, self) //: Future[Seq[EO]]
+            EORepoActor.Hydrate(d2wContextOpt, hydration, None, self) //: Future[Seq[EO]]
         } else {
           println("Receive Hydrate ---> sending RulesActor GetRulesForHydration")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetRulesForHydration(ruleRequest, hydration, self)
+            RulesActor.GetRulesForHydration(d2wContextOpt, ruleRequestOpt.get, hydration, self)
         }
 
       //case HydrateAll(fs) =>

@@ -37,7 +37,7 @@ object EORepoActor {
 
   //case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
-  case class Hydrate(d2wContext: D2WContext, hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
+  case class Hydrate(d2wContextOpt: Option[D2WContext], hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
   case class NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
@@ -46,7 +46,7 @@ object EORepoActor {
 
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
-  case class CompletedEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
+  case class CompletedEOs(d2wContext: Option[D2WContext], eo: List[EO], ruleResults: Option[List[RuleResult]])
   case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
@@ -258,6 +258,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     }
   }
 
+
+  def searchOnWORepository(fs: EOFetchSpecification): Future[List[EO]] = {
+    val entityName = EOFetchSpecification.entityName(fs)
+    val qualifier = fs match {
+      case fa: EOFetchAll => None
+      case fq: EOQualifiedFetch => Some(fq.qualifier)
+    }
+    searchOnWORepository(entityName, qualifier)
+  }
 
 
   def searchOnWORepository(entityName: String, qualifierOpt: Option[EOQualifier]): Future[List[EO]] = {
@@ -631,12 +640,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     case Search(fs: EOFetchSpecification, requester: ActorRef) =>
       log.debug("Search")
 
-      val entityName = EOFetchSpecification.entityName(fs)
-      val qualifier = fs match {
-        case fa: EOFetchAll => None
-        case fq: EOQualifiedFetch => Some(fq.qualifier)
-      }
-      searchOnWORepository(entityName, qualifier).map(rrs =>
+      searchOnWORepository(fs).map(rrs =>
         requester ! FetchedObjectsForList(fs,rrs)
       )
 
@@ -652,7 +656,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       )
 
 
-    case Hydrate(d2wContext, hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case Hydrate(d2wContextOpt, hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get Hydrate")
       hydration.drySubstrate match {
         case DrySubstrate(_, Some(eoFault), _) =>
@@ -661,9 +665,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
           hydrateEOs(eoFault.entityName, List(eoFault.pk), missingKeys.toSet).map(rrs => {
             println("Hydrate gives " + rrs)
             println("Hydrate send to " + requester)
-            requester ! CompletedEO(d2wContext, rrs.head, ruleResults)
+            requester ! CompletedEOs(d2wContextOpt, rrs, ruleResults)
           }
           )
+        case DrySubstrate(_, _, Some(fs)) =>
+          val missingKeys = missingKeysWith(hydration.wateringScope, ruleResults)
+          searchOnWORepository(fs).map(rrs =>
+            requester ! CompletedEOs(d2wContextOpt, rrs, ruleResults)
+          )
+
       }
 
 

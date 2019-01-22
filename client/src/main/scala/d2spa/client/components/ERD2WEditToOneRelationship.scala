@@ -111,20 +111,26 @@ object ERD2WEditToOneRelationship {
       destinationEntityOpt match {
         case Some(destinationEntity) =>
           val ruleResults = p.proxy.value.ruleResults
+          log.finest("ERD2WEditToOneRelationship | mounted | ruleResults " + ruleResults)
           val keyWhenRelationshipRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.keyWhenRelationship)
+          log.finest("ERD2WEditToOneRelationship | mounted | keyWhenRelationshipRuleResultPot " + keyWhenRelationshipRuleResultPot)
           val rulesPots = List(keyWhenRelationshipRuleResultPot)
+          log.finest("ERD2WEditToOneRelationship | mounted | rulesPots " + rulesPots)
           val rules = RuleUtils.firingRulesFromPotFiredRuleResult(rulesPots)
           val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
+          log.finest("ERD2WEditToOneRelationship | mounted | ruleRequestOpt " + ruleRequestOpt)
 
 
           val eoCache = p.proxy.value.cache
           val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
+          log.finest("ERD2WEditToOneRelationship | mounted | destinationEOs " + destinationEOs)
 
           destinationEOs match {
             case Some(eos) =>
               Callback.when(!ruleRequestOpt.isEmpty)(p.proxy.dispatchCB(SendRuleRequest(ruleRequestOpt.get)))
 
             case None =>
+              log.finest("ERD2WEditToOneRelationship | mounted | destinationEOs " + destinationEOs)
 
               val dataRep = pageContext.dataRep
               val drySubstrateOpt: Option[DrySubstrate] = HydrationUtils.drySubstrateFromDataRep(dataRep)

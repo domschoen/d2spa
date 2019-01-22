@@ -18,7 +18,7 @@ import play.api.libs.functional.syntax._
 import d2spa.shared._
 import javax.inject.Inject
 import models.EOModelActor.{EOModelResponse, GetEOModel}
-import models.EORepoActor.CompletedEO
+import models.EORepoActor.CompletedEOs
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.RulesActor._
 
@@ -45,7 +45,7 @@ object RulesActor {
 
   case class GetRulesForRequest(ruleRequest: RuleRequest, requester: ActorRef)
   case class GetRulesForAppInit(ruleRequest: RuleRequest, eoOpt: Option [EO], requester: ActorRef)
-  case class GetRulesForHydration(ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef)
+  case class GetRulesForHydration(d2wContext: Option[D2WContext], ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef)
 
 
   case class HydrateEOsForDisplayPropertyKeys(d2wContext: D2WContext, pks: Seq[EOPk], requester: ActorRef)
@@ -332,11 +332,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         requester ! RuleResultsResponse(List(rr))
       )
     }
-    case GetRulesForHydration(ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef) =>
+    case GetRulesForHydration(d2wContextOpt, ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef) =>
       println("Get GetRulesForHydration")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.Hydrate(ruleRequest.d2wContext, hydration, Some(rrs), requester)
+          EORepoActor.Hydrate(d2wContextOpt, hydration, Some(rrs), requester)
       }
       )
 

@@ -40,7 +40,8 @@ object D2WComponentInstaller  {
           case Some(componentName) => {
             val displayedComponentName = if (p.proxy.value.appConfiguration.isDebugMode) propertyName + " - " + componentName else ""
             componentName match {
-              case "ERD2WEditToOneRelationship" => <.span("Component not found: " + componentName) //<.span(ERD2WEditToOneRelationship(p.router, pageContext, p.proxy), displayedComponentName)
+              //case "ERD2WEditToOneRelationship" => <.span("Component not found: " + componentName)
+              case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, pageContext, p.proxy), displayedComponentName)
               case "DisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WEditString" => <.span(ERD2WEditString(p.router, pageContext, p.proxy), displayedComponentName)

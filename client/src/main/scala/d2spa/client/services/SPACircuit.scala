@@ -198,7 +198,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         //val needsHydration =  HydrationUtils.needsHydration(Some(drySubstrate), displayPropertyKeysRuleResultPot, p.proxy.value.cache, eomodel)
 
         val hydration = Hydration(drySubstrate, WateringScope(ruleResult = displayPropertyKeysRuleResultPot))
-        WebSocketClient.send(WebSocketMessages.Hydrate(d2wContext, hydration, ruleRequest))
+        WebSocketClient.send(WebSocketMessages.Hydrate(Some(d2wContext), hydration, Some(ruleRequest)))
         noChange
 
       } else {
@@ -443,6 +443,11 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(
         newCache
       )
+    case  HydrationRequest(hydration: Hydration, ruleRequestOpt: Option[RuleRequest]) =>
+      log.finest("EOCacheHandler | HydrationRequest")
+      WebSocketClient.send(WebSocketMessages.Hydrate(None, hydration, ruleRequestOpt))
+      noChange
+
 
 
     // EO goes from inserted EO to db eos
@@ -613,36 +618,66 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
 
-    case CompletedEO(d2wContext, eo, ruleResultsOpt) =>
-      log.finest("CacheHandler | CompletedEO  " + eo)
+    case CompletedEO(d2wContextOpt, eos, ruleResultsOpt) =>
+      log.finest("CacheHandler | CompletedEOs  " + eos)
       //val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
-      val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
-      val pageContextUpdated = pageContext.copy(eo = Some(eo))
 
-      val entityName = d2wContext.entityName.get
+      d2wContextOpt match {
+        case Some(d2wContext) =>
+          val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
+          val eo = eos.head
+          val pageContextUpdated = pageContext.copy(eo = Some(eo))
 
-      val isNewEO = EOValue.isNewEO(eo)
-      if (isNewEO) {
-        ruleResultsOpt match {
-          case Some(ruleResults) =>
-            effectOnly(Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated)))
-          case None =>
-            effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
-        }
-      } else {
-        ruleResultsOpt match {
-          case Some(ruleResults) =>
-            updated(
-              EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-              Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated))
-            )
+          val entityName = d2wContext.entityName.get
 
-          case None =>
-            updated(
-              EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-              Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated))
-            )
-        }
+          val isNewEO = EOValue.isNewEO(eo)
+          if (isNewEO) {
+            ruleResultsOpt match {
+              case Some(ruleResults) =>
+                effectOnly(Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated)))
+              case None =>
+                effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
+            }
+          } else {
+            ruleResultsOpt match {
+              case Some(ruleResults) =>
+                updated(
+                  EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
+                  Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated))
+                )
+
+              case None =>
+                updated(
+                  EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
+                  Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated))
+                )
+            }
+          }
+
+        case None =>
+          eos.length match {
+            case x if x == 0 =>
+              ruleResultsOpt match {
+                case Some(ruleResults) =>
+                  effectOnly(Effect.action(SetJustRuleResults(ruleResults)))
+                case None =>
+                  noChange
+              }
+            case _ =>
+              val eo = eos.head
+              val entityName = eo.entityName
+              val newCache = EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eos, entityName)
+
+              ruleResultsOpt match {
+                case Some(ruleResults) =>
+                  updated(newCache,
+                    Effect.action(SetJustRuleResults(ruleResults)))
+                case None =>
+                  updated(newCache)
+
+              }
+          }
+
       }
 
 

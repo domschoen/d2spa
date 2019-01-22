@@ -98,7 +98,7 @@ object WebSocketClient {
               case RuleRequestForAppInitResponseMsg(d2wContext, ruleResults, eoOpt) => MyCircuit.dispatch(client.SetRulesForPrepareEO(d2wContext, ruleResults, eoOpt))
 
               case RulesForSearchResultResponseMsgOut(fs,eos,ruleResultsOpt) => MyCircuit.dispatch(client.SearchResultWithRuleResults(fs,eos,ruleResultsOpt))
-              case CompletedEOMsgOut(d2wContext, eo, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContext,eo,ruleResultsOpt))
+              case CompletedEOMsgOut(d2wContextOpt, eos, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContextOpt,eos,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               case FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
               case SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
