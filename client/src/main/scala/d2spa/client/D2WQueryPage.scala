@@ -117,7 +117,7 @@ object D2WQueryPage {
                     )
                   ),
                   <.div(^.className := "repetition d2wPage",
-                    <.table(^.className := "query",
+                    <.table(^.width := "100%", ^.className := "query",
                       <.tbody(
                         <.tr(^.className := "attribute customer",
                           <.td(

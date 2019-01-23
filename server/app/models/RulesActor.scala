@@ -333,8 +333,10 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       )
     }
     case GetRulesForHydration(d2wContextOpt, ruleRequest: RuleRequest, hydration: Hydration, requester: ActorRef) =>
-      println("Get GetRulesForHydration")
+      println("GetRulesForHydration " + ruleRequest)
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+        println("GetRulesForHydration --> send Hydrate to eorepo" + rrs)
+
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
           EORepoActor.Hydrate(d2wContextOpt, hydration, Some(rrs), requester)
       }

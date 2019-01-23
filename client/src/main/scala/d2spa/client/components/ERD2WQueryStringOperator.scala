@@ -28,7 +28,7 @@ object ERD2WQueryStringOperator  {
 
     def queryValueChanged(entityName: String, propertyName: String, inputValue: String) = {
       val action = if (inputValue.length == 0) {
-        ClearQueryProperty(entityName,propertyName)
+        ClearQueryProperty(entityName,propertyName, QueryOperator.Match)
       }  else {
         UpdateQueryProperty(
           entityName,
@@ -54,7 +54,7 @@ object ERD2WQueryStringOperator  {
           val strValue = D2WContextUtils.queryValueAsStringForKey(pageContext, propertyName)
           // set id but make it unique: ^.id := "description",
           <.div(
-            <.input(^.value := strValue, ^.className := "form-control",
+            <.input(^.value := strValue, ^.`type` := "number" ,^.className := "form-control",
               ^.placeholder := "write description",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
                     entityName,

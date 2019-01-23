@@ -156,7 +156,7 @@ object D2WEditPage {
               val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
 
               log.finest("Edit page EO " + eo)
-              <.div(
+              <.div(^.width := "100%",
                 <.div(^.id := "b", MenuHeader(p.router, entityName, p.proxy)),
                 <.div(^.id := "a",
                   {

@@ -19,19 +19,18 @@ import scala.concurrent.duration._
 object SPACircuitTests extends TestSuite {
 
   val testPageContext = PageContext(
-
     d2wContext = D2WContext(
-    Some("CustomerBusiness"), // entity name
-    Some(TaskDefine.inspect),
-    None,
-      Some("InspectEmbeddedCustomerBusinessManufacturer")),
+      Some("CustomerBusiness"), // entity name
+      Some(TaskDefine.inspect),
+      None,
+      Some("InspectEmbeddedCustomerBusinessManufacturer")
+    ),
     eo = Some(EO("CustomerBusiness",
       List("businessUid", "customerUid"),
       List(IntValue(1),IntValue(30)),
       EOPk(List(1,303)), // pk
       None
-    )),
-    queryValues = Map.empty[String, QueryValue] // queryValues
+    ))
     )
 
   val cacheBefore = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List(),List(),EOPk(List(-1)),None))))

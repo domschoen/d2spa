@@ -29,7 +29,7 @@ object D2WComponentInstaller  {
       //log.finest("D2WComponentInstaller | Render")
 
       //log.finest("Render D2WComponentInstaller " + p.proxy.value.isDebugMode)
-      <.div({
+      React.Fragment({
         val propertyName = d2wContext.propertyKey.get
         val ruleResults = p.proxy.value.ruleResults
 
@@ -56,6 +56,7 @@ object D2WComponentInstaller  {
               case "DisplayBoolean" => <.span(DisplayBoolean(p.router, pageContext, p.proxy), displayedComponentName)
               case "QueryNameOrAliases" => <.span(ERD2WQueryStringOperator (p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WQueryStringOperator" => <.span(ERD2WQueryStringOperator (p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERD2WQueryNumberRange" => <.span(ERD2WQueryNumberRange (p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WQueryToOneField" => <.span(ERD2WQueryToOneField (p.router, pageContext, p.proxy), displayedComponentName)
               case "NVQueryBoolean" => <.span(NVQueryBoolean (p.router, pageContext, p.proxy), displayedComponentName)
 

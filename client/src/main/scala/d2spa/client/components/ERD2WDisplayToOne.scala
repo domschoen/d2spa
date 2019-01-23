@@ -75,13 +75,14 @@ object ERD2WDisplayToOne {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted")
+      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted " + pageContext)
 
       val eomodel = p.proxy.value.cache.eomodel.get
 
       val eoOpt = pageContext.eo
       eoOpt match {
         case Some(eo) =>
+          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eo " + eo)
 
           val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
           entityOpt match {
@@ -96,12 +97,15 @@ object ERD2WDisplayToOne {
               val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
               val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEOValueOpt  " + destinationEOValueOpt)
+
               destinationEOValueOpt match {
 
                 case Some(destinationEOValue) =>
                   destinationEOValue match {
                     case ObjectValue(destinationEO) =>
                       val destinationEntityName = destinationEO.entityName
+                      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
                       val destEOFault = EOFault(destinationEntityName, destinationEO.pk)
                       val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
                       p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
@@ -109,12 +113,11 @@ object ERD2WDisplayToOne {
                       Callback.empty
                   }
                 case None =>
-                  Callback.empty
-                case None =>
                   D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no entity for entity name: " + entityName)
                   Callback.empty
               }
             case None =>
+              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | no eo")
               D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
               Callback.empty
           }
@@ -125,7 +128,7 @@ object ERD2WDisplayToOne {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
       val propertyName = d2wContext.propertyKey.get
 

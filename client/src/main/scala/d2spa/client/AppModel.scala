@@ -143,7 +143,7 @@ case class SaveNewEO(entityName: String, eo: EO) extends Action
 case class PrepareSearchForServer(d2wContext: PageContext, ruleRequest: RuleRequest) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
-case class ClearQueryProperty(entityName: String, propertyName: String) extends Action
+case class ClearQueryProperty(entityName: String, propertyName: String, operator: String) extends Action
 case class UpdateEOValueForProperty(eo: EO, d2wContext: PageContext, value: EOValue) extends Action
 
 case class SearchAction(entityName: String) extends Action
@@ -285,7 +285,7 @@ object QueryOperator {
 
 
 // A container for value should be used. It would give a way to have not only String
-case class QueryValue(key: String,value: EOValue, operator: String)
+case class QueryValue(key: String, value: EOValue, operator: String)
 
 
 
@@ -298,25 +298,38 @@ object QueryValue {
     QueryOperator.Match -> NSSelector.QualifierOperatorEqual
   )
 
-  def qualifierFromQueryValues(queryValues: List[QueryValue]) : Option[EOQualifier] = {
-    val qualifiers = queryValues.map(qv => {
+  def qualifierFromQueryValues(pageQueryValues: PageQueryValues) : Option[EOQualifier] = {
+    val matchQualifiers = qualifiersWithQueryValues(pageQueryValues.queryMatch.values.toList)
+    val minQualifiers = qualifiersWithQueryValues(pageQueryValues.queryMin.values.toList)
+    val maxQualifiers = qualifiersWithQueryValues(pageQueryValues.queryMax.values.toList)
+    val qualifiers = matchQualifiers ::: minQualifiers ::: maxQualifiers
+
+    if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
+  }
+  def qualifiersWithQueryValues(queryValues: List[QueryValue]) = {
+    queryValues.map(qv => {
       log.finest("QueryValue " + qv)
       log.finest("QueryValue operatorByQueryOperator(qv.operator): " + operatorByQueryOperator(qv.operator))
       EOKeyValueQualifier(qv.key,operatorByQueryOperator(qv.operator),qv.value)
     })
-    if (qualifiers.isEmpty) None else Some(EOAndQualifier(qualifiers))
   }
 
   def size(queryValue: QueryValue) = EOValue.size(queryValue.value)
 }
 
 
+case class PageQueryValues(
+  queryMatch: Map[String, QueryValue] = Map(),
+  queryMin: Map[String, QueryValue] = Map(),
+  queryMax: Map[String, QueryValue] = Map()
+)
+
 //implicit val fireActionPickler = CompositePickler[FireAction].
 
 // The D2WContext will contains also the queryValues
 // it should contain everything needed to redisplay a page
 case class PageContext(previousTask: Option[PageContext] = None,
-                       queryValues: Map[String, QueryValue] = Map(),
+                       queryValues: PageQueryValues = PageQueryValues(),
                        dataRep: Option[DataRep] = None,
                        eo: Option[EO] = None,
                        d2wContext: D2WContext
@@ -636,15 +649,58 @@ object RuleUtils {
   object D2WContextUtils {
 
 
-    def queryValueForKey(d2wContext: PageContext, key: String) = {
-      val queryValues = d2wContext.queryValues
-      if (queryValues.contains(key)) Some(queryValues(key).value) else None
+    def pageContextUpdatedWithQueryValue(pageContext: PageContext, queryValue: QueryValue) = {
+      val operator = queryValue.operator
+      val queryMap = queryMapWithOperator(pageContext, operator)
+
+      val newQueryMap = queryMap + (queryValue.key -> queryValue)
+      val pageQueryValues = updatePageQueryValuesForOperator(pageContext.queryValues, newQueryMap, operator)
+      pageContext.copy(queryValues = pageQueryValues)
     }
 
-    def queryValueAsStringForKey(d2wContext: PageContext, key: String) = {
-      val value = D2WContextUtils.queryValueForKey(d2wContext, key)
-      val strValue = value match {
+    def updatePageQueryValuesForOperator(pageQueryValues: PageQueryValues, queryMap: Map[String, QueryValue], operator: String): PageQueryValues = {
+      operator match {
+        case QueryOperator.Match =>
+          pageQueryValues.copy(queryMatch = queryMap)
+        case QueryOperator.Min =>
+          pageQueryValues.copy(queryMin = queryMap)
+        case QueryOperator.Max =>
+          pageQueryValues.copy(queryMax = queryMap)
+      }
+    }
+
+    def updatePageContextByClearingKeyForOperator(pageContext: PageContext, key: String, operator: String) = {
+      val queryMap = queryMapWithOperator(pageContext, operator)
+      val newQueryMap = queryMap - key
+      val pageQueryValues = updatePageQueryValuesForOperator(pageContext.queryValues, newQueryMap, operator)
+      pageContext.copy(queryValues = pageQueryValues)
+    }
+
+    def queryMapWithOperator(pageContext: PageContext, operator: String) = {
+      operator match {
+        case QueryOperator.Match =>
+          pageContext.queryValues.queryMatch
+        case QueryOperator.Min =>
+          pageContext.queryValues.queryMin
+        case QueryOperator.Max =>
+          pageContext.queryValues.queryMax
+      }
+    }
+
+    def queryValueForKey(pageContext: PageContext, key: String, operator: String) = {
+      val queryMap = queryMapWithOperator(pageContext, operator)
+      if (queryMap.contains(key)) Some(queryMap(key).value) else None
+    }
+
+    def queryValueAsStringForKey(pageContext: PageContext, key: String): String = {
+      queryValueAsStringForKey(pageContext, key, QueryOperator.Match)
+    }
+
+    def queryValueAsStringForKey(d2wContext: PageContext, key: String, operator: String): String = {
+      val value = D2WContextUtils.queryValueForKey(d2wContext, key, operator)
+      value match {
         case Some(StringValue(str)) => str
+        case Some(IntValue(str)) => str.toString
         case _ => ""
       }
     }

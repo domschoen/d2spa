@@ -192,25 +192,21 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
 
     case UpdateQueryProperty(entityName, queryValue) =>
       log.finest("PreviousPageHandler | UpdateQueryProperty: for entity " + entityName + " with queryValue " + queryValue)
-      val d2wContext = value.get
-      val currentQueryValues = d2wContext.queryValues
-      val newQueryValues = currentQueryValues + (queryValue.key -> queryValue)
-      val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
+      val pageContext = value.get
+      val newD2wContext = D2WContextUtils.pageContextUpdatedWithQueryValue(pageContext,queryValue)
       updated(Some(newD2wContext))
 
-    case ClearQueryProperty(entityName, propertyName) =>
+    case ClearQueryProperty(entityName, propertyName, operator) =>
       log.finest("PreviousPageHandler | ClearQueryProperty: for entity " + entityName + " and property " + propertyName)
-      val d2wContext = value.get
-      val currentQueryValues = d2wContext.queryValues
-      val newQueryValues = currentQueryValues - propertyName
-      val newD2wContext = d2wContext.copy(queryValues = newQueryValues)
-      updated(Some(newD2wContext))
+      val pageContext = value.get
+      val newPageContext = D2WContextUtils.updatePageContextByClearingKeyForOperator(pageContext,propertyName, operator)
+      updated(Some(newPageContext))
 
     case SearchAction(entityName) =>
       log.finest("PreviousPageHandler | PrepareSearchForServer | entityName: " + entityName)
       val fs: EOFetchSpecification = value match {
         case Some(d2wContext) =>
-          val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues.values.toList)
+          val qualifierOpt = QueryValue.qualifierFromQueryValues(d2wContext.queryValues)
           log.finest("SPACircuit | Search(" + entityName + ") | qualifierOpt: " + qualifierOpt)
 
           qualifierOpt match {

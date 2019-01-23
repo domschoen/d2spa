@@ -584,25 +584,6 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   }
 
-  def missingKeysWith(wateringScope: WateringScope, ruleResultsOpt: Option[List[RuleResult]]) = {
-     // 2 cases:
-    // 1) the PotFiredRuleResult is a left(string) -> we will find the value in the rule result
-    // 2) the PotFiredRuleResult is a left(RuleResult) -> the rule result is the value
-    val ruleResultOpt = wateringScope.ruleResult.value match {
-      case Left(keyToFire) =>
-        ruleResultsOpt match {
-          case Some(ruleResults) =>
-            RulesUtilities.ruleResultForKey(ruleResults,keyToFire)
-          case _ => None
-        }
-      case Right(ruleResult) => Some(ruleResult)
-    }
-    ruleResultOpt match {
-      case Some(ruleResult) =>
-        RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
-      case None => List()
-    }
-  }
 
   def handleException(error: String, eo: EO): EO = {
     Logger.debug("error " + error + " with eo " + eo)
@@ -660,7 +641,9 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       log.debug("Get Hydrate")
       hydration.drySubstrate match {
         case DrySubstrate(_, Some(eoFault), _) =>
-          val missingKeys = missingKeysWith(hydration.wateringScope, ruleResults)
+          val missingKeys = RulesUtilities.missingKeysWith(hydration.wateringScope, ruleResults)
+          println("Hydrate missingKeys " + missingKeys)
+          println("Hydrate hydration.wateringScope " + hydration.wateringScope)
 
           hydrateEOs(eoFault.entityName, List(eoFault.pk), missingKeys.toSet).map(rrs => {
             println("Hydrate gives " + rrs)
@@ -669,7 +652,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
           }
           )
         case DrySubstrate(_, _, Some(fs)) =>
-          val missingKeys = missingKeysWith(hydration.wateringScope, ruleResults)
+          val missingKeys = RulesUtilities.missingKeysWith(hydration.wateringScope, ruleResults)
           searchOnWORepository(fs).map(rrs =>
             requester ! CompletedEOs(d2wContextOpt, rrs, ruleResults)
           )

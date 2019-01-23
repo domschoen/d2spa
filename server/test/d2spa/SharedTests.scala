@@ -38,6 +38,19 @@ class StackSpec extends PlaySpec {
       pkValues.head mustBe 5
     }
   }
+  "Get missing keys from rules" must {
+    "Verification" in {
+      val wateringScope = WateringScope(PotFiredRuleResult(Left("keyWhenRelationship")))
+      val ruleResults = List(RuleResult(D2WContext(Some("Project"),Some("inspect"),Some("customer"),None),"keyWhenRelationship",RuleValue(Some("name"),List())))
+
+      val ruleResult = RulesUtilities.ruleResultForKey(ruleResults,RuleKeys.keyWhenRelationship)
+      println("ruleResult " + ruleResult)
+      //RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
+
+      val missingKeys = RulesUtilities.missingKeysWith(wateringScope, Some(ruleResults))
+      missingKeys.size mustBe 1
+    }
+  }
   "Creation of a new EO" must {
     "Verification" in {
       val insertedEOsForEntity = TestData.insertedEOs("Project")

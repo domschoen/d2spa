@@ -716,10 +716,15 @@ object RulesUtilities {
     ruleResults.find(r => {r.key.equals(key)})
 
 
-
+// case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
   def ruleListValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
     ruleResultOpt match {
-      case Some(ruleResult) => ruleResult.value.stringsV
+      case Some(ruleResult) =>
+        ruleResult.value.stringV match {
+          case Some(key) => List(key)
+          case None =>
+            ruleResult.value.stringsV
+        }
       case _ => List()
     }
   }
@@ -731,6 +736,25 @@ object RulesUtilities {
     a.equals(b)
   }
 
+  def missingKeysWith(wateringScope: WateringScope, ruleResultsOpt: Option[List[RuleResult]]) = {
+    // 2 cases:
+    // 1) the PotFiredRuleResult is a left(string) -> we will find the value in the rule result
+    // 2) the PotFiredRuleResult is a left(RuleResult) -> the rule result is the value
+    val ruleResultOpt = wateringScope.ruleResult.value match {
+      case Left(keyToFire) =>
+        ruleResultsOpt match {
+          case Some(ruleResults) =>
+            RulesUtilities.ruleResultForKey(ruleResults,keyToFire)
+          case _ => None
+        }
+      case Right(ruleResult) => Some(ruleResult)
+    }
+    ruleResultOpt match {
+      case Some(ruleResult) =>
+        RulesUtilities.ruleListValueWithRuleResult(Some(ruleResult))
+      case None => List()
+    }
+  }
 
 }
 

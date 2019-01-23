@@ -28,7 +28,7 @@ object NVQueryBoolean {
 
     def setDontCare(entityName: String, propertyName: String) = {
       Callback.log(s"Set to Yes : $propertyName") >>
-        $.props >>= (_.proxy.dispatchCB(ClearQueryProperty(entityName, propertyName)))
+        $.props >>= (_.proxy.dispatchCB(ClearQueryProperty(entityName, propertyName, QueryOperator.Match)))
     }
 
     def setYes(entityName: String, propertyName: String) = {
@@ -50,7 +50,7 @@ object NVQueryBoolean {
       val propertyName = d2wContext.propertyKey.get
 
       log.finest("NVQueryBoolean " + propertyName + " query values " + pageContext.queryValues)
-      val (dontCare, isYes, isNo) = D2WContextUtils.queryValueForKey(pageContext, propertyName) match {
+      val (dontCare, isYes, isNo) = D2WContextUtils.queryValueForKey(pageContext, propertyName, QueryOperator.Match) match {
         case Some(BooleanValue(value)) =>
           log.finest("NVQueryBoolean value " + value)
           if (value) (false, true, false) else (false, false, true)

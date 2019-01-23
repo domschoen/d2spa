@@ -52,10 +52,20 @@ object WebSocketClient {
     println("  SOCKETE SOCKETE SOCKETE")
 
     var isClosed = true
+    var toBeSent: Option[WebSocketMsgIn] = None
 
     private val socket: WebSocket = new dom.WebSocket(url = url)
 
     def send(msg: WebSocketMsgIn): Unit = {
+      if (isClosed) {
+        toBeSent = Some(msg)
+      } else {
+        sendForSure(msg)
+      }
+    }
+
+
+    def sendForSure(msg: WebSocketMsgIn): Unit = {
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
       val bytes = Pickle.intoBytes(msg).arrayBuffer()
       log.finest("Send " + msg)
@@ -64,22 +74,29 @@ object WebSocketClient {
     }
 
 
-      socket.onopen = (e: Event) => {
-        d2wContextOpt match {
-          case Some(d2wContext) =>
-            MyCircuit.dispatch(SetPageForSocketReady(d2wContext))
-          case None => ()
-        }
-        isClosed = false
+    socket.onopen = (e: Event) => {
+      isClosed = false
+
+      toBeSent match {
+        case Some(msg) =>
+          toBeSent = None
+          sendForSure(msg)
+        case None =>
+          d2wContextOpt match {
+            case Some(d2wContext) =>
+              MyCircuit.dispatch(SetPageForSocketReady(d2wContext))
+            case None => ()
+          }
       }
-      socket.onclose = (e: CloseEvent) => {
+    }
+    socket.onclose = (e: CloseEvent) => {
         dom.console.log(s"Socket closed. Reason: ${e.reason} (${e.code})")
         isClosed = true
-      }
-      socket.onerror = (e: Event) => {
+    }
+    socket.onerror = (e: Event) => {
         dom.console.log(s"Socket error! ${e}")
-      }
-      socket.onmessage = onMessage
+    }
+    socket.onmessage = onMessage
   }
 
 

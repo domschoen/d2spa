@@ -223,6 +223,7 @@ object ERD2WEditToOneRelationship {
                               case Some(eos) => {
                                 log.finest("ERD2WEditToOneRelationship render eoRefs " + eos)
                                 log.finest("ERD2WEditToOneRelationship render eo " + eo)
+                                // the selection
                                 val destinationEO = EOValue.valueForKey(eo, propertyName)
                                 log.finest("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
                                 val defaultValue = destinationEO match {
@@ -231,12 +232,15 @@ object ERD2WEditToOneRelationship {
                                   case _ => "None"
                                 }
                                 log.finest("ERD2WEditToOneRelationship render defaultValue " + defaultValue)
+                                log.finest("ERD2WEditToOneRelationship | render | keyWhenRelationship " + keyWhenRelationship)
 
                                 <.div(
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
                                     p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                                   },
                                     {
+                                      log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
+                                      log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
                                       val tuples = eos map (deo => {
 
                                         //log.finest("id " + id + " for eo: " + x)

@@ -36,7 +36,8 @@
 3) Enter data and Save
 ---> Inspect page with data entered
 4) return
-X---> Object not found in cache
+
+
 
 
 
@@ -45,3 +46,4 @@ Problems
 ---------
 
 1) Socket can be closed and not reopened transparently
+2) ERD2WEditToOneRelationship crashes
