@@ -57,10 +57,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! RuleRequestForAppInitResponseMsg(d2wContext, Some(ruleResults), eoOpt)
 
 
-    case EORepoActor.CompletedEOs(d2wContextOpt, eos, ruleResultsOpt) =>
+    case EORepoActor.CompletedEOs(d2wContextOpt, hydration,  eos, ruleResultsOpt) =>
       println("Receive CompletedEO ---> sending FetchedObjectsMsgOut")
+      println("Receive CompletedEO ---> eos " + eos)
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! CompletedEOMsgOut(d2wContextOpt, eos, ruleResultsOpt)
+      out ! CompletedEOMsgOut(d2wContextOpt, hydration, eos, ruleResultsOpt)
 
     case EORepoActor.FetchedObjects(entityName, eos, ruleResultsOpt) =>
       println("Receive FetchedObjects ---> sending FetchedObjectsMsgOut")
@@ -73,10 +74,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       out ! RulesForSearchResultResponseMsgOut(fs, eos, ruleResultsOpt)
 
 
-    case EORepoActor.FetchedObjectsForList(fs, eos) =>
+    /*case EORepoActor.FetchedObjectsForList(fs, eos) =>
       println("Receive FetchedObjectsForList ---> sending FetchedObjectsForListMsgOut")
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
-      out ! FetchedObjectsForListMsgOut(fs, eos)
+      out ! FetchedObjectsForListMsgOut(fs, eos)*/
 
     case EORepoActor.SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
@@ -146,6 +147,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
 
 
 
+
      /* case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
         val entityName = d2wContext.entityName.get
         if (missingKeys.isEmpty) {
@@ -156,10 +158,10 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
         }*/
 
-      case Search(fs) =>
+      /*case Search(fs) =>
         println("Receive Search ---> sending EORepoActor Search")
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.Search(fs, self)
-
+*/
 
 
       case AppInitMsgIn(ruleRequest, eoOpt) =>

@@ -49,7 +49,7 @@ object ERD2WQueryNumberRange  {
           // set id but make it unique: ^.id := "description",
           React.Fragment(
             "from ",
-            <.input(^.value := strValueFrom,
+            <.input(^.value := strValueFrom,^.`type` := "number" ,
               ^.placeholder := "write number",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
                     entityName,
@@ -60,7 +60,7 @@ object ERD2WQueryNumberRange  {
               }
             ),
             " to ",
-            <.input(^.value := strValueTo,
+            <.input(^.value := strValueTo,^.`type` := "number" ,
               ^.placeholder := "write number",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
                   entityName,

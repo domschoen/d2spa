@@ -222,8 +222,7 @@ class PreviousPageHandler[M](modelRW: ModelRW[M, Option[PageContext]]) extends A
       //val  stack = stackD2WContext(d2wContext)
       //log.finest("PreviousPageHandler | Search | Register Previous " + stack)
 
-      WebSocketClient.send(WebSocketMessages.Search(fs))
-      noChange
+      effectOnly(Effect.action(SearchHydration(fs)))
 
       //updated(
         // change context to inspect

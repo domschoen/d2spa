@@ -96,7 +96,7 @@ class MenusActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorL
         case (mm, cs) =>
 
           val childMenus = cs.map(cm => {
-            Logger.debug("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
+            //Logger.debug("LOOK for " + cm.entity.name + " into eomodel " + fetchedEOModel)
 
             val entity = EOModelUtils.entityNamed(fetchedEOModel, cm.entity.name).get
             Menu(cm.id, cm.title, entity)

@@ -24,7 +24,6 @@ object WebSocketMessages {
   //final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   //final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   //final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class Search(fs: EOFetchSpecification) extends WebSocketMsgIn
   final case class RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   final case class Hydrate(d2wContext: Option[D2WContext], hydration: Hydration, ruleRequest: Option[RuleRequest]) extends WebSocketMsgIn
@@ -46,7 +45,7 @@ object WebSocketMessages {
   final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContext) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus, d2wContext: D2WContext) extends WebSocketMsgOut
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], eo: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class RulesForSearchResultResponseMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
@@ -337,7 +336,6 @@ object Test14 extends MaterializePicklerFallback {
   implicit val ruleRequestResponseMsgPicker: Pickler[ExecuteRuleRequest] = generatePickler[ExecuteRuleRequest]
   implicit val ruleRequestForAppInitResponseMsgPicker: Pickler[RuleToFire] = generatePickler[RuleToFire]
   implicit val completedEOMsgOutPicker: Pickler[DeleteEOMsgIn] = generatePickler[DeleteEOMsgIn]
-  implicit val fetchedObjectsPicker: Pickler[Search] = generatePickler[Search]
   implicit val hydratePicker: Pickler[Hydrate] = generatePickler[Hydrate]
   implicit val savingResponseMsgOutPicker: Pickler[NewEO] = generatePickler[NewEO]
   implicit val deletingResponseMsgOutPicker: Pickler[UpdateEO] = generatePickler[UpdateEO]
@@ -350,7 +348,6 @@ object Test14 extends MaterializePicklerFallback {
     .addConcreteType[ExecuteRuleRequest]
     .addConcreteType[RuleToFire]
     .addConcreteType[DeleteEOMsgIn]
-    .addConcreteType[Search]
     .addConcreteType[Hydrate]
     .addConcreteType[NewEO]
     .addConcreteType[UpdateEO]

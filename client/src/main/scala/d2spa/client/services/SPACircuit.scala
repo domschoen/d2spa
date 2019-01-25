@@ -212,6 +212,18 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
         }
       }
 
+    case SearchHydration(fs) =>
+      val entityName = EOFetchSpecification.entityName(fs)
+      val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
+      val drySubstrate = DrySubstrate(fetchSpecification = Some(fs))
+      val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(value, d2wContext, RuleKeys.displayPropertyKeys)
+      val wateringScope = WateringScope(ruleResult = displayPropertyKeysRuleResultPot)
+      val hydration = Hydration(drySubstrate, wateringScope)
+      val ruleRequest = RuleUtils.metaDataRuleRequest(value, d2wContext)
+      WebSocketClient.send(WebSocketMessages.Hydrate(Some(d2wContext), hydration, Some(ruleRequest)))
+      noChange
+
+
 
     case GetMetaDataForSetPage(pageContext) =>
       val d2wContext = pageContext.d2wContext
@@ -402,7 +414,22 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
     EOCacheUtils.removeEOFromCache(eo, eos)
   }*/
 
+  def registerEosAndRules(pageContext: PageContext, eos: List[EO], ruleResultsOpt: Option[List[RuleResult]]) = {
+    val entityName = pageContext.d2wContext.entityName.get
+    ruleResultsOpt match {
+      case Some(ruleResults) =>
+        updated(
+          EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eos, entityName),
+          Effect.action(SetPreviousWithResults(ruleResults, pageContext))
+        )
 
+      case None =>
+        updated(
+          EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, eos, entityName),
+          Effect.action(RegisterPreviousPageAndSetPage(pageContext))
+        )
+    }
+  }
 
   override def handle = {
 
@@ -618,41 +645,47 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       )
 
 
-    case CompletedEO(d2wContextOpt, eos, ruleResultsOpt) =>
+
+
+     case CompletedEO(d2wContextOpt, hydration, eos, ruleResultsOpt) =>
       log.finest("CacheHandler | CompletedEOs  " + eos)
       //val entity = EOModelUtils.entityNamed(value.eomodel.get,entityName).get
 
       d2wContextOpt match {
         case Some(d2wContext) =>
-          val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
-          val eo = eos.head
-          val pageContextUpdated = pageContext.copy(eo = Some(eo))
-
           val entityName = d2wContext.entityName.get
 
-          val isNewEO = EOValue.isNewEO(eo)
-          if (isNewEO) {
-            ruleResultsOpt match {
-              case Some(ruleResults) =>
-                effectOnly(Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated)))
-              case None =>
-                effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
-            }
-          } else {
-            ruleResultsOpt match {
-              case Some(ruleResults) =>
-                updated(
-                  EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-                  Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated))
-                )
+          val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
+          val task = d2wContext.task.get
+          log.finest("CacheHandler | CompletedEOs | d2wContext | task " + task)
 
-              case None =>
-                updated(
-                  EOCacheUtils.updatedDBCacheWithEOsForEntityNamed(value, List(eo), entityName),
-                  Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated))
-                )
-            }
+          task match {
+            case TaskDefine.list =>
+              val fs = hydration.drySubstrate.fetchSpecification.get
+              val dataRep = DataRep (fetchSpecification = Some(fs))
+              val pageContextUpdated = pageContext.copy(dataRep = Some(dataRep))
+              registerEosAndRules(pageContextUpdated, eos, ruleResultsOpt)
+
+            case _ =>
+              val eo = eos.head
+              val pageContextUpdated = pageContext.copy(eo = Some(eo))
+
+
+              val isNewEO = EOValue.isNewEO(eo)
+              if (isNewEO) {
+                ruleResultsOpt match {
+                  case Some(ruleResults) =>
+                    effectOnly(Effect.action(SetPreviousWithResults(ruleResults, pageContextUpdated)))
+                  case None =>
+                    effectOnly(Effect.action(RegisterPreviousPageAndSetPage(pageContextUpdated)))
+                }
+              } else {
+                registerEosAndRules(pageContextUpdated, eos, ruleResultsOpt)
+
+              }
+
           }
+
 
         case None =>
           eos.length match {

@@ -22,6 +22,8 @@ object D2WComponentInstaller  {
 
   class Backend($ : BackendScope[Props, Unit]) {
 
+    def debugInfo(propertyName: String, componentName: String) = propertyName + " - " + componentName
+
     def render(p: Props) = {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
@@ -38,17 +40,21 @@ object D2WComponentInstaller  {
         log.finest("Render D2WComponentInstaller | component name " + componentNameFound)
         componentNameFound match {
           case Some(componentName) => {
-            val displayedComponentName = if (p.proxy.value.appConfiguration.isDebugMode) propertyName + " - " + componentName else ""
+            val displayedComponentName = if (p.proxy.value.appConfiguration.isDebugMode) debugInfo(propertyName, componentName) else ""
             componentName match {
               //case "ERD2WEditToOneRelationship" => <.span("Component not found: " + componentName)
               case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, pageContext, p.proxy), displayedComponentName)
               case "DisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
+              case "D2WDisplayToManyTable" => <.span(D2WDisplayToManyTable(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WEditString" => <.span(ERD2WEditString(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WEditNumber" => <.span(ERD2WEditNumber(p.router, pageContext, p.proxy), displayedComponentName)
               case "D2WDisplayNumber" => <.span(D2WDisplayNumber(p.router, pageContext, p.proxy), displayedComponentName)
+              case "D2WDisplayNumber2" => <.span(D2WDisplayNumber(p.router, pageContext, p.proxy), displayedComponentName)
 
               case "ERD2WDisplayString" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+              case "D2WDisplayPrefixedString" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
+
               case "ERD2WDisplayStringWithLineBreaks" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayDateOrNull" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
               case "NVD2WDisplayFixedFontString" => <.span(ERD2WDisplayString(p.router, pageContext, p.proxy), displayedComponentName)
@@ -64,7 +70,7 @@ object D2WComponentInstaller  {
               case "DisplayProjectPotentialCustomers" => <.span(DisplayProjectPotentialCustomers(p.router, pageContext, p.proxy), displayedComponentName)
 
               // application specific components
-              case _ => <.span("Component not found: " + componentName)
+              case _ => <.span("Component not found: " + debugInfo(propertyName, componentName))
             }
           }
           case _ => <.span("Rule Result with empty value for property " + propertyName)

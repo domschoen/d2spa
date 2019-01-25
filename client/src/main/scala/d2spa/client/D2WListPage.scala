@@ -40,7 +40,7 @@ object D2WListPage {
     }
 
     def render(p: Props) = {
-      log.finest("D2WListPage render " + p.proxy.value)
+      log.finest("D2WListPage render")
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get

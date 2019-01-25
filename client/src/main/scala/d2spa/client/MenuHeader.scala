@@ -56,11 +56,11 @@ object MenuHeader {
           <.div(
             <.ul(style.listGroup, ^.className := "menu",
               p.proxy.value.menuModel.get.menus toTagMod (mainMenu =>
-                mainMenu.children toTagMod (
+                mainMenu.children.reverse toTagMod (
                   menu => {
                     <.li(style.item, GlobalStyles.menuItem, (style.active).when(p.entity.equals(menu.entity.name)),
                       <.div(GlobalStyles.menuInputGroup,
-                        <.div(GlobalStyles.menuLabel, menu.entity.name, ^.onClick --> selectMenu(menu.entity.name)),
+                        <.div(GlobalStyles.menuLabel, menu.title, ^.onClick --> selectMenu(menu.entity.name)),
                         <.div(GlobalStyles.menuAddon, <.i(^.className := "fa fa-plus"), ^.onClick --> newEO(menu.entity))
                       )
                     )

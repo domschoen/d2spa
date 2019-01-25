@@ -29,11 +29,11 @@ object EORepoActor {
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new EORepoActor(eomodelActor, ws))
 
 
-  case class SearchAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
+  //case class SearchAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
   case class HydrateAll(fs: EOFetchAll, requester: ActorRef) //: Future[Seq[EO]]
 
 
-  case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
+  //case class Search(fs: EOFetchSpecification, requester: ActorRef) //: Future[Seq[EO]]
 
   //case class CompleteEO(d2wContext: D2WContext, eo: EOFault, missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
   case class HydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
@@ -46,22 +46,27 @@ object EORepoActor {
 
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
-  case class CompletedEOs(d2wContext: Option[D2WContext], eo: List[EO], ruleResults: Option[List[RuleResult]])
-  case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
+  case class CompletedEOs(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]])
+  //case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
   case class DeletingResponse(eo: EO)
 
   def valueMapWithJsonFields(eomodel: EOModel, fields : Seq[(String,JsValue)]): Map[String,EOValue] = {
+    //println("valueMapWithJsonFields | eomodel " + eomodel)
+    //println("valueMapWithJsonFields | fields " + fields)
+
     fields.map(kvTuple => {
       val key = kvTuple._1
       val value = kvTuple._2
       //Logger.debug("valueMapWithJsonFields : " + value)
+      //println("valueMapWithJsonFields : " + value)
 
       //Logger.debug("Complete EO: value : " + value)
       // JsValue : JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsUndefined
       val newValue = value match {
         case jsArray: play.api.libs.json.JsArray =>
+          println("valueMapWithJsonFields | value | match with JsArray " + jsArray)
           println("jsArray " + jsArray.getClass.getName)
 
 
@@ -75,7 +80,7 @@ object EORepoActor {
               case oneElement: JsObject =>
                 // {"id":1,"type":"Project"}
 
-                val eos: List[EO] = seqJsValues.toList.map(x => {
+                val eoOpts: List[Option[EO]] = seqJsValues.toList.map(x => {
                   eoFromJsonJsObject(eomodel, None, x.asInstanceOf[JsObject])
                 })
                 /*val hasError = !eos.find(eoOpt => eoOpt.isEmpty).isEmpty
@@ -83,6 +88,10 @@ object EORepoActor {
                   handleException(response.body, eo)
 
                 }*/
+                println("related eos : " + eoOpts)
+
+
+                val eos = eoOpts.flatten
                 val eoPks = eos.map(eo => eo.pk)
                 ObjectsValue(eoPks)
 
@@ -125,13 +134,24 @@ object EORepoActor {
 
 
         case jsObj : JsObject =>
-          ObjectValue(eo = eoFromJsonJsObject(eomodel, None, jsObj))
+          println("valueMapWithJsonFields | value | match with JsObject " + jsObj)
+          val eoOpt = eoFromJsonJsObject(eomodel, None, jsObj)
+          eoOpt match {
+            case Some(eo) =>
+              ObjectValue(eo = eo)
+            case None =>
+              println("Failed to create EO with json " + jsObj)
+              EmptyValue
+
+          }
 
         case jsString: JsString =>
+          println("valueMapWithJsonFields | value | match with JsString " + jsString)
           val stringV = jsString.value
           EOValue.stringV(stringV)
 
         case play.api.libs.json.JsNumber(n) =>
+          println("valueMapWithJsonFields | value | match with JsNumber " + n)
           // TBD use a BigDecimal container
           n match {
             case bd: BigDecimal => IntValue(bd.toInt)
@@ -142,15 +162,19 @@ object EORepoActor {
           }
 
         case n: play.api.libs.json.JsBoolean =>
+          println("valueMapWithJsonFields | value | match with JsBoolean " + n)
           val boolVal = n.value
           BooleanValue(boolVal)
 
         case play.api.libs.json.JsNull =>
+          println("valueMapWithJsonFields | value | match with JsNull")
           EmptyValue
 
         case _ =>
-          val stringV = value.toString()
-          EOValue.stringV(stringV)
+          println("valueMapWithJsonFields | value | match with unsupported " + _)
+          EmptyValue
+          //val stringV = value.toString()
+          //EOValue.stringV(stringV)
 
       }
 
@@ -161,14 +185,19 @@ object EORepoActor {
   }
 
 
-  def eoFromJsonJsObject(eomodel: EOModel, eoOpt: Option[EO], jsObj: JsObject): EO = {
+  def eoFromJsonJsObject(eomodel: EOModel, eoOpt: Option[EO], jsObj: JsObject): Option[EO] = {
+    println("eoFromJsonJsObject | eoOpt " + eoOpt)
+    println("eoFromJsonJsObject | jsObj " + jsObj)
     val entityNameOpt : Option[(String, JsValue)] = jsObj.fields.find(x => x._1.equals("type"))
+    println("eoFromJsonJsObject | entityNameOpt " + entityNameOpt)
     entityNameOpt match {
       case Some((_, JsString(entityName))) =>
         val entityOpt = EOModelUtils.entityNamed(eomodel,entityName)
+        println("eoFromJsonJsObject | entityOpt " + entityOpt)
         entityOpt match {
           case Some(entity) =>
             val pkNames = entity.pkAttributeNames
+            println("eoFromJsonJsObject | pkNames " + pkNames)
 
             // Iterate on fields (Seq[(String, JsValue)]
             val eo = eoOpt match {
@@ -190,15 +219,17 @@ object EORepoActor {
             val jObjValues: Seq[(String, JsValue)] = jsObj.fields.filter(x => !(pkNames.contains(x._1) || x._1.equals("type")|| x._1.equals("id")))
             println("jObjValues " + jObjValues)
             val valuesMap = valueMapWithJsonFields(eomodel, jObjValues)
-            EOValue.takeValuesForKeys(eo, valuesMap)
+            Some(EOValue.takeValuesForKeys(eo, valuesMap))
 
 
           case None =>
-            throw new Exception("no entity found for entityName: " + entityName)
+            println("no entity found for entityName: " + entityName)
+            None
         }
 
       case None =>
-        throw new Exception("no type in json: " + jsObj)
+        println("no type in json: " + jsObj)
+        None
     }
   }
 
@@ -223,9 +254,12 @@ object EORepoActor {
 
   def convertEOJsonToEOs(eomodel: EOModel, eo: EO, resultBody: JsObject): List[EO] = {
     val jObj = resultBody.asInstanceOf[JsObject]
-    val refreshedEO = eoFromJsonJsObject(eomodel, Some(eo),jObj)
-
-    eoExtractor(refreshedEO, Set(refreshedEO)).toList
+    val refreshedEOOpt = eoFromJsonJsObject(eomodel, Some(eo),jObj)
+    refreshedEOOpt match {
+      case Some(refreshedEO) =>
+        eoExtractor(refreshedEO, Set(refreshedEO)).toList
+      case None => List()
+    }
   }
 
 }
@@ -259,34 +293,42 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   }
 
 
-  def searchOnWORepository(fs: EOFetchSpecification): Future[List[EO]] = {
+  def searchOnWORepository(fs: EOFetchSpecification, missingKeys: List[String]): Future[List[EO]] = {
     val entityName = EOFetchSpecification.entityName(fs)
     val qualifier = fs match {
       case fa: EOFetchAll => None
       case fq: EOQualifiedFetch => Some(fq.qualifier)
     }
-    searchOnWORepository(entityName, qualifier)
+    searchOnWORepository(entityName, qualifier,missingKeys)
   }
 
 
-  def searchOnWORepository(entityName: String, qualifierOpt: Option[EOQualifier]): Future[List[EO]] = {
+  def searchOnWORepository(entityName: String, qualifierOpt: Option[EOQualifier], missingKeys: List[String]): Future[List[EO]] = {
     Logger.debug("Search with fs:" + entityName)
     val qualifierSuffix = qualifierOpt match {
       case Some(q) => "?qualifier=" + qualifiersUrlPart(q)
       case _ => ""
     }
-    val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix
+    val missingKeysFormKeyStr =  missingKeysFormKeyString(missingKeys.toSet)
+    val missingKeysAddon = if (missingKeysFormKeyStr.isEmpty) "" else "?" + missingKeysFormKeyStr
+
+    val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix + missingKeysAddon
     Logger.debug("Search URL:" + url)
     val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
     futureResponse.map { response =>
+      println("response " + response)
 
       val resultBody = response.json
+      println("resultBody " + resultBody)
+
       val array = resultBody.asInstanceOf[JsArray]
       var eos = List[EO]()
       for (item <- array.value) {
-        val valuesMap = valueMapWithJson(item)
+        println("searchOnWORepository | item " + item)
 
+        val valuesMap = valueMapWithJson(item)
+        println("valuesMap " + valuesMap)
         //Logger.debug("valuesMap " + valuesMap)
         val pkEOValue = valuesMap("id")
         val pk = EOValue.juiceInt(pkEOValue)
@@ -302,6 +344,8 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   def valueMapWithJson(jsval : JsValue): Map[String,EOValue] = {
     val jObj = jsval.asInstanceOf[JsObject]
+    println("valueMapWithJson | jObj " + jObj)
+    println("valueMapWithJson | jObj.fields " + jObj.fields)
     EORepoActor.valueMapWithJsonFields(eomodel, jObj.fields)
   }
 
@@ -318,6 +362,14 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   "customer": null
 }*/
 
+  def missingKeysFormKeyString(missingKeys: Set[String]) = {
+    if (missingKeys.size > 0) {
+      val toArrayString = missingKeys.map(x => s""""${x}"""").mkString("(", ",", ")")
+      "missingKeys=" + toArrayString
+    } else ""
+
+  }
+
   def completeEO(eoFault: EOFault, missingKeys: Set[String]): Future[List[EO]] = {
     Logger.debug("Complete EO: " + eoFault + " missing keys: " + missingKeys)
     val entityName = eoFault.entityName
@@ -325,16 +377,13 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     entityOpt match {
       case Some(entity) =>
         val eo = EOValue.dryEOWithEntity(entity.name, eoFault.pk)
-        val missingKeysFormKeyString =  if (missingKeys.size > 0) {
-          val toArrayString = missingKeys.map(x => s""""${x}"""").mkString("(", ",", ")")
-          "missingKeys=" + toArrayString
-        } else ""
+        val missingKeysFormKeyStr =  missingKeysFormKeyString(missingKeys)
         val pks = eoFault.pk
         pks.pks.size match {
           case 1 =>
             val pk = pks.pks.head
             // http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Customer/2/propertyValues.json?missingKeys=("projects")
-            val url = d2spaServerBaseUrl + "/" + entityName + "/" + pk + "/propertyValues.json?" + missingKeysFormKeyString
+            val url = d2spaServerBaseUrl + "/" + entityName + "/" + pk + "/propertyValues.json?" + missingKeysFormKeyStr
             completeEOWithUrl(eo, url, x => x)
 
           case _ =>
@@ -344,7 +393,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
             })
             val qualString = qualStrings.mkString(" and ")
 
-            val url = d2spaServerBaseUrl + "/" + entityName + ".json?qualifier=" + qualString + "&batchSize=-1&" + missingKeysFormKeyString
+            val url = d2spaServerBaseUrl + "/" + entityName + ".json?qualifier=" + qualString + "&batchSize=-1&" + missingKeysFormKeyStr
             completeEOWithUrl(eo, url, x => x.asInstanceOf[JsArray].value.head)
 
         }
@@ -610,20 +659,20 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
      // - componentName
      // - attributeType
 
-    case HydrateAll(fs: EOFetchAll, requester: ActorRef) =>
+    /*case HydrateAll(fs: EOFetchAll, requester: ActorRef) =>
       log.debug("SearchAll")
       val entityName = EOFetchSpecification.entityName(fs)
 
-      searchOnWORepository(entityName, None).map(rrs =>
+      searchOnWORepository(entityName, None, List().map(rrs =>
         requester ! FetchedObjects(entityName, rrs, None)
-      )
+      )*/
 
-    case Search(fs: EOFetchSpecification, requester: ActorRef) =>
+    /*case Search(fs: EOFetchSpecification, requester: ActorRef) =>
       log.debug("Search")
 
       searchOnWORepository(fs).map(rrs =>
         requester ! FetchedObjectsForList(fs,rrs)
-      )
+      )*/
 
     /*case CompleteEO(eo: EOFault, missingKeys: Set[String], requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
@@ -648,13 +697,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
           hydrateEOs(eoFault.entityName, List(eoFault.pk), missingKeys.toSet).map(rrs => {
             println("Hydrate gives " + rrs)
             println("Hydrate send to " + requester)
-            requester ! CompletedEOs(d2wContextOpt, rrs, ruleResults)
+            requester ! CompletedEOs(d2wContextOpt, hydration, rrs, ruleResults)
           }
           )
         case DrySubstrate(_, _, Some(fs)) =>
           val missingKeys = RulesUtilities.missingKeysWith(hydration.wateringScope, ruleResults)
-          searchOnWORepository(fs).map(rrs =>
-            requester ! CompletedEOs(d2wContextOpt, rrs, ruleResults)
+          println("Hydrate fs : " + fs)
+          println("Hydrate with missingKeys " + missingKeys)
+          searchOnWORepository(fs, missingKeys).map(rrs =>
+            requester ! CompletedEOs(d2wContextOpt, hydration, rrs, ruleResults)
           )
 
       }

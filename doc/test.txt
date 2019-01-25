@@ -44,6 +44,3 @@
 
 Problems
 ---------
-
-1) Socket can be closed and not reopened transparently
-2) ERD2WEditToOneRelationship crashes

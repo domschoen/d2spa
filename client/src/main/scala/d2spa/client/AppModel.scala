@@ -90,7 +90,7 @@ case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchMenu(d2wContext: D2WContext) extends Action
 
 case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class CompletedEO(d2wContext: Option[D2WContext], eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class CompletedEO(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class SetPageForSocketReady(d2wContext: PageContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
@@ -117,6 +117,7 @@ case object SetPreviousPage extends Action
 case class RegisterAndPrepareEODisplay(eo: EO, d2wContext: PageContext) extends Action
 case class PrepareEODisplay(d2wContext: PageContext) extends Action
 case class PrepareEditPage(d2wContext: PageContext) extends Action
+case class SearchHydration(fs: EOFetchSpecification) extends Action
 
 
 case class PrepareEODisplayRules(d2wContext: PageContext, cache: EOCache, needsHydration: Boolean) extends Action
@@ -180,7 +181,6 @@ case class UpdateEOsForEOOnError(eo:EO) extends Action
 // In that case the FireRules will trigger RuleToFire action to the server for as many entries in dipslayPropertyKeys
 // case class CreateMemID(entityName: String) extends D2WAction
 case class GetMetaDataForSetPage(d2wContext: PageContext) extends Action
-
 
 
 object HydrationUtils {

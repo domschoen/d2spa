@@ -54,7 +54,7 @@ object ERD2WQueryStringOperator  {
           val strValue = D2WContextUtils.queryValueAsStringForKey(pageContext, propertyName)
           // set id but make it unique: ^.id := "description",
           <.div(
-            <.input(^.value := strValue, ^.`type` := "number" ,^.className := "form-control",
+            <.input(^.value := strValue, ^.className := "form-control",
               ^.placeholder := "write description",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
                     entityName,

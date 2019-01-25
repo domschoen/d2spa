@@ -263,7 +263,7 @@ object NVListComponent {
                         propertyKey => {
                           val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
                           val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext, eo = Some(eo))
-                          println("propertyPageContext " + propertyPageContext)
+                          println("NVListComponent | propertyPageContext " + propertyPageContext)
                           <.td(^.className := "",
                             D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
                           )

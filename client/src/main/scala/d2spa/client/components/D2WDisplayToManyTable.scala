@@ -1,9 +1,7 @@
 package d2spa.client.components
 
-import d2spa.client.RuleUtils.ruleResultForContextAndKey
-import d2spa.client.components.ERD2WEditToOneRelationship.Props
 import d2spa.client._
-import d2spa.client.logger.{D2SpaLogger, log}
+import d2spa.client.logger.D2SpaLogger
 import d2spa.shared._
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
@@ -13,10 +11,10 @@ import japgolly.scalajs.react.vdom.html_<^._
 
 import d2spa.client.MegaContent
 import d2spa.client.SPAMain.TaskAppPage
-import d2spa.shared.PropertyMetaInfo
+import d2spa.client.logger.log
 
 
-object ERD2WDisplayToOne {
+object D2WDisplayToManyTable {
 
   //@inline private def bss = GlobalStyles.bootstrapStyles
   //bss.formControl,
@@ -75,14 +73,18 @@ object ERD2WDisplayToOne {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted " + pageContext)
+      D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted " + pageContext)
 
       val eomodel = p.proxy.value.cache.eomodel.get
 
       val eoOpt = pageContext.eo
+
+      D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | eoOpt " + eoOpt)
+
+
       eoOpt match {
         case Some(eo) =>
-          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eo " + eo)
+          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | eo " + eo)
 
           val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
           entityOpt match {
@@ -97,7 +99,7 @@ object ERD2WDisplayToOne {
               val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
               val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEOValueOpt  " + destinationEOValueOpt)
+              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | destinationEOValueOpt  " + propertyName + " - " + destinationEOValueOpt)
 
               destinationEOValueOpt match {
 
@@ -105,7 +107,7 @@ object ERD2WDisplayToOne {
                   destinationEOValue match {
                     case ObjectValue(destinationEO) =>
                       val destinationEntityName = destinationEO.entityName
-                      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
+                      D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | destinationEntityName  " + destinationEntityName)
                       val destEOFault = EOFault(destinationEntityName, destinationEO.pk)
                       val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
                       p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
@@ -113,17 +115,16 @@ object ERD2WDisplayToOne {
                       Callback.empty
                   }
                 case None =>
-                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no entity for entity name: " + entityName)
+                  D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable mounted: no entity for entity name: " + entityName)
                   Callback.empty
               }
             case None =>
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | no eo")
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | no eo")
+              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable mounted: no eo " + entityName)
               Callback.empty
           }
         case None =>
-          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | no eo")
-          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | no eo")
           Callback.empty
       }
     }
@@ -132,7 +133,7 @@ object ERD2WDisplayToOne {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | render " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
       val propertyName = d2wContext.propertyKey.get
 
@@ -151,7 +152,7 @@ object ERD2WDisplayToOne {
               destinationEOValue match {
                 case ObjectValue(destinationEO) =>
                   val destinationEntityName = destinationEO.entityName
-                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
+                  D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
                   val cache = p.proxy.value.cache
                   //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
                   val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(cache, destinationEntityName, destinationEO)
@@ -186,14 +187,15 @@ object ERD2WDisplayToOne {
               <.div("No value for key " + propertyName)
           }
         case None =>
-          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable mounted: no eo " + entityName)
           <.div("No eo for entity: " + entityName + " for key " + propertyName)
       }
     }
   }
 
 
-  private val component = ScalaComponent.builder[Props]("ERD2WDisplayToOne")
+
+  private val component = ScalaComponent.builder[Props]("D2WDisplayToManyTable")
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))
