@@ -131,7 +131,21 @@ Inspect record from list page
         PrepareEODisplayRules
             socket.Hydrate
     RegisterPreviousPageAndSetPage            
+
+
+ERD2WDisplayToOne
+    Hydrate(None,
+        Hydration(
+            DrySubstrate(None,Some(EOFault(Customer,EOPk(List(1)))),None),
+            WateringScope(PotFiredRuleResult(Left(keyWhenRelationship)))),
+        Some(
+            RuleRequest(D2WContext(Some(Project),Some(inspect),Some(customer),None),List(FireRule(keyWhenRelationship)))))
             
+        RulesActor ! GetRulesForHydration
+            EORepoActor ! Hydrate
+                WebSocketActor ! CompletedEOs
+                    out ! CompletedEOMsgOut
+    CompletedEO        
 ----------------
 Search
     SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
