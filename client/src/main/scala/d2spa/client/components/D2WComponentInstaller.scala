@@ -44,6 +44,9 @@ object D2WComponentInstaller  {
             componentName match {
               //case "ERD2WEditToOneRelationship" => <.span("Component not found: " + componentName)
               case "ERD2WEditToOneRelationship" => <.span(ERD2WEditToOneRelationship(p.router, pageContext, p.proxy), displayedComponentName)
+              case "ERDEditRelationship" => <.span(ERDEditRelationship(p.router, pageContext, p.proxy), displayedComponentName)
+
+
               case "DisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
               case "ERD2WDisplayToOne" => <.span(ERD2WDisplayToOne(p.router, pageContext, p.proxy), displayedComponentName)
               case "D2WDisplayToManyTable" => <.span(D2WDisplayToManyTable(p.router, pageContext, p.proxy), displayedComponentName)

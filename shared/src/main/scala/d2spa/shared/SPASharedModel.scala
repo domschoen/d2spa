@@ -493,9 +493,13 @@ object EOValue {
   }
 
   def stringValueForKey(eo: EO, key: String) = {
-    valueForKey(eo, key) match {
-      case Some(value) => juiceString(value)
-      case None => ""
+    if (key.equals("userPresentableDescription")) {
+      eo.toString
+    } else {
+      valueForKey(eo, key) match {
+        case Some(value) => juiceString(value)
+        case None => ""
+      }
     }
   }
 
