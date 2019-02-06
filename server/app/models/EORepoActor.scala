@@ -536,7 +536,23 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
   //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
+  // EO values:
+  //   attribute -> saved with EO
+  //   to-One -> saved with EO
+  //   to-Many -> save related EO
+  // We should process the tree and identify create a set of EO to save. Then send a WS for each
   def updateEO(eo: EO): Future[EO] = {
+    val eos = extractEOsToSave(eo)
+    val updateFutures: List[Future[EO]] = eos.map(eo => saveEO(eo))
+    val futureOfList = Future sequence updateFutures
+    futureOfList
+  }
+
+  def extractEOsToSave(eo: EO): List[EO] = {
+    List()
+  }
+
+  def saveEO(eo: EO): Future[EO] = {
     Logger.debug("Update EO: " + eo)
     val pk = eo.pk.pks.head
 

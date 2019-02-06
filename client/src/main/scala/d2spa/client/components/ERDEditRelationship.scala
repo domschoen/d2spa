@@ -222,9 +222,9 @@ object ERDEditRelationship {
                                 // the selection
                                 val destinationEO = EOValue.valueForKey(eo, propertyName)
                                 log.finest("ERDEditRelationship render destinationEO " + destinationEO)
-                                val defaultValue = destinationEO match {
-                                  case Some(ObjectValue(eoV)) =>
-                                    EOValue.juiceEOPkString(eoV.pk)
+                                val defaultValue = s.selectedEO match {
+                                  case Some(eo) =>
+                                    EOValue.juiceEOPkString(eo.pk)
                                   case _ => "None"
                                 }
                                 log.finest("ERDEditRelationship render defaultValue " + defaultValue)
