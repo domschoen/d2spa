@@ -6,7 +6,7 @@ import java.util.logging._
 object D2SpaLogger {
 
     val ALL = "ALL"
-    val EntityFocus = List("Project","Customer")
+    val EntityFocus = List("Project","Customer", "Product")
     //val EntityFocus = List()
 
 

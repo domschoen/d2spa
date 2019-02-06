@@ -22,6 +22,7 @@ object ERDEditRelationship {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
+  case class State(selectedEO: Option[EO])
 
   def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
     println("eoWith | entity name " + entity.name + " id " + id + " eos " + eos )
@@ -35,7 +36,7 @@ object ERDEditRelationship {
     optEO
   }
 
-  class Backend($: BackendScope[Props, Unit]) {
+  class Backend($: BackendScope[Props, State]) {
 
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       log.finest("ERDEditRelationship | willReceiveProps")
@@ -147,20 +148,22 @@ object ERDEditRelationship {
       }
     }
 
+    def handleSubmit(p: Props, s: State, pageContext: PageContext, e: ReactEventFromInput): Callback = {
+      e.preventDefaultCB >> {
+        s.selectedEO match {
+          case Some(eo) =>
+            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(Some(eo))))
 
-    /*def eoRefWith(eos: Seq[EO], entity: EOEntity, id: String) = {
-      //log.finest("id " + id + " class " + id.getClass.getName)
-      if (id.equals("None")) None
-      val idAsInt = id.toInt
-      val pkAttributeName = entity.pkAttributeName
-      val optEO = eos.find(eo => {
-        val optPk = EOValueUtils.pk(eo)
-        optPk.isDefined && optPk.get.equals(idAsInt)
-      })
-      if (optEO.isDefined) Some(EORef(entity.name, EOValueUtils.pk(optEO.get).get)) else None
-    }*/
+          case None =>
+            Callback.empty
+        }
+      }
+    }
+    def handleSelectionChange(eoOpt: Option[EO]) = {
+        $.modState(_.copy(selectedEO = eoOpt))
+    }
 
-    def render(p: Props) = {
+    def render(p: Props, s: State) = {
       log.finest("ERDEditRelationship render")
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
@@ -227,9 +230,12 @@ object ERDEditRelationship {
                                 log.finest("ERDEditRelationship render defaultValue " + defaultValue)
                                 log.finest("ERDEditRelationship | render | keyWhenRelationship " + keyWhenRelationship)
 
-                                <.div(
-                                  <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+
+                                //{ e: ReactEventFromInput =>
+                                //  p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+                                <.form(^.onSubmit ==> { e: ReactEventFromInput => handleSubmit(p, s, pageContext, e)},
+                                  <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> {
+                                    e: ReactEventFromInput => handleSelectionChange(eoWith(eos, destinationEntity, e.currentTarget.value))
                                   },
                                     {
                                       log.finest("ERDEditRelationship | render | destination eos " + eos)
@@ -248,7 +254,8 @@ object ERDEditRelationship {
                                         <.option(^.value := eo._1, eo._2)
                                       })
                                     }
-                                  )
+                                  ),
+                                  <.input.submit(^.value := "Add")
                                 )
                               }
                               case _ => {
@@ -274,6 +281,7 @@ object ERDEditRelationship {
 
 
   private val component = ScalaComponent.builder[Props]("ERDEditRelationship")
+    .initialState(State(None))
     .renderBackend[Backend]
     //.componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentDidMount(scope => scope.backend.mounted(scope.props))

@@ -788,7 +788,7 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
 
 
     case UpdateEOValueForProperty(eo, pageContext, newEOValue) =>
-      println("UpdateEOValueForProperty")
+      println("CacheHandler | UpdateEOValueForProperty")
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       val propertyName = d2wContext.propertyKey.get
