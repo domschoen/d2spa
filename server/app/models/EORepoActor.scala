@@ -536,16 +536,20 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
   //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
-  // EO values:
-  //   attribute -> saved with EO
-  //   to-One -> saved with EO
-  //   to-Many -> save related EO
-  // We should process the tree and identify create a set of EO to save. Then send a WS for each
+  // traverse the tree 2 times:
+  // 1) go through the tree and save all to-one  starting from leaves:
+  //    while any children, go to it,
+  //      if is leaf or only to-many children and coming from to-one or to-many flattened > if not saved, save, flag saved then backward and recurse
+  //    if not saved, save root
+  // 2) go through the tree and save all destination of to-many:
+  //    while any children, go to it,
+  //      if destination of a to many > if not saved, save, flag saved and recurse
   def updateEO(eo: EO): Future[EO] = {
-    val eos = extractEOsToSave(eo)
+    /*val eos = extractEOsToSave(eo)
     val updateFutures: List[Future[EO]] = eos.map(eo => saveEO(eo))
     val futureOfList = Future sequence updateFutures
-    futureOfList
+    futureOfList*/
+    saveEO(eo)
   }
 
   def extractEOsToSave(eo: EO): List[EO] = {
