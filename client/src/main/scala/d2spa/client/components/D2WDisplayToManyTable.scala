@@ -105,12 +105,20 @@ object D2WDisplayToManyTable {
 
                 case Some(destinationEOValue) =>
                   destinationEOValue match {
-                    case ObjectValue(destinationEO) =>
-                      val destinationEntityName = destinationEO.entityName
-                      D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | destinationEntityName  " + destinationEntityName)
-                      val destEOFault = EOFault(destinationEntityName, destinationEO.pk)
-                      val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
-                      p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
+                    case ObjectValue(destinationEOPK) =>
+                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                      destinationEntityOpt match {
+                        case Some(destinationEntity) =>
+
+                          val destinationEntityName = destinationEntity.name
+                          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | destinationEntityName  " + destinationEntityName)
+                          val destEOFault = EOFault(destinationEntityName, destinationEOPK)
+                          val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
+                          p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
+                        case _ =>
+                          Callback.empty
+                      }
+
                     case _ =>
                       Callback.empty
                   }
@@ -151,33 +159,48 @@ object D2WDisplayToManyTable {
             case Some(destinationEOValue) =>
               destinationEOValue match {
                 case ObjectValue(destinationEO) =>
-                  val destinationEntityName = destinationEO.entityName
-                  D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
-                  val cache = p.proxy.value.cache
-                  //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
-                  val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(cache, destinationEntityName, destinationEO)
-                  eoOpt match {
-                    case Some(eo) =>
-                      val ruleResultsModel = p.proxy.value.ruleResults
-                      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-                      keyWhenRelationshipOpt match {
-                        case Some(keyWhenRelationship) =>
-                          val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
-                          eoValueOpt match {
-                            case Some(eoValue) =>
+                  val eomodel = p.proxy.value.cache.eomodel.get
+                  val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
+                  entityOpt match {
+                    case Some(entity) =>
 
-                              val value = EOValue.juiceString(eoValue)
-                              <.div(
-                                <.span(^.id := "description", value))
+                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                      destinationEntityOpt match {
+                        case Some(destinationEntity) =>
 
+                          val destinationEntityName = destinationEntity.name
+                          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
+                          val cache = p.proxy.value.cache
+                          //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
+                          val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, destinationEntityName, destinationEO)
+                          eoOpt match {
+                            case Some(eo) =>
+                              val ruleResultsModel = p.proxy.value.ruleResults
+                              val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+                              keyWhenRelationshipOpt match {
+                                case Some(keyWhenRelationship) =>
+                                  val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
+                                  eoValueOpt match {
+                                    case Some(eoValue) =>
+
+                                      val value = EOValue.juiceString(eoValue)
+                                      <.div(
+                                        <.span(^.id := "description", value))
+
+                                    case None =>
+                                      <.div("No value for key " + keyWhenRelationship)
+                                  }
+                                case None =>
+                                  <.div("No keyWhenRelationship")
+                              }
                             case None =>
-                              <.div("No value for key " + keyWhenRelationship)
+                              <.div("No eo out of cache")
                           }
                         case None =>
-                          <.div("No keyWhenRelationship")
+                          <.div("No entity for eo")
                       }
                     case None =>
-                      <.div("No eo out of cache")
+                      <.div("No destination Entity for key: " + propertyName)
                   }
                 // This is a nominal case
                 case _ =>
@@ -194,7 +217,6 @@ object D2WDisplayToManyTable {
   }
 
 
-
   private val component = ScalaComponent.builder[Props]("D2WDisplayToManyTable")
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
@@ -202,6 +224,6 @@ object D2WDisplayToManyTable {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) =
-    component(Props(ctl, d2wContext,  proxy))
+    component(Props(ctl, d2wContext, proxy))
 
 }

@@ -105,17 +105,17 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
             RulesActor.GetMetaDataForNewEO(d2wContext, eo, ruleRequest, self)
         }
 
-      case UpdateEO(d2wContext, eo, ruleRequest) =>
+      case UpdateEO(d2wContext, eos, ruleRequest) =>
         val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
 
         if (isEmptyRuleRequest) {
           println("Receive UpdateEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.UpdateEO(d2wContext, eo, None, self)
+            EORepoActor.UpdateEO(d2wContext, eos, None, self)
         } else {
           println("Receive UpdateEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForUpdatedEO(d2wContext, eo, ruleRequest, self)
+            RulesActor.GetMetaDataForUpdatedEO(d2wContext, eos, ruleRequest, self)
         }
 
       case Hydrate(d2wContextOpt, hydration, ruleRequestOpt) =>

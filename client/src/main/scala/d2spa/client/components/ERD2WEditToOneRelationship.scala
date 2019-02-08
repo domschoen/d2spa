@@ -227,8 +227,8 @@ object ERD2WEditToOneRelationship {
                                 val destinationEO = EOValue.valueForKey(eo, propertyName)
                                 log.finest("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
                                 val defaultValue = destinationEO match {
-                                  case Some(ObjectValue(eoV)) =>
-                                    EOValue.juiceEOPkString(eoV.pk)
+                                  case Some(ObjectValue(eoPK)) =>
+                                    EOValue.juiceEOPkString(eoPK)
                                   case _ => "None"
                                 }
                                 log.finest("ERD2WEditToOneRelationship render defaultValue " + defaultValue)

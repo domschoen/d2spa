@@ -30,7 +30,7 @@ object WebSocketMessages {
 
   // D2W Context is needed for the fetch of rules
   final case class NewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
-  final case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
   final case class AppInitMsgIn(ruleRequest: RuleRequest, eoOpt: Option[EO]) extends WebSocketMsgIn
 
   // Server ---> Client
@@ -362,7 +362,7 @@ sealed trait EOValue
 case class StringValue(value: String) extends EOValue
 case class IntValue(value : Int) extends EOValue
 case class BooleanValue(value : Boolean) extends EOValue
-case class ObjectValue(eo: EO) extends EOValue
+case class ObjectValue(eo: EOPk) extends EOValue
 case class ObjectsValue(eos: List[EOPk]) extends EOValue
 case object EmptyValue extends  EOValue
 //case object NoneValue extends EOValue
@@ -405,14 +405,14 @@ object EOValue {
 
   def objectValue(eoOpt: Option[EO]) = {
     eoOpt match {
-      case Some(eo) => ObjectValue(eo = eo)
+      case Some(eo) => ObjectValue(eo = eo.pk)
       case None => EmptyValue
     }
   }
 
   def stringV(value: String) = StringValue(value)
   def intV(value: Int) = IntValue(value)
-  def eoV(value: EO) =  ObjectValue(eo = value)
+  def eoV(value: EO) =  ObjectValue(eo = value.pk)
   def eosV(value: List[EOPk]) = ObjectsValue(eos = value)
 
 
@@ -465,7 +465,7 @@ object EOValue {
       case _ => false
     }
 
-  def juiceEO(v: EOValue): Option[EO] =
+  def juiceEO(v: EOValue): Option[EOPk] =
     v match {
       case BooleanValue(value) => None
       case StringValue(value) => None
@@ -481,6 +481,7 @@ object EOValue {
     }
 
 
+  // Return a Key-Value Map with all non empty value
   def definedValues(eo: EO): Map[String,EOValue] = {
     val valueMap = keyValues(eo)
     valueMap filter (v => {

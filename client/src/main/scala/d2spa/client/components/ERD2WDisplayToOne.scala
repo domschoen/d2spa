@@ -103,12 +103,20 @@ object ERD2WDisplayToOne {
 
                 case Some(destinationEOValue) =>
                   destinationEOValue match {
-                    case ObjectValue(destinationEO) =>
-                      val destinationEntityName = destinationEO.entityName
-                      D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
-                      val destEOFault = EOFault(destinationEntityName, destinationEO.pk)
-                      val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
-                      p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
+                    case ObjectValue(destinationEOPk) =>
+                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                      destinationEntityOpt match {
+                        case Some(destinationEntity) =>
+                          val destinationEntityName = destinationEntity.name
+                          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
+                          val destEOFault = EOFault(destinationEntityName, destinationEOPk)
+                          val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
+                          p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
+
+                        case None =>
+                          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no destination entity for property: " + propertyName)
+                          Callback.empty
+                      }
                     case _ =>
                       Callback.empty
                   }
@@ -149,35 +157,51 @@ object ERD2WDisplayToOne {
           destinationEOValueOpt match {
             case Some(destinationEOValue) =>
               destinationEOValue match {
-                case ObjectValue(destinationEO) =>
-                  val destinationEntityName = destinationEO.entityName
-                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
-                  val cache = p.proxy.value.cache
-                  //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
-                  val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(cache, destinationEntityName, destinationEO)
-                  eoOpt match {
-                    case Some(eo) =>
-                      val ruleResultsModel = p.proxy.value.ruleResults
-                      val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
-                      keyWhenRelationshipOpt match {
-                        case Some(keyWhenRelationship) =>
-                          val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
-                          eoValueOpt match {
-                            case Some(eoValue) =>
+                case ObjectValue(destinationEOPk) =>
+                  val eomodel = p.proxy.value.cache.eomodel.get
+                  val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
+                  entityOpt match {
+                    case Some(entity) =>
 
-                              val value = EOValue.juiceString(eoValue)
-                              <.div(
-                                <.span(^.id := "description", value))
+                      val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
+                      destinationEntityOpt match {
+                        case Some(destinationEntity) =>
 
+                          val destinationEntityName = destinationEntity.name
+                          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEOPk)
+                          val cache = p.proxy.value.cache
+                          //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
+                          val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)
+                          eoOpt match {
+                            case Some(eo) =>
+                              val ruleResultsModel = p.proxy.value.ruleResults
+                              val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
+                              keyWhenRelationshipOpt match {
+                                case Some(keyWhenRelationship) =>
+                                  val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
+                                  eoValueOpt match {
+                                    case Some(eoValue) =>
+
+                                      val value = EOValue.juiceString(eoValue)
+                                      <.div(
+                                        <.span(^.id := "description", value))
+
+                                    case None =>
+                                      <.div("No value for key " + keyWhenRelationship)
+                                  }
+                                case None =>
+                                  <.div("No keyWhenRelationship")
+                              }
                             case None =>
-                              <.div("No value for key " + keyWhenRelationship)
+                              <.div("No eo out of cache")
                           }
                         case None =>
-                          <.div("No keyWhenRelationship")
+                          <.div("No entity for eo")
                       }
                     case None =>
-                      <.div("No eo out of cache")
+                      <.div("No destination Entity for key: " + propertyName)
                   }
+
                 // This is a nominal case
                 case _ =>
                   <.div("")
@@ -200,6 +224,6 @@ object ERD2WDisplayToOne {
     .build
 
   def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) =
-    component(Props(ctl, d2wContext,  proxy))
+    component(Props(ctl, d2wContext, proxy))
 
 }

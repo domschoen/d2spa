@@ -179,7 +179,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
 
       // Update the DB and dispatch the result withing UpdatedEO action
       //
-      WebSocketClient.send(WebSocketMessages.UpdateEO(d2wContext, purgedEO, ruleRequest))
+      WebSocketClient.send(WebSocketMessages.UpdateEO(d2wContext, List(purgedEO), ruleRequest))
       noChange
 
 

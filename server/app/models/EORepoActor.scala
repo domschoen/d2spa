@@ -40,7 +40,7 @@ object EORepoActor {
   case class Hydrate(d2wContextOpt: Option[D2WContext], hydration: Hydration, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[Seq[EO]]
 
   case class NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
-  case class UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
+  case class UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) //: Future[EO]
 
   case class DeleteEO(eo: EO, requester: ActorRef) // : Future[EO]
 
@@ -49,7 +49,7 @@ object EORepoActor {
   case class CompletedEOs(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]])
   //case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
-  case class SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]])
+  case class SavingResponse(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]])
   case class DeletingResponse(eo: EO)
 
   def valueMapWithJsonFields(eomodel: EOModel, fields : Seq[(String,JsValue)]): Map[String,EOValue] = {
@@ -138,7 +138,7 @@ object EORepoActor {
           val eoOpt = eoFromJsonJsObject(eomodel, None, jsObj)
           eoOpt match {
             case Some(eo) =>
-              ObjectValue(eo = eo)
+              ObjectValue(eo = eo.pk)
             case None =>
               println("Failed to create EO with json " + jsObj)
               EmptyValue
@@ -238,7 +238,7 @@ object EORepoActor {
   def eoExtractor(eo : EO, accu : Set[EO]) : Set[EO] = {
     val values = eo.values
     val eoValueOpts = values.map(eov => eov match {
-      case ObjectValue(eo) => if (eo.values.isEmpty) None else Some(eo)
+      case ObjectValue(eopk) => if (eo.values.isEmpty) None else Some(eo)
       case _ => None
     })
     val eos = eoValueOpts.flatten.toSet
@@ -482,9 +482,10 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
     // For all value the user has set, we prepare the json to be sent
     val eoDefinedValues = EOValue.definedValues(eo)
+    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
 
     Logger.debug("eoDefinedValues " + eoDefinedValues)
-    val eoValues = eoDefinedValues map { case (key, valContainer) => (key, woWsParameterForValue(valContainer)) }
+    val eoValues = eoDefinedValues map { case (key, valContainer) => (key, woWsParameterForValue(valContainer, entity, key)) }
     Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
@@ -499,7 +500,6 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     // But we don't set the pk eo attribute yet because the client needs to find it's chicks
     futureResponse.map { response =>
       try {
-        val entity = EOModelUtils.entityNamed(eomodel, entityName).get
 
         val pkAttributeNames = entity.pkAttributeNames
         pkAttributeNames.size match {
@@ -533,6 +533,14 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     }
   }
 
+
+
+  def savedEOsForToOne(eos: List[EO]) : List[EO] = {
+    val pkByEO = eos.map(eo => (eo.pk, eo)).toMap
+    List()
+  }
+
+
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
   //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
@@ -544,12 +552,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   // 2) go through the tree and save all destination of to-many:
   //    while any children, go to it,
   //      if destination of a to many > if not saved, save, flag saved and recurse
-  def updateEO(eo: EO): Future[EO] = {
+  def updateEO(eos: List[EO]): Future[List[EO]] = {
+    val tree = savedEOsForToOne(eos)
+
     /*val eos = extractEOsToSave(eo)
     val updateFutures: List[Future[EO]] = eos.map(eo => saveEO(eo))
     val futureOfList = Future sequence updateFutures
     futureOfList*/
-    saveEO(eo)
+    //saveEO(eo)
+    Future(tree)
   }
 
   def extractEOsToSave(eo: EO): List[EO] = {
@@ -567,9 +578,10 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     /*val eoDefinedValues = eo.values filter (v => {
       Logger.debug("v._2" + v._2)
       EOValueUtils.isDefined(v._2) })*/
+    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
 
     Logger.debug("eoDefinedValues " + eo.values)
-    val eoValues = EOValue.keyValues(eo) map { case (key, valContainer) => (key, woWsParameterForValue(valContainer)) }
+    val eoValues = EOValue.keyValues(eo) map { case (key, valContainer) => (key, woWsParameterForValue(valContainer, entity, key)) }
     Logger.debug("eoValues " + eoValues)
     val data = Json.toJson(eoValues)
 
@@ -636,15 +648,17 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   // We don't link a eo with an destination eo which has compound pks
   // Instead we create the destination eo which will have only to-one to single pk eo
   // -> we don't support compound pks eo here
-  def woWsParameterForValue(value: EOValue): JsValue = {
+  def woWsParameterForValue(value: EOValue, entity: EOEntity, key: String): JsValue = {
     value match {
       case StringValue(stringV) => JsString(stringV)
 
       case IntValue(intV) => JsNumber(intV)
 
       case ObjectValue(eo) => {
-        val entityName = eo.entityName
-        val pk = eo.pk.pks.head
+        val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, key).get
+
+        val entityName = destinationEntity.name
+        val pk = eo.pks.head
         JsObject(Seq("id" -> JsNumber(pk), "type" -> JsString(entityName)))
       }
       case EmptyValue => JsNull
@@ -734,14 +748,14 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
 
     case NewEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
-      log.debug("Get NewEO")
+      log.debug("Get NewEO " + EO)
       val entityName = d2wContext.entityName.get
       newEO(entityName, eo).map(rrs =>
-        requester ! SavingResponse(d2wContext, rrs, ruleResults)
+        requester ! SavingResponse(d2wContext, List(rrs), ruleResults)
       )
-    case UpdateEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
+    case UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       log.debug("Get UpdateEO")
-      updateEO(eo).map(rrs =>
+      updateEO(eos).map(rrs =>
         requester ! SavingResponse(d2wContext, rrs, ruleResults)
       )
 

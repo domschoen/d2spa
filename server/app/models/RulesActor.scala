@@ -53,7 +53,7 @@ object RulesActor {
   case class GetMetaDataForEOCompletion(d2wContext: D2WContext, eoFault: EOFault, requester: ActorRef)
 
   case class GetMetaDataForNewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest, requester: ActorRef)
-  case class GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO,ruleRequest: RuleRequest, requester: ActorRef)
+  case class GetMetaDataForUpdatedEO(d2wContext: D2WContext, eos: List[EO],ruleRequest: RuleRequest, requester: ActorRef)
 
   case class GetMetaDataForSearch(fs: EOFetchSpecification, requester: ActorRef)
 
@@ -379,11 +379,11 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       )
 
 
-    case GetMetaDataForUpdatedEO(d2wContext: D2WContext, eo: EO, ruleRequest, requester: ActorRef) =>
+    case GetMetaDataForUpdatedEO(d2wContext: D2WContext, eos: List[EO], ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForUpdatedEO")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") !
-          EORepoActor.UpdateEO(d2wContext, eo, Some(rrs), requester)
+          EORepoActor.UpdateEO(d2wContext, eos, Some(rrs), requester)
       )
 
 

@@ -81,7 +81,7 @@ object ERD2WInspect {
             case Some(DataRep(_, Some(eosAtKeyPath))) => {
               val eoValueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
               val eo = EOValue.juiceEO(eoValueOpt.get).get
-              val eoFault = EOFault(eosAtKeyPath.destinationEntityName,eo.pk)
+              val eoFault = EOFault(eosAtKeyPath.destinationEntityName,eo)
               // Materialooze Some(DrySubstrate(eo = Some(eoFault)))
               Some(DrySubstrate())
             }
@@ -176,7 +176,7 @@ object ERD2WInspect {
                       eovalue match {
                         case ObjectValue(eo) =>
                           D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo found")
-                          EOCacheUtils.outOfCacheEOUsingPk(p.proxy.value.cache, entityName, eo.pk)
+                          EOCacheUtils.outOfCacheEOUsingPk(p.proxy.value.cache, entityName, eo)
                         case _ => None
                       }
                     case _ =>
