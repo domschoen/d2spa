@@ -114,6 +114,9 @@ case class RuleRequest(d2wContext: D2WContext, rules: List[FiringRules])
 //case class DateValue(value: java.util.Date) extends EOValue
 
 //case class EO(entityName: String, values: Map[String, EOValue] = Map.empty[String, EOValue], pk: EOPk, validationError: Option[String] = None)
+
+
+// PK is a list of int in the same order as in the eomodel
 case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk = EOPk(List()), validationError: Option[String] = None)
 //case class EO2(entityName: String, values: List[EOValue2], pk: List[Int], validationError: Option[String] = None)
 //case class EO2(entityName: String, values: Map[String,EOValue2] = Map(),  pk: List[Int])
@@ -683,7 +686,30 @@ case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attributes: List[String] = List(), relationships: List[EORelationship] = List())
-case class EORelationship(sourceAttributeName: List[String], name: String, destinationEntityName: String)
+case class EORelationship(sourceAttributeName: List[String], name: String, definition: Option[String], isToMany: Boolean, destinationEntityName: String)
+
+object EORelationship {
+
+  def isFlattened(relationship: EORelationship) = {
+    relationship.definition match {
+      case Some(definition) => true
+      case None => false
+    }
+  }
+
+  def keyPathFirstKey(keyPath: String) = {
+    val indexOfDot = keyPath.indexOf(".")
+    if (indexOfDot < 0) {
+      keyPath
+    } else {
+      keyPath.substring(0,indexOfDot)
+    }
+  }
+
+  def relationshipNamed(relationships: List[EORelationship], name: String): Option[EORelationship] = {
+    relationships.find(rel => {rel.name.equals(name)})
+  }
+}
 
 //case class EORef(entityName: String, id: Int)
 

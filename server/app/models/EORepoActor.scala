@@ -534,12 +534,91 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   }
 
 
+  // 1) go through the tree and save all to-one  starting from leaves:
+  //    while any children, go to it,
+  //      if is leaf or only to-many children and coming from to-one or to-many flattened > if not saved, save, flag saved then backward and recurse
+  //    if not saved, save root
 
+  // How to detect flattened to-many ?
+  //
   def savedEOsForToOne(eos: List[EO]) : List[EO] = {
+    val root = eos.head
+    val entityName = root.entityName
     val pkByEO = eos.map(eo => (eo.pk, eo)).toMap
-    List()
+    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+    val relationships = entity.relationships
+    //val filteredRelatinships = relationships.filter(r => {!r.isToMany && EORelationship.isFlattened()})
+    for (relationship <- relationships) {
+
+    }
+
+    eos
   }
 
+
+  def savingEOTree(eos: List[EO]) : List[EO] = {
+    traverseTree(eos.head, eos)
+  }
+  def traverseTree(root: EO, eos: List[EO]): List[EO] = {
+    val entityName = root.entityName
+    val pkByEO = eos.map(eo => (eo.pk, eo)).toMap
+    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+    val relationships = entity.relationships
+    val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+    val subEOLists: List[List[EO]] = filteredRelationships.map( relationship => {
+        relationship.definition match {
+          case Some(definition) =>
+            // we want to consider flattened many-to-many
+            // in such case the object around the link table will have non compound pk
+            val rootPk = root.pk.pks.head
+            val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+            eoValueOpt match {
+              case ObjectsValue(eoPks: List[EOPk]) =>
+                val keyPathFirstKey = EORelationship.keyPathFirstKey(definition)
+                val linkRelationshipOpt = EORelationship.relationshipNamed(relationships, keyPathFirstKey)
+                linkRelationshipOpt match {
+                  case Some(linkRelationship) =>
+                    val linkEntity = EOModelUtils.entityNamed(eomodel, linkRelationship.destinationEntityName).get
+                    val newEOs = eoPks.map(eoPk => {
+                      val isRootFirst = linkEntity.relationships.head.destinationEntityName.equals(entityName)
+                      val destinationPk = eoPk.pks.head
+                      val linkPks = if (isRootFirst) List(rootPk, destinationPk) else List(destinationPk, rootPk)
+                      EO(entityName = linkEntity.name, pk = EOPk(linkPks))
+                    })
+                    
+
+                    newEOs
+                  case None =>
+                    List.empty[EO]
+                }
+              case _ => List.empty[EO]
+            }
+
+          case None =>
+            val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+            eoValueOpt match {
+              case Some(eovalue) =>
+                eovalue match {
+                  case ObjectValue(eoPk: EOPk) =>
+                    if (pkByEO.contains(eoPk)) {
+                      List(pkByEO(eoPk))
+                    } else List.empty[EO]
+                  case  ObjectsValue(eoPks: List[EOPk]) =>
+                    val eoOpts = eoPks.map( eoPk  => {
+                      if (pkByEO.contains(eoPk)) {
+                        Some(pkByEO(eoPk))
+                      } else None
+                    })
+                    eoOpts.flatten
+                  case _ => List.empty[EO]
+                }
+              case None => List.empty[EO]
+            }
+        }
+    })
+    val subEOs = subEOLists.flatten
+    root :: subEOs
+  }
 
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
   //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
@@ -553,7 +632,9 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   //    while any children, go to it,
   //      if destination of a to many > if not saved, save, flag saved and recurse
   def updateEO(eos: List[EO]): Future[List[EO]] = {
-    val tree = savedEOsForToOne(eos)
+    val savingEOs = savingEOTree(eos)
+
+    val tree = savedEOsForToOne(savingEOs)
 
     /*val eos = extractEOsToSave(eo)
     val updateFutures: List[Future[EO]] = eos.map(eo => saveEO(eo))

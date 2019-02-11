@@ -37,6 +37,7 @@ case class FetchedEOEntity(
 
 case class FetchedEORelationship(sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
                                  name: String,
+                                 definition: String,
                                  destinationEntityName: String)
 
 case class FetchedEOAttribute(`type`: String, name: String)
@@ -118,7 +119,7 @@ class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
                 r => {
                   val sourceAttributesNames = r.sourceAttributes map (_.name)
 
-                  EORelationship(sourceAttributesNames.toList, r.name, r.destinationEntityName)
+                  EORelationship(sourceAttributesNames.toList, r.name, r.definition, r.destinationEntityName)
                 }).toList
               val attributes: List[String] = fetchedEOEntity.attributes.map {
                 a => a.name
