@@ -533,6 +533,62 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     }
   }
 
+  // 2) go through the tree and save all destination of to-many:
+  //    while any children, go to it,
+  //      if destination of a to many > if not saved, save, flag saved and recurse
+  def savedEOsForToMany(eos: List[EO]) : List[Future[EO]] = {
+    val eosMap = eosByEntityNameByPk(eos)
+    traverseTreeToMany(eos.head, eosMap, true)
+  }
+
+  def traverseTreeToMany(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], toSave: Boolean): List[Future[EO]] = {
+    val entityName = root.entityName
+    val entity = EOModelUtils.entityNamed(eomodel, entityName).get
+    val relationships = entity.relationships
+
+    // only the relationships of the EO Keys to optimize
+    val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+
+    // for each relationship we go down the tree
+    val subEOLists = filteredRelationships.map( relationship => {
+      val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+      eoValueOpt match {
+        case Some(eovalue) =>
+          eovalue match {
+            case ObjectValue(eoPk: EOPk) =>
+              traverseToManyDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
+            case ObjectsValue(eoPks: List[EOPk]) =>
+              traverseToManyDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
+            case _ => List.empty[Future[EO]]
+          }
+        case None => List.empty[Future[EO]]
+      }
+    })
+    val subEOs = subEOLists.flatten
+    val newRoot = if (toSave) {
+      saveEO(root)
+    } else Future(root)
+    newRoot :: subEOs
+  }
+
+  def traverseToManyDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    eoOpt match {
+      case Some(eo) => traverseTree2(eo, eosByEntityNameByPk, false)
+      case None => List.empty[Future[EO]]
+    }
+
+  }
+
+  def traverseToManyDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpts = eoPks.map( eoPk  => {
+      eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    })
+    val newEOs = eoOpts.flatten
+    newEOs.map(traverseTreeToMany(_, eosByEntityNameByPk, true)).flatten
+  }
+
+
 
   // 1) go through the tree and save all to-one  starting from leaves:
   //    while any children, go to it,
@@ -541,53 +597,120 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   // How to detect flattened to-many ?
   //
-  def savedEOsForToOne(eos: List[EO]) : List[EO] = {
-    val root = eos.head
+  def savedEOsForToOne(eos: List[EO]) : List[Future[EO]] = {
+    val eosMap = eosByEntityNameByPk(eos)
+    traverseTree2(eos.head, eosMap, true)
+  }
+
+  def traverseTree2(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], isFromToOne: Boolean): List[Future[EO]] = {
     val entityName = root.entityName
-    val pkByEO = eos.map(eo => (eo.pk, eo)).toMap
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
-    //val filteredRelatinships = relationships.filter(r => {!r.isToMany && EORelationship.isFlattened()})
-    for (relationship <- relationships) {
 
+    // only the relationships of the EO Keys to optimize
+    val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+
+    // for each relationship we go down the tree
+    val subEOLists = filteredRelationships.map( relationship => {
+      val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+      eoValueOpt match {
+        case Some(eovalue) =>
+          eovalue match {
+            case ObjectValue(eoPk: EOPk) =>
+              traverseDestinationEOWithPk2(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
+            case ObjectsValue(eoPks: List[EOPk]) =>
+              traverseDestinationEOsWithPks2(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
+            case _ => List.empty[Future[EO]]
+          }
+        case None => List.empty[Future[EO]]
+      }
+    })
+    val subEOs = subEOLists.flatten
+    val newRoot = if (isFromToOne) {
+      saveEO(root)
+    } else Future(root)
+    newRoot :: subEOs
+  }
+
+  def traverseDestinationEOWithPk2(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    eoOpt match {
+      case Some(eo) => traverseTree2(eo, eosByEntityNameByPk, true)
+      case None => List.empty[Future[EO]]
     }
 
-    eos
   }
 
+  def traverseDestinationEOsWithPks2(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpts = eoPks.map( eoPk  => {
+      eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    })
+    val newEOs = eoOpts.flatten
+    newEOs.map(traverseTree2(_, eosByEntityNameByPk, false)).flatten
+  }
 
+    // return the exact same tree except that flattten will be generate extra EO for the intermediate entity
   def savingEOTree(eos: List[EO]) : List[EO] = {
-    traverseTree(eos.head, eos)
+    val eosMap = eosByEntityNameByPk(eos)
+    traverseTree(eos.head, eosMap)
   }
-  def traverseTree(root: EO, eos: List[EO]): List[EO] = {
+
+  def eosByEntityNameByPk(eos: List[EO]): Map[String, Map[EOPk, EO]] = {
+    val eosByEntityName = eos.groupBy(_.entityName)
+    eosByEntityName.map { case (entityName, gr) => { (entityName, gr.map(toto => (toto.pk, toto)).toMap)}}
+  }
+
+  def traverseTree(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]): List[EO] = {
     val entityName = root.entityName
-    val pkByEO = eos.map(eo => (eo.pk, eo)).toMap
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
+
+    // only the relationships of the EO Keys to optimize
     val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+
+    // for each relationship we go down the tree
     val subEOLists: List[List[EO]] = filteredRelationships.map( relationship => {
         relationship.definition match {
+
+            // Flatten. All flatten are considered as many-to-many (Is that ok ?)
           case Some(definition) =>
             // we want to consider flattened many-to-many
             // in such case the object around the link table will have non compound pk
             val rootPk = root.pk.pks.head
+
+            // to many to ending eos
             val eoValueOpt = EOValue.valueForKey(root, relationship.name)
             eoValueOpt match {
-              case ObjectsValue(eoPks: List[EOPk]) =>
+              case Some(ObjectsValue(eoPks: List[EOPk])) =>
                 val keyPathFirstKey = EORelationship.keyPathFirstKey(definition)
-                val linkRelationshipOpt = EORelationship.relationshipNamed(relationships, keyPathFirstKey)
-                linkRelationshipOpt match {
+                val relationshipToLinkOpt = EORelationship.relationshipNamed(relationships, keyPathFirstKey)
+                relationshipToLinkOpt match {
+
                   case Some(linkRelationship) =>
                     val linkEntity = EOModelUtils.entityNamed(eomodel, linkRelationship.destinationEntityName).get
-                    val newEOs = eoPks.map(eoPk => {
+                    val newEOs: List[Option[EO]] = eoPks.map(eoPk => {
                       val isRootFirst = linkEntity.relationships.head.destinationEntityName.equals(entityName)
                       val destinationPk = eoPk.pks.head
                       val linkPks = if (isRootFirst) List(rootPk, destinationPk) else List(destinationPk, rootPk)
-                      EO(entityName = linkEntity.name, pk = EOPk(linkPks))
-                    })
-                    
 
-                    newEOs
+                      val linkToDestinationRelationshipOpt = linkEntity.relationships.find(rel => { !rel.destinationEntityName.equals(entityName)})
+                      linkToDestinationRelationshipOpt match {
+                        case Some(linkToDestinationRelationship) =>
+                            Some(EO(entityName = linkEntity.name, keys = List(linkToDestinationRelationship.name), values = List(ObjectValue(eoPk)), pk = EOPk(linkPks)))
+                        case None =>
+                          None
+                      }
+                    })
+                    // Source EO should link to new objects
+                    val links: List[EO] = newEOs.flatten
+                    val keyValues = EO.mapWith(root.keys,root.values)
+                    val cleanedKeyValues = keyValues - relationship.name
+                    val linkPks = links.map(_.pk)
+                    val fixedKeyValues = cleanedKeyValues + (keyPathFirstKey -> ObjectsValue(linkPks))
+                    val children: List[EO] = traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
+                    val updatedRoot: EO = EO.updateEOWithMap(root,fixedKeyValues)
+                    val aggregatedEOs: List[EO] = updatedRoot :: links ::: children
+                    aggregatedEOs
                   case None =>
                     List.empty[EO]
                 }
@@ -595,21 +718,16 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
             }
 
           case None =>
+
+            // Nothing to do
             val eoValueOpt = EOValue.valueForKey(root, relationship.name)
             eoValueOpt match {
               case Some(eovalue) =>
                 eovalue match {
                   case ObjectValue(eoPk: EOPk) =>
-                    if (pkByEO.contains(eoPk)) {
-                      List(pkByEO(eoPk))
-                    } else List.empty[EO]
+                    traverseDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
                   case  ObjectsValue(eoPks: List[EOPk]) =>
-                    val eoOpts = eoPks.map( eoPk  => {
-                      if (pkByEO.contains(eoPk)) {
-                        Some(pkByEO(eoPk))
-                      } else None
-                    })
-                    eoOpts.flatten
+                    traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
                   case _ => List.empty[EO]
                 }
               case None => List.empty[EO]
@@ -618,6 +736,36 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     })
     val subEOs = subEOLists.flatten
     root :: subEOs
+  }
+
+  def traverseDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    eoOpt match {
+      case Some(eo) => traverseTree(eo, eosByEntityNameByPk)
+      case None => List.empty[EO]
+    }
+
+  }
+
+  def traverseDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpts = eoPks.map( eoPk  => {
+      eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
+    })
+    val newEOs = eoOpts.flatten
+    newEOs.map(traverseTree(_, eosByEntityNameByPk)).flatten
+  }
+
+  def eoWithEntityNameAndPk(eosByEntityNameByPk: Map[String, Map[EOPk, EO]], entityName : String, pk: EOPk) = {
+     if (eosByEntityNameByPk.contains(entityName)) {
+       val eoByPK = eosByEntityNameByPk(entityName)
+       if (eoByPK.contains(pk)) {
+         Some(eoByPK(pk))
+       } else {
+         None
+       }
+     } else {
+       None
+     }
   }
 
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
@@ -635,13 +783,14 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     val savingEOs = savingEOTree(eos)
 
     val tree = savedEOsForToOne(savingEOs)
+    val futureOfList = Future sequence tree
 
-    /*val eos = extractEOsToSave(eo)
-    val updateFutures: List[Future[EO]] = eos.map(eo => saveEO(eo))
-    val futureOfList = Future sequence updateFutures
-    futureOfList*/
-    //saveEO(eo)
-    Future(tree)
+    val toto = futureOfList.map(rrs => {
+      val tree2 = savedEOsForToMany(rrs)
+      val futureOfList2 = Future sequence tree2
+      futureOfList2
+    })
+    toto.flatten
   }
 
   def extractEOsToSave(eo: EO): List[EO] = {

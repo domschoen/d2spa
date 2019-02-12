@@ -122,6 +122,20 @@ case class EO(entityName: String, keys: List[String] = List.empty[String], value
 //case class EO2(entityName: String, values: Map[String,EOValue2] = Map(),  pk: List[Int])
 //case class EOValueMap(values: Map[String,String] = Map())
 
+object EO {
+
+  def mapWith(keys: List[String], values: List[EOValue]) = {
+    keys.zip(values).toMap
+  }
+
+  def updateEOWithMap(eo: EO, keyValues: Map[String, EOValue]) = {
+    val keys = keyValues.keys.toList
+    val values = keyValues.values.toList
+    eo.copy(keys = keys, values = values)
+  }
+}
+
+
 case class EOPack(eos: List[EO])
 
 object Test3 extends MaterializePicklerFallback {
