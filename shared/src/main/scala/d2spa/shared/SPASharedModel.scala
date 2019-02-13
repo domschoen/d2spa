@@ -51,7 +51,7 @@ object WebSocketMessages {
 
 
   final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
-  final case class SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
 }
 

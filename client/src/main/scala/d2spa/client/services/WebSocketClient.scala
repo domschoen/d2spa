@@ -118,8 +118,8 @@ object WebSocketClient {
               case CompletedEOMsgOut(d2wContextOpt, hydration, eos, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContextOpt, hydration, eos,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               //CompletedEOMsgOutcase FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
-              case SavingResponseMsgOut(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
-                MyCircuit.dispatch(client.SavingEO(d2wContext, eo, ruleResults))
+              case SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) =>
+                MyCircuit.dispatch(client.SavingEO(d2wContext, eos.head, ruleResults))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
               case DebugConfMsg(showDebugButton, d2wContext) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton), d2wContext))
             }

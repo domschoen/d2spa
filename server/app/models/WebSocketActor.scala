@@ -79,9 +79,9 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //context.system.scheduler.scheduleOnce(5 second, out, FetchedObjectsMsgOut(eos))
       out ! FetchedObjectsForListMsgOut(fs, eos)*/
 
-    case EORepoActor.SavingResponse(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+    case EORepoActor.SavingResponse(d2wContext: D2WContext, eos, ruleResults: Option[List[RuleResult]]) =>
       println("Receive SavingResponse ---> sending SavingResponseMsgOut")
-      out ! SavingResponseMsgOut(d2wContext, eo, ruleResults)
+      out ! SavingResponseMsgOut(d2wContext, eos, ruleResults)
 
     case EORepoActor.DeletingResponse(eo) =>
       println("Receive DeletingResponse ---> sending DeletingResponseMsgOut")
@@ -113,7 +113,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.UpdateEO(d2wContext, eos, None, self)
         } else {
-          println("Receive UpdateEO ---> sending RulesActor GetMetaDataForUpdatedEO")
+          println("Receive UpdateEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForUpdatedEO(d2wContext, eos, ruleRequest, self)
         }
@@ -133,30 +133,30 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       //case HydrateAll(fs) =>
       //  context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.HydrateAll(fs, self)
 
-     /* case CompleteEO(d2wContext, eoFault, missingKeys, ruleRequest) =>
-        val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
-        if (isEmptyRuleRequest) {
-          println("Receive CompleteEO ---> sending EORepoActor CompleteEO")
-          context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.CompleteEO(d2wContext, eoFault, missingKeys, None, self) //: Future[Seq[EO]]
-        } else {
-          println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
-          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
-        }*/
+      /* case CompleteEO(d2wContext, eoFault, missingKeys, ruleRequest) =>
+         val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
+         if (isEmptyRuleRequest) {
+           println("Receive CompleteEO ---> sending EORepoActor CompleteEO")
+           context.actorSelection("akka://application/user/node-actor/eoRepo") !
+             EORepoActor.CompleteEO(d2wContext, eoFault, missingKeys, None, self) //: Future[Seq[EO]]
+         } else {
+           println("Receive CompleteEO ---> sending RulesActor GetMetaDataForEOCompletion")
+           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+             RulesActor.GetMetaDataForEOCompletion(d2wContext, eoFault, self)
+         }*/
 
 
 
 
-     /* case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
-        val entityName = d2wContext.entityName.get
-        if (missingKeys.isEmpty) {
-          context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], self)
-        } else {
-          context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
-        }*/
+      /* case HydrateEOs(d2wContext, pks: Seq[EOPk], missingKeys) =>
+         val entityName = d2wContext.entityName.get
+         if (missingKeys.isEmpty) {
+           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
+             HydrateEOsForDisplayPropertyKeys(d2wContext, pks: Seq[EOPk], self)
+         } else {
+           context.actorSelection("akka://application/user/node-actor/eoRepo") !
+             EORepoActor.HydrateEOs(entityName, pks, missingKeys, None, self) //: Future[Seq[EO]]
+         }*/
 
       /*case Search(fs) =>
         println("Receive Search ---> sending EORepoActor Search")
