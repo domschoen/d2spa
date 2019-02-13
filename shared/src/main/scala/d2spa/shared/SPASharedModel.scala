@@ -29,7 +29,7 @@ object WebSocketMessages {
   final case class Hydrate(d2wContext: Option[D2WContext], hydration: Hydration, ruleRequest: Option[RuleRequest]) extends WebSocketMsgIn
 
   // D2W Context is needed for the fetch of rules
-  final case class NewEO(d2wContext: D2WContext, eo: EO, ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class NewEO(d2wContext: D2WContext, eos: List[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
   final case class UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
   final case class AppInitMsgIn(ruleRequest: RuleRequest, eoOpt: Option[EO]) extends WebSocketMsgIn
 

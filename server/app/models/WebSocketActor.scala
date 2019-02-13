@@ -92,17 +92,17 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
       case DeleteEOMsgIn(eo) =>
         context.actorSelection("akka://application/user/node-actor/eoRepo") ! EORepoActor.DeleteEO(eo, self)
 
-      case NewEO(d2wContext, eo, ruleRequest) =>
+      case NewEO(d2wContext, eos, ruleRequest) =>
         val entityName = d2wContext.entityName.get
         val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
         if (isEmptyRuleRequest) {
           println("Receive NewEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
-            EORepoActor.NewEO(d2wContext, eo, None, self)
+            EORepoActor.NewEO(d2wContext, eos, None, self)
         } else {
           println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
-            RulesActor.GetMetaDataForNewEO(d2wContext, eo, ruleRequest, self)
+            RulesActor.GetMetaDataForNewEO(d2wContext, eos, ruleRequest, self)
         }
 
       case UpdateEO(d2wContext, eos, ruleRequest) =>
@@ -113,7 +113,7 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.UpdateEO(d2wContext, eos, None, self)
         } else {
-          println("Receive UpdateEO ---> sending RulesActor GetMetaDataForNewEO")
+          println("Receive UpdateEO ---> sending RulesActor GetMetaDataForUpdatedEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForUpdatedEO(d2wContext, eos, ruleRequest, self)
         }

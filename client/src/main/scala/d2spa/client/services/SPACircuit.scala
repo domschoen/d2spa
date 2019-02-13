@@ -163,7 +163,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       val isMetaDataFetched = RulesUtilities.isEmptyRuleRequest(ruleRequest)
       D2SpaLogger.logfinest(entityName,"RuleResultsHandler | SaveNewEO | isMetaDataFetched " + isMetaDataFetched)
       D2SpaLogger.logfinest(entityName,"RuleResultsHandler | SaveNewEO | d2wContext " + d2wContext)
-      WebSocketClient.send(WebSocketMessages.NewEO(d2wContext, eo, ruleRequest))
+      WebSocketClient.send(WebSocketMessages.NewEO(d2wContext, List(eo), ruleRequest))
       noChange
 
 
