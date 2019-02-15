@@ -117,7 +117,7 @@ case class RuleRequest(d2wContext: D2WContext, rules: List[FiringRules])
 
 
 // PK is a list of int in the same order as in the eomodel
-case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk = EOPk(List()), validationError: Option[String] = None)
+case class EO(entityName: String, keys: List[String] = List.empty[String], values: List[EOValue] = List.empty[EOValue], pk: EOPk = EOPk(List()), validationError: Option[String] = None, saved: Boolean = true)
 //case class EO2(entityName: String, values: List[EOValue2], pk: List[Int], validationError: Option[String] = None)
 //case class EO2(entityName: String, values: Map[String,EOValue2] = Map(),  pk: List[Int])
 //case class EOValueMap(values: Map[String,String] = Map())

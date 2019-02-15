@@ -1012,7 +1012,7 @@ object RuleUtils {
     def newEOWithLastMemID(entityName: String, memID: Option[Int]) = {
       val newMemID = newMemIdWithLastId(memID)
       val newPk = EOPk(List(newMemID))
-      EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk)
+      EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk, saved = false)
     }
 
     def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache: EOCache, entityName: String): (EOCache, EO) = {

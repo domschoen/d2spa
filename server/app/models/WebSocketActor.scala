@@ -9,7 +9,7 @@ import models.EOModelActor.{EOModelResponse, GetEOModel}
 import models.MenusActor.{GetMenus, MenusResponse}
 import models.NodeActor.SetItUp
 import models.RulesActor._
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.ws.WSClient
 
@@ -96,11 +96,11 @@ val eoRepoActor = context.actorOf(EORepoActor.props(eomodelActor), "eoRepo")*/
         val entityName = d2wContext.entityName.get
         val isEmptyRuleRequest = RulesUtilities.isEmptyRuleRequest(ruleRequest)
         if (isEmptyRuleRequest) {
-          println("Receive NewEO ---> sending EORepoActor NewEO")
+          Logger.debug("Receive NewEO ---> sending EORepoActor NewEO")
           context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.NewEO(d2wContext, eos, None, self)
         } else {
-          println("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
+          Logger.debug("Receive NewEO ---> sending RulesActor GetMetaDataForNewEO")
           context.actorSelection("akka://application/user/node-actor/rulesFetcher") !
             RulesActor.GetMetaDataForNewEO(d2wContext, eos, ruleRequest, self)
         }
