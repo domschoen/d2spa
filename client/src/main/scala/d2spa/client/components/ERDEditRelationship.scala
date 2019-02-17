@@ -148,11 +148,21 @@ object ERDEditRelationship {
       }
     }
 
-    def handleSubmit(p: Props, s: State, pageContext: PageContext, e: ReactEventFromInput): Callback = {
+    def handleSubmit(p: Props, s: State, pageContext: PageContext, ceo: EO, propertyName: String, e: ReactEventFromInput): Callback = {
+
       e.preventDefaultCB >> {
+        log.finest("ERDEditRelationship handleSubmit " + s.selectedEO)
         s.selectedEO match {
           case Some(eo) =>
-            p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(Some(eo))))
+            val destinationEOsValueOpt = EOValue.valueForKey(ceo, propertyName)
+            log.finest("ERDEditRelationship handleSubmit : " + destinationEOsValueOpt +  " property " + propertyName)
+            val eoPkList: List[EOPk] = destinationEOsValueOpt match {
+              case Some(ObjectsValue(eoPks)) =>
+                eoPks
+              case _ => List.empty[EOPk]
+            }
+            val newEOPkList = eo.pk :: eoPkList
+            p.proxy.dispatchCB(UpdateEOValueForProperty(ceo, pageContext, ObjectsValue(newEOPkList)))
 
           case None =>
             Callback.empty
@@ -206,22 +216,19 @@ object ERDEditRelationship {
 
                           log.finest("ERDEditRelationship render Look into the cache for objects for entity named " + destinationEntity.name)
                           log.finest("ERDEditRelationship render eoCache " + eoCache)
-                          val destinationEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
+                          val possibleEOs = EOCacheUtils.dbEOsForEntityNamed(eoCache, destinationEntity.name)
 
                           <.div(
                             //{
                             //log.finest("p.property.ruleKeyValues " + p.property.ruleKeyValues)
-                            /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " destinationEOs "),
+                            /*   <.div("destinationEntity " + p.proxy.value.eomodel.get +  " possibleEOs "),
                              <.div("entity " +entity),
                              <.div("propertyName " +propertyName)*/
 
-                            destinationEOs match {
+                            possibleEOs match {
                               case Some(eos) => {
                                 log.finest("ERDEditRelationship render eoRefs " + eos)
                                 log.finest("ERDEditRelationship render eo " + eo)
-                                // the selection
-                                val destinationEO = EOValue.valueForKey(eo, propertyName)
-                                log.finest("ERDEditRelationship render destinationEO " + destinationEO)
                                 val defaultValue = s.selectedEO match {
                                   case Some(eo) =>
                                     EOValue.juiceEOPkString(eo.pk)
@@ -233,7 +240,7 @@ object ERDEditRelationship {
 
                                 //{ e: ReactEventFromInput =>
                                 //  p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
-                                <.form(^.onSubmit ==> { e: ReactEventFromInput => handleSubmit(p, s, pageContext, e)},
+                                <.form(^.onSubmit ==> { e: ReactEventFromInput => handleSubmit(p, s, pageContext, eo, propertyName, e)},
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> {
                                     e: ReactEventFromInput => handleSelectionChange(eoWith(eos, destinationEntity, e.currentTarget.value))
                                   },
@@ -261,7 +268,8 @@ object ERDEditRelationship {
                               case _ => {
                                 <.div("No destination objects")
                               }
-                            }
+                            },
+                            ERDList(p.router, pageContext, p.proxy)
                           )
                         case None =>
                           <.div("No destination entity")
