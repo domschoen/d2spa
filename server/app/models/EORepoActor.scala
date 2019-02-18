@@ -462,7 +462,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
 
   def hydrateEOs(entityName: String, pks: Seq[EOPk], missingKeys: Set[String]): Future[List[EO]] = {
-    val futures = pks.map(pk => completeEO(EOFault(entityName, pk), missingKeys))
+    val futures: Seq[Future[List[EO]]] = pks.map(pk => completeEO(EOFault(entityName, pk), missingKeys))
     val futureOfList = Future sequence futures
     futureOfList.map {
       x => x.flatten.toList
@@ -545,7 +545,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     result
   }
 
-  def traverseTree2(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], isFromToOne: Boolean): List[Future[EO]] = {
+  def traverseTree2(root: EO, eosByENameByPk: Map[String, Map[EOPk, EO]], isFromToOne: Boolean): List[Future[EO]] = {
     val entityName = root.entityName
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
@@ -560,20 +560,60 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         case Some(eovalue) =>
           eovalue match {
             case ObjectValue(eoPk: EOPk) =>
-              traverseDestinationEOWithPk2(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
+              traverseDestinationEOWithPk2(eoPk, relationship.destinationEntityName, eosByENameByPk)
             case ObjectsValue(eoPks: List[EOPk]) =>
-              traverseDestinationEOsWithPks2(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
+              traverseDestinationEOsWithPks2(eoPks, relationship.destinationEntityName, eosByENameByPk)
             case _ => List.empty[Future[EO]]
           }
         case None => List.empty[Future[EO]]
       }
     })
-    val subEOs = subEOLists.flatten
-    val newRoot = if (isFromToOne) {
-      saveEO(root)
+    val subEOs: List[Future[EO]] = subEOLists.flatten
+
+    if (isFromToOne) {
+      val updatedSubEOs = saveEO(root)
       // TODO update subEOs with root newly saved pk for all to many having a refence to it
-    } else Future(root)
-    newRoot :: subEOs
+ /*     val futureOfList: Future[List[EO]] = Future sequence subEOs
+
+      val updatedSubEOs = futureOfList.map(peos => {
+
+        val peosMap = eosByEntityNameByPk(peos)
+
+
+        val updateMap = filteredRelationships.map( relationship => {
+        val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+        eoValueOpt match {
+          case Some(eovalue) =>
+            eovalue match {
+              case ObjectsValue(eoPks: List[EOPk]) =>
+                val peoEntityName = relationship.destinationEntityName
+                val peoEntity = EOModelUtils.entityNamed(eomodel, peoEntityName).get
+
+                if (peosMap.contains(peoEntityName)) {
+                  val eoByPk = peosMap(peoEntityName)
+                  for (eoPk <- eoPks) {
+                    if (eoByPk.contains(eoPk)) {
+                      val relEO = eoByPk(eoPk)
+                      val reverseRelOpt = EORelationship.relationshipFromTo(peoEntity,entity.name)
+                      reverseRelOpt match {
+                        case Some(reverseRel) => reverseRel.sourceAttributeName
+                        case None => None
+                      }
+                    } else None
+                  }
+                }
+
+
+                }
+
+
+              case _ => None
+            }
+          case None => None
+        }
+      })*/
+      updatedSubEOs :: subEOs
+    } else Future(root) :: subEOs
   }
 
   def traverseDestinationEOWithPk2(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
@@ -608,12 +648,13 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     val entityName = root.entityName
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
+    Logger.debug("Update EO | traverse tree | relationships " + relationships)
 
     // only the relationships of the EO Keys to optimize
     val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
     Logger.debug("Update EO | traverse tree | filteredRelationships " + filteredRelationships)
 
-
+    var updatedRoot = root
     // for each relationship we go down the tree
     val subEOLists: List[List[EO]] = filteredRelationships.map( relationship => {
       relationship.definition match {
@@ -669,8 +710,8 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
                   val linkPks = links.map(_.pk)
                   val fixedKeyValues = cleanedKeyValues + (keyPathFirstKey -> ObjectsValue(linkPks))
                   val children: List[EO] = traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
-                  val updatedRoot: EO = EO.updateEOWithMap(root,fixedKeyValues)
-                  val aggregatedEOs: List[EO] = updatedRoot :: links ::: children
+                  updatedRoot = EO.updateEOWithMap(root,fixedKeyValues)
+                  val aggregatedEOs: List[EO] = links ::: children
                   Logger.debug("Update EO | traverse tree | aggregatedEOs " + aggregatedEOs)
                   aggregatedEOs
                 case None =>
@@ -688,16 +729,16 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
             case Some(eovalue) =>
               eovalue match {
                 case ObjectValue(eoPk: EOPk) =>
-                  root :: traverseDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
+                  traverseDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
                 case  ObjectsValue(eoPks: List[EOPk]) =>
-                  root :: traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
+                  traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
                 case _ => List.empty[EO]
               }
             case None => List.empty[EO]
           }
       }
     })
-    subEOLists.flatten
+    updatedRoot :: subEOLists.flatten
   }
 
   def traverseDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
@@ -748,7 +789,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     val savedEOsForTo1 = savedEOsForToOne(savingEOs)
     Logger.debug("updateEO | savedEOsForToOne: " + savedEOsForTo1)
 
-    val futureOfList = Future sequence savedEOsForTo1
+    val futureOfList: Future[List[EO]] = Future sequence savedEOsForTo1
 
     val toto = futureOfList.map(rrs => {
       val savedEOsForToM = savedEOsForToMany(rrs)

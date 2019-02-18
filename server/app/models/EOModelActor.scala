@@ -13,7 +13,7 @@ import play.api.libs.ws._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
-import d2spa.shared.{D2WContext, EOEntity, EOModel, EORelationship}
+import d2spa.shared.{D2WContext, EOEntity, EOModel, EORelationship,EOJoin}
 import models.EOModelActor.{EOModelResponse, GetEOModel}
 
 import scala.concurrent.Future
@@ -35,13 +35,15 @@ case class FetchedEOEntity(
                             relationships: Seq[FetchedEORelationship] = Seq()
                           )
 
-case class FetchedEORelationship(sourceAttributes: Seq[FetchedEOAttribute] = Seq(),
+case class FetchedEORelationship(joins: Seq[FetchedEOJoin] = Seq(),
                                  name: String,
                                  definition: Option[String],
                                  isToMany: Boolean,
                                  destinationEntityName: String)
 
 case class FetchedEOAttribute(`type`: String, name: String)
+
+case class FetchedEOJoin(sourceAttribute: FetchedEOAttribute, destinationAttribute: FetchedEOAttribute)
 
 
 object EOModelActor {
@@ -78,8 +80,8 @@ class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
     ) (FetchedEOEntity.apply _)
 
   implicit lazy val fetchedEORelationshipReads: Reads[FetchedEORelationship] = (
-    ((JsPath \ "sourceAttributes").lazyRead(Reads.seq(fetchedEOAttributeReads)) or
-      Reads.pure(Seq.empty[FetchedEOAttribute])
+    ((JsPath \ "joins").lazyRead(Reads.seq(fetchedEOJoinReads)) or
+      Reads.pure(Seq.empty[FetchedEOJoin])
       ) and
       (JsPath \ "name").read[String] and
       (JsPath \ "definition").readNullable[String]  and
@@ -92,6 +94,10 @@ class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
       (JsPath \ "name").read[String]
     ) (FetchedEOAttribute.apply _)
 
+  implicit lazy val fetchedEOJoinReads: Reads[FetchedEOJoin] = (
+    (JsPath \ "sourceAttribute").read[FetchedEOAttribute] and
+      (JsPath \ "destinationAttribute").read[FetchedEOAttribute]
+    ) (FetchedEOJoin.apply _)
 
 
   def executeEOModelWS(): Future[EOModel] = {
@@ -120,9 +126,11 @@ class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
               val fetchedRelationships = fetchedEOEntity.relationships
               val relationships = fetchedRelationships.map(
                 r => {
-                  val sourceAttributesNames = r.sourceAttributes map (_.name)
+                  val joins = r.joins map (join => {
+                    EOJoin(join.sourceAttribute.name, join.destinationAttribute.name)
+                  })
 
-                  EORelationship(sourceAttributesNames.toList, r.name, r.definition, r.isToMany, r.destinationEntityName)
+                  EORelationship(joins.toList, r.name, r.definition, r.isToMany, r.destinationEntityName)
                 }).toList
               val attributes: List[String] = fetchedEOEntity.attributes.map {
                 a => a.name

@@ -6,7 +6,7 @@ object SharedTestData {
     List ("id"), // pkAttributeNames
     List ("customerID", "descr", "id", "projectNumber"), //attributes
     List (
-      EORelationship (List ("customerID"), "customer", None, false, "Customer")
+      EORelationship (List (EOJoin("customerID", "id")), "customer", None, false, "Customer")
     )
   )
   val customerEntity = EOEntity (
@@ -14,7 +14,7 @@ object SharedTestData {
     List ("id"), // pkAttributeNames
     List ("acronym", "address", "id", "name"), //attributes
     List (
-      EORelationship (List ("id"), "projects", None, true, "Project")
+      EORelationship (List (EOJoin("id","customerID")), "projects", None, true, "Project")
     )
   )
   val entities: List[EOEntity] = List(

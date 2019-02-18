@@ -700,7 +700,8 @@ case class EOSortOrdering(key: String, selector: String)
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attributes: List[String] = List(), relationships: List[EORelationship] = List())
-case class EORelationship(sourceAttributeName: List[String], name: String, definition: Option[String], isToMany: Boolean, destinationEntityName: String)
+case class EORelationship(joins: List[EOJoin], name: String, definition: Option[String], isToMany: Boolean, destinationEntityName: String)
+case class EOJoin(sourceAttributeName: String, destinationAttributeName: String)
 
 object EORelationship {
 
@@ -723,6 +724,15 @@ object EORelationship {
   def relationshipNamed(relationships: List[EORelationship], name: String): Option[EORelationship] = {
     relationships.find(rel => {rel.name.equals(name)})
   }
+
+  def relationshipFromTo(fromEntity: EOEntity, toEntityName: String): Option[EORelationship] = {
+    fromEntity.relationships.find(
+      rel => {
+        rel.destinationEntityName.equals(toEntityName)
+    })
+  }
+
+
 }
 
 //case class EORef(entityName: String, id: Int)
