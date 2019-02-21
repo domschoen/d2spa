@@ -402,6 +402,22 @@ object EOValue {
     eo.copy(validationError = Some(escapedHtml))
   }
 
+  def pkFromValues(eomodel: EOModel, eo: EO) : Option[EOPk] = {
+    val entity = EOModelUtils.entityNamed(eomodel, eo.entityName).get
+    val pkAttributeNames = entity.pkAttributeNames
+    val pkOpts = pkAttributeNames.map( pkAttributeName => {
+      EOValue.valueForKey(eo,pkAttributeName) match {
+        case Some(IntValue(intV)) => Some(intV)
+        case None => None
+      }
+    })
+    val missingValueOpt = pkOpts.find(_.isEmpty)
+    if (missingValueOpt.isDefined) {
+      None
+    } else {
+      Some(EOPk(pkOpts.flatten))
+    }
+  }
 
 
   def isNew(pk: EOPk) = pk.pks.size == 1 && pk.pks.head < 0
@@ -533,10 +549,19 @@ object EOValue {
   def takeValueForKey(eo: EO, eovalue: EOValue, key: String): EO = {
     val valueMap = keyValues(eo)
     val newValueMap = (valueMap - key) + (key -> eovalue)
-    takeValuesForKeys(eo, newValueMap)
+    takeAllValuesForKeys(eo, newValueMap)
   }
 
   def takeValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
+    val valueMap = keyValues(eo)
+    val updatedMap = valueMap ++ keyValuePairs
+    takeAllValuesForKeys(eo, updatedMap)
+  }
+
+
+    // Only if the map has all attribute
+  // Not ok for partial update
+  def takeAllValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
     eo.copy(keys = keyValuePairs.keys.toList, values = keyValuePairs.values.toList)
   }
 
@@ -703,6 +728,13 @@ case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attri
 case class EORelationship(joins: List[EOJoin], name: String, definition: Option[String], isToMany: Boolean, destinationEntityName: String)
 case class EOJoin(sourceAttributeName: String, destinationAttributeName: String)
 
+object EOJoin {
+  def isReciprocalToJoin(of: EOJoin, otherJoin: EOJoin) = {
+    of.sourceAttributeName.equals(otherJoin.destinationAttributeName) && of.destinationAttributeName.equals(otherJoin.sourceAttributeName)
+  }
+
+}
+
 object EORelationship {
 
   def isFlattened(relationship: EORelationship) = {
@@ -725,13 +757,31 @@ object EORelationship {
     relationships.find(rel => {rel.name.equals(name)})
   }
 
-  def relationshipFromTo(fromEntity: EOEntity, toEntityName: String): Option[EORelationship] = {
-    fromEntity.relationships.find(
+  //  A --> B
+  //        B ---> A ?
+  def inverseRelationship(eomodel: EOModel, relationship: EORelationship): Option[EORelationship] = {
+    val destinationEntity = EOModelUtils.entityNamed(eomodel, relationship.destinationEntityName).get
+    destinationEntity.relationships.find(
       rel => {
-        rel.destinationEntityName.equals(toEntityName)
+        EORelationship.isRelationshipReciprocalToRelationship(relationship, rel)
     })
   }
 
+  def isRelationshipReciprocalToRelationship(of: EORelationship, otherRelationship: EORelationship): Boolean = {
+    if (of.destinationEntityName.equals(otherRelationship.destinationEntityName)) {
+      val ourJoins = of.joins
+      val otherJoins = otherRelationship.joins
+      val count = ourJoins.size
+
+      if (count == otherJoins.size) {
+         val notReciprocalJoinsOpt = ourJoins.find(join => {
+            val notReciprocalJoinOpt = otherJoins.find(otherJoin => !EOJoin.isReciprocalToJoin(join,otherJoin))
+            notReciprocalJoinOpt.isEmpty
+         })
+        notReciprocalJoinsOpt.isEmpty
+      } else false
+    } else false
+  }
 
 }
 

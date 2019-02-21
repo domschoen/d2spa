@@ -545,6 +545,8 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     result
   }
 
+  case class ToManyUpdate(relationship: EORelationship, eovalue: ObjectsValue, eos: Map[EOPk, EO])
+
   def traverseTree2(root: EO, eosByENameByPk: Map[String, Map[EOPk, EO]], isFromToOne: Boolean): List[Future[EO]] = {
     val entityName = root.entityName
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
@@ -571,49 +573,123 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     val subEOs: List[Future[EO]] = subEOLists.flatten
 
     if (isFromToOne) {
-      val updatedSubEOs = saveEO(root)
-      // TODO update subEOs with root newly saved pk for all to many having a refence to it
- /*     val futureOfList: Future[List[EO]] = Future sequence subEOs
+      val futureOfSavedRoot = saveEO(root)
+      val savedRoot: EO = Await result(futureOfSavedRoot, 2 seconds)
 
-      val updatedSubEOs = futureOfList.map(peos => {
+      // TODO update subEOs with root newly saved pk for all to many having a refence to it
+      // 1) find the inverse relationship from link entity
+      // 2) For each join take all destination value and set it in values of destination
+      // 3) update root with destination pk (we need a way to get the pk from values and not from pks (we keep to identify it in the cache)
+
+      val futureOfList: Future[List[EO]] = Future sequence subEOs
+
+      val toManyUpdates: Future[List[Future[EO]]] = futureOfList.map(peos => {
 
         val peosMap = eosByEntityNameByPk(peos)
 
+        // For all to-many relationship, we create a map of key-value with key = relationship and value the modifed destination eos
+        val toManyUpdateOpts: List[Option[ToManyUpdate]] = filteredRelationships.map(relationship => {
+          val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+          eoValueOpt match {
+            case Some(eovalue) =>
+              eovalue match {
 
-        val updateMap = filteredRelationships.map( relationship => {
-        val eoValueOpt = EOValue.valueForKey(root, relationship.name)
-        eoValueOpt match {
-          case Some(eovalue) =>
-            eovalue match {
-              case ObjectsValue(eoPks: List[EOPk]) =>
-                val peoEntityName = relationship.destinationEntityName
-                val peoEntity = EOModelUtils.entityNamed(eomodel, peoEntityName).get
+                // for to-many
+                case ObjectsValue(eoPks: List[EOPk]) =>
+                  val peoEntityName = relationship.destinationEntityName
+                  val peoEntity = EOModelUtils.entityNamed(eomodel, peoEntityName).get
 
-                if (peosMap.contains(peoEntityName)) {
-                  val eoByPk = peosMap(peoEntityName)
-                  for (eoPk <- eoPks) {
-                    if (eoByPk.contains(eoPk)) {
-                      val relEO = eoByPk(eoPk)
-                      val reverseRelOpt = EORelationship.relationshipFromTo(peoEntity,entity.name)
-                      reverseRelOpt match {
-                        case Some(reverseRel) => reverseRel.sourceAttributeName
-                        case None => None
-                      }
-                    } else None
-                  }
-                }
+                  // find the eo in the eos in order to update them
+                  val newEOOpts: List[Option[(EOPk,EO)]] = eoPks.map(eoPk => {
+                    val eoOpt = eoFromCache(peosMap, peoEntityName, eoPk)
+                    eoOpt match {
+                      case Some(eo) =>
+                        // Inverse relationship will give the attribute to update in the distant eo
+                        val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, relationship)
+                        inverseRelationshipOpt match {
+                          case Some(inverseRelationship) =>
+                            val updateTupleOpts: List[Option[(String, EOValue)]] = inverseRelationship.joins.map(join => {
+                              val sourceValueOpt = EOValue.valueForKey(savedRoot, join.destinationAttributeName)
+                              val opt: Option[(String, EOValue)] = sourceValueOpt match {
+                                case Some(sourceValue) =>
+                                  val key = join.sourceAttributeName
+                                  Some((key, sourceValue))
+                                case None => None
+                              }
+                              opt
+                            })
+                            val updateTuples = updateTupleOpts.flatten
+                            val updateMap = updateTuples.toMap
+                            Some((eoPk, EOValue.takeValuesForKeys(eo, updateMap)))
+                          case None => None
+                        }
+                      case None =>
+                        // It's kind of an error if we cannot find an eo
+                        // we'll ignore them...
+                        None
+                    }
+                  })
+                  // Map[String, Map[EOPk, EO]]
+                  val newEOTuples = newEOOpts.flatten
+                  val newEOs = newEOTuples.toMap
+                  val newPkOpts = newEOs.values.toList.map(newEO => {
+                    EOValue.pkFromValues(eomodel, newEO)
+                  })
 
+                  val newValue = ObjectsValue(newPkOpts.flatten)
+                  Some(ToManyUpdate(relationship, newValue, newEOs))
+              }
+            case _ => None
+          }
+        })
+        toManyUpdateOpts.flatten
+        val toManyUpdates = toManyUpdateOpts.flatten
 
-                }
+        // We have to update
+        // 1) the root
+        val updateMap = toManyUpdates.map(umto => {
+          //case class ToManyUpdate(relationship: EORelationship, eovalue: ObjectsValue, eos: Map[EOPk, EO])
+          (umto.relationship.name, umto.eovalue)
+        }).toMap
 
+        val updatedRoot = EOValue.takeValuesForKeys(savedRoot, updateMap)
 
-              case _ => None
-            }
-          case None => None
+        // 2) the cache
+        val partialUpdatedCache = toManyUpdates.map(umto => {
+          (umto.relationship.destinationEntityName, umto.eos)
         }
-      })*/
-      updatedSubEOs :: subEOs
-    } else Future(root) :: subEOs
+        ).toMap
+
+        val updateCache: List[Future[EO]] = peosMap.keys.toList.map(entityName => {
+          val eosByPK = peosMap(entityName)
+          val eopks = eosByPK.keys.toList
+          eopks.map(eopk => {
+            val anyUpdate = eoFromCache(partialUpdatedCache,entityName,eopk)
+            anyUpdate match {
+              case Some(ueo) => Future(ueo)
+              case None => Future(eosByPK(eopk))
+            }
+          })
+        }).flatten
+
+        Future(updatedRoot) :: updateCache
+
+      })
+
+      Await result(toManyUpdates, 2 seconds)
+
+    } else {
+      Future(root) :: subEOs
+    }
+  }
+
+  def eoFromCache(cache: Map[String, Map[EOPk, EO]], entityName: String, eoPk: EOPk) = {
+    if (cache.contains(entityName)) {
+      val eoByPk = cache(entityName)
+      if (eoByPk.contains(eoPk)) {
+        Some(eoByPk(eoPk))
+      } else None
+    } else None
   }
 
   def traverseDestinationEOWithPk2(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
