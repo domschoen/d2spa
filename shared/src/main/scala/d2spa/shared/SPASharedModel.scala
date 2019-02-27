@@ -420,7 +420,7 @@ object EOValue {
   }
 
 
-  def isNew(pk: EOPk) = pk.pks.size == 1 && pk.pks.head < 0
+  def isNew(pk: EOPk) = pk.pks.find(_ < 0).isDefined
 
   // When saving an EO, we have to remove any non db attributes
   def purgedEO(eo: EO) = {
@@ -759,16 +759,17 @@ object EORelationship {
 
   //  A --> B
   //        B ---> A ?
-  def inverseRelationship(eomodel: EOModel, relationship: EORelationship): Option[EORelationship] = {
+  def inverseRelationship(eomodel: EOModel, sourceEntity: EOEntity,  relationship: EORelationship): Option[EORelationship] = {
     val destinationEntity = EOModelUtils.entityNamed(eomodel, relationship.destinationEntityName).get
     destinationEntity.relationships.find(
       rel => {
-        EORelationship.isRelationshipReciprocalToRelationship(relationship, rel)
+        EORelationship.isRelationshipReciprocalToRelationship(sourceEntity, relationship, rel)
     })
   }
 
-  def isRelationshipReciprocalToRelationship(of: EORelationship, otherRelationship: EORelationship): Boolean = {
-    if (of.destinationEntityName.equals(otherRelationship.destinationEntityName)) {
+  def isRelationshipReciprocalToRelationship(sourceEntity: EOEntity, of: EORelationship, otherRelationship: EORelationship): Boolean = {
+    if (sourceEntity.name.equals(otherRelationship.destinationEntityName)) {
+
       val ourJoins = of.joins
       val otherJoins = otherRelationship.joins
       val count = ourJoins.size
@@ -776,7 +777,7 @@ object EORelationship {
       if (count == otherJoins.size) {
          val notReciprocalJoinsOpt = ourJoins.find(join => {
             val notReciprocalJoinOpt = otherJoins.find(otherJoin => !EOJoin.isReciprocalToJoin(join,otherJoin))
-            notReciprocalJoinOpt.isEmpty
+            notReciprocalJoinOpt.isDefined
          })
         notReciprocalJoinsOpt.isEmpty
       } else false

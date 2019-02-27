@@ -25,6 +25,51 @@ object TestData {
 
 class StackSpec extends PlaySpec {
 
+  "Get inverse relationship Product.customerProducts" must {
+    "product " in {
+      val eomodel = SharedTestData.eomodel
+      val entityOpt = EOModelUtils.entityNamed(eomodel, "Product")
+      val entity = entityOpt.get
+      val relationshipOpt = EORelationship.relationshipNamed(entity.relationships, "customerProducts")
+      relationshipOpt.isDefined mustBe true
+      val relationship = relationshipOpt.get
+
+      val destinationEntityOpt = EOModelUtils.entityNamed(eomodel, relationship.destinationEntityName)
+      destinationEntityOpt.isDefined mustBe true
+      val destinationEntity = destinationEntityOpt.get
+
+      val iRelationshipOpt = EORelationship.relationshipNamed(destinationEntity.relationships, "product")
+      iRelationshipOpt.isDefined mustBe true
+      val iRelationship = iRelationshipOpt.get
+
+
+      val sameEntity = entity.name.equals(iRelationship.destinationEntityName)
+      sameEntity mustBe true
+
+      val ourJoins = relationship.joins
+      val otherJoins = iRelationship.joins
+      val count = ourJoins.size
+
+      val sameJoinsCount = ourJoins.size == otherJoins.size
+      sameJoinsCount mustBe true
+
+      val notReciprocalJoinsOpt = ourJoins.find(join => {
+        val notReciprocalJoinOpt = otherJoins.find(otherJoin => !EOJoin.isReciprocalToJoin(join,otherJoin))
+        notReciprocalJoinOpt.isDefined
+      })
+      notReciprocalJoinsOpt.isEmpty mustBe true
+
+      val reciprocal = EORelationship.isRelationshipReciprocalToRelationship(entity, relationship, iRelationship)
+      reciprocal mustBe true
+
+      val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, entity, relationship)
+
+      inverseRelationshipOpt.isDefined mustBe true
+      val inverseRelationship = inverseRelationshipOpt.get
+      inverseRelationship.name mustBe "product"
+    }
+  }
+
   "Get pk" must {
     "entity is defined" in {
       val entityOpt = EOModelUtils.entityNamed(SharedTestData.eomodel,"Project")

@@ -23,7 +23,6 @@ import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
 
-
 object EORepoActor {
 
   def props(eomodelActor: ActorRef, ws: WSClient): Props = Props(new EORepoActor(eomodelActor, ws))
@@ -46,13 +45,16 @@ object EORepoActor {
 
   // Responses
   case class FetchedObjects(entityName: String, eos: List[EO], ruleResults: Option[List[RuleResult]])
+
   case class CompletedEOs(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]])
+
   //case class FetchedObjectsForList(fs: EOFetchSpecification, eos: List[EO])
 
   case class SavingResponse(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]])
+
   case class DeletingResponse(eo: EO)
 
-  def valueMapWithJsonFields(eomodel: EOModel, fields : Seq[(String,JsValue)]): Map[String,EOValue] = {
+  def valueMapWithJsonFields(eomodel: EOModel, fields: Seq[(String, JsValue)]): Map[String, EOValue] = {
     //println("valueMapWithJsonFields | eomodel " + eomodel)
     //println("valueMapWithJsonFields | fields " + fields)
 
@@ -132,8 +134,7 @@ object EORepoActor {
           }
 
 
-
-        case jsObj : JsObject =>
+        case jsObj: JsObject =>
           println("valueMapWithJsonFields | value | match with JsObject " + jsObj)
           val eoOpt = eoFromJsonJsObject(eomodel, None, jsObj)
           eoOpt match {
@@ -188,11 +189,11 @@ object EORepoActor {
   def eoFromJsonJsObject(eomodel: EOModel, eoOpt: Option[EO], jsObj: JsObject): Option[EO] = {
     println("eoFromJsonJsObject | eoOpt " + eoOpt)
     println("eoFromJsonJsObject | jsObj " + jsObj)
-    val entityNameOpt : Option[(String, JsValue)] = jsObj.fields.find(x => x._1.equals("type"))
+    val entityNameOpt: Option[(String, JsValue)] = jsObj.fields.find(x => x._1.equals("type"))
     println("eoFromJsonJsObject | entityNameOpt " + entityNameOpt)
     entityNameOpt match {
       case Some((_, JsString(entityName))) =>
-        val entityOpt = EOModelUtils.entityNamed(eomodel,entityName)
+        val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
         println("eoFromJsonJsObject | entityOpt " + entityOpt)
         entityOpt match {
           case Some(entity) =>
@@ -216,7 +217,7 @@ object EORepoActor {
                 }
                 EOValue.dryEOWithEntity(entity.name, EOPk(pk))
             }
-            val jObjValues: Seq[(String, JsValue)] = jsObj.fields.filter(x => !(pkNames.contains(x._1) || x._1.equals("type")|| x._1.equals("id")))
+            val jObjValues: Seq[(String, JsValue)] = jsObj.fields.filter(x => !(pkNames.contains(x._1) || x._1.equals("type") || x._1.equals("id")))
             println("jObjValues " + jObjValues)
             val valuesMap = valueMapWithJsonFields(eomodel, jObjValues)
             Some(EOValue.takeValuesForKeys(eo, valuesMap))
@@ -235,7 +236,7 @@ object EORepoActor {
 
   // The EO Extrator will go inside all to-one relationship to see if there is some EO which are more than dry
   // The goal is to be able to register everything EO in the cache then
-  def eoExtractor(eo : EO, accu : Set[EO]) : Set[EO] = {
+  def eoExtractor(eo: EO, accu: Set[EO]): Set[EO] = {
     val values = eo.values
     val eoValueOpts = values.map(eov => eov match {
       case ObjectValue(eopk) => if (eo.values.isEmpty) None else Some(eo)
@@ -254,7 +255,7 @@ object EORepoActor {
 
   def convertEOJsonToEOs(eomodel: EOModel, eo: EO, resultBody: JsObject): List[EO] = {
     val jObj = resultBody.asInstanceOf[JsObject]
-    val refreshedEOOpt = eoFromJsonJsObject(eomodel, Some(eo),jObj)
+    val refreshedEOOpt = eoFromJsonJsObject(eomodel, Some(eo), jObj)
     refreshedEOOpt match {
       case Some(refreshedEO) =>
         eoExtractor(refreshedEO, Set(refreshedEO)).toList
@@ -264,11 +265,10 @@ object EORepoActor {
 
 }
 
-class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
+class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with ActorLogging {
   val timeout = 10.seconds
   val configuration = ConfigFactory.load()
   val d2spaServerBaseUrl = configuration.getString("d2spa.woappURL")
-
 
 
   // TBD Sorting parameter
@@ -299,7 +299,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       case fa: EOFetchAll => None
       case fq: EOQualifiedFetch => Some(fq.qualifier)
     }
-    searchOnWORepository(entityName, qualifier,missingKeys)
+    searchOnWORepository(entityName, qualifier, missingKeys)
   }
 
 
@@ -309,7 +309,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       case Some(q) => "?qualifier=" + qualifiersUrlPart(q)
       case _ => ""
     }
-    val missingKeysFormKeyStr =  missingKeysFormKeyString(missingKeys.toSet)
+    val missingKeysFormKeyStr = missingKeysFormKeyString(missingKeys.toSet)
     val missingKeysAddon = if (missingKeysFormKeyStr.isEmpty) "" else "?" + missingKeysFormKeyStr
 
     val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix + missingKeysAddon
@@ -333,7 +333,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         val pkEOValue = valuesMap("id")
         val pk = EOValue.juiceInt(pkEOValue)
         val dryEO = EOValue.dryEOWithEntity(entityName, EOPk(List(pk)))
-        val eo = EOValue.takeValuesForKeys(dryEO,valuesMap)
+        val eo = EOValue.takeValuesForKeys(dryEO, valuesMap)
         eos ::= eo
       }
       //Logger.debug("Search: eos created " + eos)
@@ -342,7 +342,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     }
   }
 
-  def valueMapWithJson(jsval : JsValue): Map[String,EOValue] = {
+  def valueMapWithJson(jsval: JsValue): Map[String, EOValue] = {
     val jObj = jsval.asInstanceOf[JsObject]
     println("valueMapWithJson | jObj " + jObj)
     println("valueMapWithJson | jObj.fields " + jObj.fields)
@@ -377,7 +377,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     entityOpt match {
       case Some(entity) =>
         val eo = EOValue.dryEOWithEntity(entity.name, eoFault.pk)
-        val missingKeysFormKeyStr =  missingKeysFormKeyString(missingKeys)
+        val missingKeysFormKeyStr = missingKeysFormKeyString(missingKeys)
         val pks = eoFault.pk
         pks.pks.size match {
           case 1 =>
@@ -470,43 +470,110 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   }
 
 
-
-
   // 2) go through the tree and save all destination of to-many:
   //    while any children, go to it,
   //      if destination of a to many > if not saved, save, flag saved and recurse
-  def savedEOsForToMany(eos: List[EO]) : List[Future[EO]] = {
+  def savedEOsForToMany(eos: List[EO]): List[Future[EO]] = {
+    Logger.debug("savedEOsForToMany | eos " + eos)
     val eosMap = eosByEntityNameByPk(eos)
-    val result = traverseTreeToMany(eos.head, eosMap, true, None)
-    println("Did save EOs for to-many")
+    val result = traverseTreeToMany(eos.head, eosMap, true, None, None)
+    Logger.debug("savedEOsForToMany | result " + result)
     result
   }
 
 
   // Save first
-  def traverseTreeToMany(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], toSave: Boolean, relationshipOpt: Option[EORelationship]): List[Future[EO]] = {
+  def traverseTreeToMany(root: EO, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], toSave: Boolean, relationshipOpt: Option[EORelationship], sourceEOOpt: Option[EO]): List[Future[EO]] = {
+    Logger.debug("traverseTreeToMany | root " + root + " relationship " + relationshipOpt + " source EO " + sourceEOOpt)
 
-    val savedRoot = if (toSave) {
+    val savedRoot: EO = if (toSave) {
       // Update reverse to-one pk of the coming from relationship
-      relationshipOpt match {
-        case Some(relationship) =>
-          val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, relationship)
+      val toSaveEO = relationshipOpt match {
 
-        case None => ()
+        case Some(relationship) =>
+          // val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, relationship)
+
+          // 1) Update Root with coming from relationship source EO which could have been saved (This in order to save root with correct references)
+          //   Why no store the inverse relationship in the eomodel and save it like this in the play application, offering a tool to create it from WO Application.
+          //     a) ask for values of relationship joins source attribute in source eo
+          //     b) update root relationship joins destination attribute
+
+          // 2) Update the ObjectsValue in the relationship source EO
+          // Not necessary because not used in the save ??
+          val sourceEO = sourceEOOpt.get
+
+          val updateTupleOpts = relationship.joins.map(join => {
+            val sourceValueOpt = EOValue.valueForKey(sourceEO, join.sourceAttributeName)
+            val opt: Option[(String, EOValue)] = sourceValueOpt match {
+              case Some(sourceValue) =>
+                val key = join.sourceAttributeName
+                Some((key, sourceValue))
+              case None => None
+            }
+            opt
+          })
+
+          val updateTuples = updateTupleOpts.flatten
+          val updateMap = updateTuples.toMap
+          Logger.debug("traverseTreeToMany | updateMap " + updateMap)
+
+
+          val sourceEOEntity = EOModelUtils.entityNamed(eomodel, sourceEO.entityName).get
+          val sourcePkAttributeNames = sourceEOEntity.pkAttributeNames
+          Logger.debug("traverseTreeToMany | sourcePkAttributeNames " + sourcePkAttributeNames)
+
+          val orderedPkOpts = sourcePkAttributeNames.map(key => if (updateMap.contains(key)) {
+            val value = updateMap(key)
+            value match {
+              case IntValue(pk) => Some(pk)
+              case _ => None
+            }
+          } else None)
+          Logger.debug("traverseTreeToMany | orderedPkOpts " + orderedPkOpts)
+
+          val allDefined = orderedPkOpts.find(_.isEmpty).isEmpty
+          if (allDefined) {
+            val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, sourceEOEntity, relationship)
+            Logger.debug("traverseTreeToMany | inverseRelationshipOpt of " + relationship.name + " =  " + inverseRelationshipOpt)
+            inverseRelationshipOpt match {
+              case Some(inverseRelationship) =>
+                Logger.debug("traverseTreeToMany | updateTupleOpts " + orderedPkOpts)
+                val pks: List[Int] = orderedPkOpts.flatten
+                val objectValue = ObjectValue(EOPk(pks))
+                Logger.debug("traverseTreeToMany | objectValue " + objectValue)
+                val updatedRoot = EOValue.takeValueForKey(root, objectValue, inverseRelationship.name)
+                Logger.debug("traverseTreeToMany | updatedRoot " + updatedRoot)
+                updatedRoot
+
+              case None =>
+                root
+            }
+
+
+          } else {
+            root
+          }
+        case None =>
+          root
       }
 
-      Await result(saveEO(root), 2 seconds)
+      Await result(saveEO(toSaveEO), 2 seconds)
+
     } else root
+    Logger.debug("traverseTreeToMany | savedRoot " + savedRoot)
 
     val entityName = savedRoot.entityName
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
 
     // only the relationships of the EO Keys to optimize
-    val filteredRelationships = relationships.filter(rel => {savedRoot.keys.contains(rel.name)})
+    val filteredRelationships = relationships.filter(rel => {
+      savedRoot.keys.contains(rel.name)
+    })
 
     // for each relationship we go down the tree
-    val subEOLists = filteredRelationships.map( relationship => {
+    val subEOLists = filteredRelationships.map(relationship => {
+      Logger.debug("traverseTreeToMany | for each relationship we go down the tree " + relationship.name)
       val eoValueOpt = EOValue.valueForKey(savedRoot, relationship.name)
       eoValueOpt match {
         case Some(eovalue) =>
@@ -514,7 +581,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
             case ObjectValue(eoPk: EOPk) =>
               traverseToManyDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
             case ObjectsValue(eoPks: List[EOPk]) =>
-              traverseToManyDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk, relationship)
+              traverseToManyDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk, relationship, savedRoot)
             case _ => List.empty[Future[EO]]
           }
         case None => List.empty[Future[EO]]
@@ -524,23 +591,22 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     Future(savedRoot) :: subEOs
   }
 
-  def traverseToManyDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+  def traverseToManyDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
     val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     eoOpt match {
-      case Some(eo) => traverseTreeToMany(eo, eosByEntityNameByPk, false, None)
+      case Some(eo) => traverseTreeToMany(eo, eosByEntityNameByPk, false, None, None)
       case None => List.empty[Future[EO]]
     }
 
   }
 
-  def traverseToManyDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]], relationship: EORelationship) = {
-    val eoOpts = eoPks.map( eoPk  => {
+  def traverseToManyDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]], relationship: EORelationship, sourceEO: EO) = {
+    val eoOpts = eoPks.map(eoPk => {
       eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     })
     val newEOs = eoOpts.flatten
-    newEOs.map(traverseTreeToMany(_, eosByEntityNameByPk, true, Some(relationship))).flatten
+    newEOs.map(traverseTreeToMany(_, eosByEntityNameByPk, true, Some(relationship), Some(sourceEO))).flatten
   }
-
 
 
   // 1) go through the tree and save all to-one  starting from leaves:
@@ -550,18 +616,19 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   // How to detect flattened to-many ?
   //
-  def savedEOsForToOne(eos: List[EO]) : List[Future[EO]] = {
+  def savedEOsForToOne(eos: List[EO]): List[Future[EO]] = {
     val eosMap = eosByEntityNameByPk(eos)
     val result = traverseTreeToOne(eos.head, eosMap, true)
-    println("Did save EOs for to-one")
+    Logger.debug("savedEOsForToOne | Did save EOs for to-one " + result)
     result
   }
 
   case class ToManyUpdate(relationship: EORelationship, eovalue: ObjectsValue, eos: Map[EOPk, EO])
+
   case class ToOneUpdate(relationship: EORelationship, oldEOPk: EOPk, eovalue: ObjectValue, eo: EO)
 
 
-  def updateDestinationEO(eo: EO, relationship: EORelationship) : Option[(EOPk, EO)] = {
+  def updateDestinationEO(eo: EO, relationship: EORelationship): Option[(EOPk, EO)] = {
     val eoValueOpt = EOValue.valueForKey(eo, relationship.name)
     eoValueOpt match {
       case Some(eovalue) =>
@@ -594,7 +661,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       val eosByPK: Map[EOPk, EO] = cache(entityName)
       val eopks = eosByPK.keys.toList
       eopks.map(eopk => {
-        val anyUpdate = eoFromCache(partialUpdatedCache,entityName,eopk)
+        val anyUpdate = eoFromCache(partialUpdatedCache, entityName, eopk)
         anyUpdate match {
           case Some(ueo) => ueo
           case None => eosByPK(eopk)
@@ -604,15 +671,27 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   }
 
   def traverseTreeToOne(root: EO, eosByENameByPk: Map[String, Map[EOPk, EO]], isFromToOne: Boolean): List[Future[EO]] = {
+    Logger.debug("traverseTreeToOne | eosByENameByPk " + eosByENameByPk)
+
+
     val entityName = root.entityName
     val entity = EOModelUtils.entityNamed(eomodel, entityName).get
     val relationships = entity.relationships
 
     // only the relationships of the EO Keys to optimize
-    val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+    val filteredRelationships = relationships.filter(rel => {
+      root.keys.contains(rel.name)
+    })
+
+    Logger.debug("traverseTreeToOne | filteredRelationships " + filteredRelationships)
+
+    // Example: Saving a Customer with a flatten relationship to products containing 1 product
+    // Customer ---->> CustomerProduct --> Product
+    // ==> filteredRelationships = customerProducts (a to-many)
 
     // for each relationship we go down the tree
-    val subEOLists = filteredRelationships.map( relationship => {
+    // It should return the same sub tree
+    val subEOLists = filteredRelationships.map(relationship => {
       val eoValueOpt = EOValue.valueForKey(root, relationship.name)
       eoValueOpt match {
         case Some(eovalue) =>
@@ -627,16 +706,17 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       }
     })
     val subEOs: List[Future[EO]] = subEOLists.flatten
+    Logger.debug("traverseTreeToOne | subEOs from children " + subEOs)
 
     // Update all to-one to children pk
     // return a Tuple with old EOpk as key an update EO as value
-    val toOneUpdateOpts = filteredRelationships.map( relationship => {
+    val toOneUpdateOpts = filteredRelationships.map(relationship => {
       if (relationship.isToMany) {
         None
       } else {
-        val tupleOpt = updateDestinationEO(root,relationship)
+        val tupleOpt = updateDestinationEO(root, relationship)
         tupleOpt match {
-          case Some((eopk,eo)) =>
+          case Some((eopk, eo)) =>
             val newEOPkOpt = EOValue.pkFromValues(eomodel, eo)
             newEOPkOpt match {
               case Some(newEOPk) =>
@@ -664,16 +744,24 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       (entityName, subMap)
     }).toMap
 
+    Logger.debug("traverseTreeToOne | cacheUpdate " + cacheUpdate)
 
+    // children
     val futureOfList: Future[List[EO]] = Future sequence subEOs
 
-    val toManyUpdates: Future[List[Future[EO]]] = futureOfList.map(
+    val updateFEOs: Future[List[Future[EO]]] = futureOfList.map(
       peos => {
 
-        val peosMap = eosByEntityNameByPk(peos.tail)
+        val futureOfEOs: List[Future[EO]] = if (peos.size > 0) {
+          Logger.debug("traverseTreeToOne | peos.size > 0 " + peos)
+          val peosMap = eosByEntityNameByPk(peos)
 
-        val newEos = updateCacheWith(peosMap, cacheUpdate)
-        val futureOfEOs = newEos.map(Future(_))
+          val newEos = updateCacheWith(peosMap, cacheUpdate)
+          Logger.debug("traverseTreeToOne | newEos " + newEos)
+          newEos.map(Future(_))
+        } else {
+          List.empty[Future[EO]]
+        }
 
         if (isFromToOne) {
           val futureOfSavedRoot = saveEO(updatedRoot)
@@ -683,7 +771,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
         }
       }
     )
-    Await result(toManyUpdates, 2 seconds)
+    Await result(updateFEOs, 2 seconds)
   }
 
   def eoFromCache(cache: Map[String, Map[EOPk, EO]], entityName: String, eoPk: EOPk) = {
@@ -695,7 +783,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     } else None
   }
 
-  def traverseDestinationEOWithPk2(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+  def traverseDestinationEOWithPk2(eoPk: EOPk, destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
     val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     eoOpt match {
       case Some(eo) => traverseTreeToOne(eo, eosByEntityNameByPk, true)
@@ -704,8 +792,8 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   }
 
-  def traverseDestinationEOsWithPks2(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
-    val eoOpts = eoPks.map( eoPk  => {
+  def traverseDestinationEOsWithPks2(eoPks: List[EOPk], destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpts = eoPks.map(eoPk => {
       eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     })
     val newEOs = eoOpts.flatten
@@ -713,14 +801,17 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
   }
 
   // return the exact same tree except that flattten will be generate extra EO for the intermediate entity
-  def savingEOTree(eos: List[EO]) : List[EO] = {
+  def savingEOTree(eos: List[EO]): List[EO] = {
     val eosMap = eosByEntityNameByPk(eos)
     traverseTree(eos.head, eosMap)
   }
 
   def eosByEntityNameByPk(eos: List[EO]): Map[String, Map[EOPk, EO]] = {
     val eosByEntityName = eos.groupBy(_.entityName)
-    eosByEntityName.map { case (entityName, gr) => { (entityName, gr.map(toto => (toto.pk, toto)).toMap)}}
+    eosByEntityName.map { case (entityName, gr) => {
+      (entityName, gr.map(toto => (toto.pk, toto)).toMap)
+    }
+    }
   }
 
   // unflatten relationships
@@ -731,12 +822,14 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     Logger.debug("Update EO | traverse tree | relationships " + relationships)
 
     // only the relationships of the EO Keys to optimize
-    val filteredRelationships = relationships.filter(rel => {root.keys.contains(rel.name)})
+    val filteredRelationships = relationships.filter(rel => {
+      root.keys.contains(rel.name)
+    })
     Logger.debug("Update EO | traverse tree | filteredRelationships " + filteredRelationships)
 
     var updatedRoot = root
     // for each relationship we go down the tree
-    val subEOLists: List[List[EO]] = filteredRelationships.map( relationship => {
+    val subEOLists: List[List[EO]] = filteredRelationships.map(relationship => {
       relationship.definition match {
 
         // Flatten. All flatten are considered as many-to-many (Is that ok ?)
@@ -772,11 +865,13 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
                     val linkPks = if (isRootFirst) List(rootPk, destinationPk) else List(destinationPk, rootPk)
                     Logger.debug("Update EO | traverse tree | linkPks " + linkPks)
 
-                    val linkToDestinationRelationshipOpt = linkEntity.relationships.find(rel => { !rel.destinationEntityName.equals(entityName)})
+                    val linkToDestinationRelationshipOpt = linkEntity.relationships.find(rel => {
+                      !rel.destinationEntityName.equals(entityName)
+                    })
                     Logger.debug("Update EO | traverse tree | linkToDestinationRelationshipOpt " + linkToDestinationRelationshipOpt)
                     linkToDestinationRelationshipOpt match {
                       case Some(linkToDestinationRelationship) =>
-                        val newEO = EO(entityName = linkEntity.name, keys = List(linkToDestinationRelationship.name), values = List(ObjectValue(eoPk)), pk = EOPk(linkPks),saved = false)
+                        val newEO = EO(entityName = linkEntity.name, keys = List(linkToDestinationRelationship.name), values = List(ObjectValue(eoPk)), pk = EOPk(linkPks), saved = false)
                         Logger.debug("Update EO | traverse tree | newEO " + newEO)
                         Some(newEO)
                       case None =>
@@ -785,12 +880,12 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
                   })
                   // Source EO should link to new objects
                   val links: List[EO] = newEOs.flatten
-                  val keyValues = EO.mapWith(root.keys,root.values)
+                  val keyValues = EO.mapWith(root.keys, root.values)
                   val cleanedKeyValues = keyValues - relationship.name
                   val linkPks = links.map(_.pk)
                   val fixedKeyValues = cleanedKeyValues + (keyPathFirstKey -> ObjectsValue(linkPks))
                   val children: List[EO] = traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
-                  updatedRoot = EO.updateEOWithMap(root,fixedKeyValues)
+                  updatedRoot = EO.updateEOWithMap(root, fixedKeyValues)
                   val aggregatedEOs: List[EO] = links ::: children
                   Logger.debug("Update EO | traverse tree | aggregatedEOs " + aggregatedEOs)
                   aggregatedEOs
@@ -810,7 +905,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
               eovalue match {
                 case ObjectValue(eoPk: EOPk) =>
                   traverseDestinationEOWithPk(eoPk, relationship.destinationEntityName, eosByEntityNameByPk)
-                case  ObjectsValue(eoPks: List[EOPk]) =>
+                case ObjectsValue(eoPks: List[EOPk]) =>
                   traverseDestinationEOsWithPks(eoPks, relationship.destinationEntityName, eosByEntityNameByPk)
                 case _ => List.empty[EO]
               }
@@ -821,7 +916,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
     updatedRoot :: subEOLists.flatten
   }
 
-  def traverseDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+  def traverseDestinationEOWithPk(eoPk: EOPk, destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
     val eoOpt = eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     eoOpt match {
       case Some(eo) => traverseTree(eo, eosByEntityNameByPk)
@@ -830,15 +925,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
   }
 
-  def traverseDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String,  eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
-    val eoOpts = eoPks.map( eoPk  => {
+  def traverseDestinationEOsWithPks(eoPks: List[EOPk], destinationEntityName: String, eosByEntityNameByPk: Map[String, Map[EOPk, EO]]) = {
+    val eoOpts = eoPks.map(eoPk => {
       eoWithEntityNameAndPk(eosByEntityNameByPk, destinationEntityName, eoPk)
     })
     val newEOs = eoOpts.flatten
     newEOs.map(traverseTree(_, eosByEntityNameByPk)).flatten
   }
 
-  def eoWithEntityNameAndPk(eosByEntityNameByPk: Map[String, Map[EOPk, EO]], entityName : String, pk: EOPk) = {
+  def eoWithEntityNameAndPk(eosByEntityNameByPk: Map[String, Map[EOPk, EO]], entityName: String, pk: EOPk) = {
     if (eosByEntityNameByPk.contains(entityName)) {
       val eoByPK = eosByEntityNameByPk(entityName)
       if (eoByPK.contains(pk)) {
@@ -850,6 +945,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       None
     }
   }
+
   // Upate WS:  http://localhost:1666/cgi-bin/WebObjects/D2SPAServer.woa/ra/Project/3.json
   //  WS post data: {"descr":"1","id":3,"customer":{"id":2,"type":"Customer"},"projectNumber":3,"type":"Project"}
 
@@ -891,92 +987,106 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
 
 
   def saveEO(eo: EO): Future[EO] = {
-    if ( !eo.saved) {
+    if (!eo.saved) {
 
-      Logger.debug("Update EO: " + eo)
-      val pk = eo.pk.pks.head
+      Logger.debug("saveEO | eo not saved " + eo)
       val isNewEO = EOValue.isNewEO(eo)
+      Logger.debug("saveEO | isNewEO " + isNewEO)
 
       val entityName = eo.entityName
+      Logger.debug("saveEO | entityName " + entityName)
+
       val baseUrl = d2spaServerBaseUrl + "/" + entityName
-      val url = if (isNewEO) baseUrl + ".json" else "/" + pk + ".json"
+      val url = baseUrl + (if (isNewEO) ".json" else {
+        val pk = eo.pk.pks.head
+        "/" + pk + ".json"
+      })
 
       val request: WSRequest = ws.url(url).withRequestTimeout(10000.millis)
-      /*val eoDefinedValues = eo.values filter (v => {
-      Logger.debug("v._2" + v._2)
-      EOValueUtils.isDefined(v._2) })*/
-      val entity = EOModelUtils.entityNamed(eomodel, entityName).get
-      //val eoDefinedValues = EOValue.definedValues(eo)
-      val eoDefinedValues = EOValue.keyValues(eo)
 
-      Logger.debug("eoDefinedValues " + eo.values)
-      val eoValuesOpts = eoDefinedValues map { case (key, valContainer) => {
-        val valueOpt = woWsParameterForValue(valContainer, entity, key)
-        valueOpt match {
-          case Some(value) => Some((key, value))
-          case None => None
-        }
-      } }
-      val eoValues = eoValuesOpts.flatten.toMap
-      Logger.debug("eoValues " + eoValues)
-      val data = Json.toJson(eoValues)
+      Logger.debug("saveEO | baseUrl " + url)
+      val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
+      entityOpt match {
+        case Some(entity) =>
+          Logger.debug("saveEO | entity " + entity)
 
-      Logger.debug("Save EO | Upate WS:  " + url)
-      Logger.debug("Save EO | WS post data: " + data)
+          //val eoDefinedValues = EOValue.definedValues(eo)
+          val eoDefinedValues = EOValue.keyValues(eo)
 
-      val futureResponse: Future[WSResponse] = if (isNewEO) request.post(data) else request.put(data)
-      // Work with the response: The goal is to update the PK that could have been generated by the server
-      // (for single PK only because the multiple pk are reference to other object so we know them already)
-      // But we don't set the pk eo attribute yet because the client needs to find it's chicks
-      futureResponse.map { response =>
-        try {
-          val savedEO = if (isNewEO) {
-            val pkAttributeNames = entity.pkAttributeNames
-            Logger.debug("New EO | pkAttributeNames: " + pkAttributeNames)
-            pkAttributeNames.size match {
-              case 1 =>
-                Logger.debug("New EO | size = 1")
-                val pkAttributeName = pkAttributeNames.head
-                val resultBody = response.json
-                Logger.debug("New EO | resultBody: " + resultBody)
-                val jsObj = resultBody.asInstanceOf[JsObject]
+          Logger.debug("eoDefinedValues " + eo.values)
+          val eoValuesOpts = eoDefinedValues map { case (key, valContainer) => {
+            val valueOpt = woWsParameterForValue(valContainer, entity, key)
+            valueOpt match {
+              case Some(value) => Some((key, value))
+              case None => None
+            }
+          }
+          }
+          val eoValues = eoValuesOpts.flatten.toMap
+          Logger.debug("eoValues " + eoValues)
+          val data = Json.toJson(eoValues)
 
-                val pkValue = jsObj.value("id")
-                pkValue match {
-                  case JsNumber(pkNumber) =>
-                    // We don't set the pk of the EO here because the client has to identify it. It's going to be its responsibility
-                    // TODO this contradicts the fact that pk should not be in the value in order to test if it is empty
-                    val pkIntValue = pkNumber.intValue()
-                    Logger.debug("New EO | pkIntValue: " + pkIntValue)
-                    val updatedEO = EOValue.takeValueForKey(eo, EOValue.intV(pkIntValue), pkAttributeName)
-                    Logger.debug("New EO | updatedEO: " + updatedEO)
-                    updatedEO
-                  case _ => eo // should never occur but let's have it as a safety nest
+          Logger.debug("Save EO | Upate WS:  " + url)
+          Logger.debug("Save EO | WS post data: " + data)
+
+          val futureResponse: Future[WSResponse] = if (isNewEO) request.post(data) else request.put(data)
+          // Work with the response: The goal is to update the PK that could have been generated by the server
+          // (for single PK only because the multiple pk are reference to other object so we know them already)
+          // But we don't set the pk eo attribute yet because the client needs to find it's chicks
+          futureResponse.map { response =>
+            try {
+              val savedEO = if (isNewEO) {
+                val pkAttributeNames = entity.pkAttributeNames
+                Logger.debug("New EO | pkAttributeNames: " + pkAttributeNames)
+                pkAttributeNames.size match {
+                  case 1 =>
+                    Logger.debug("New EO | size = 1")
+                    val pkAttributeName = pkAttributeNames.head
+                    val resultBody = response.json
+                    Logger.debug("New EO | resultBody: " + resultBody)
+                    val jsObj = resultBody.asInstanceOf[JsObject]
+
+                    val pkValue = jsObj.value("id")
+                    pkValue match {
+                      case JsNumber(pkNumber) =>
+                        // We don't set the pk of the EO here because the client has to identify it. It's going to be its responsibility
+                        // TODO this contradicts the fact that pk should not be in the value in order to test if it is empty
+                        val pkIntValue = pkNumber.intValue()
+                        Logger.debug("New EO | pkIntValue: " + pkIntValue)
+                        val updatedEO = EOValue.takeValueForKey(eo, EOValue.intV(pkIntValue), pkAttributeName)
+                        Logger.debug("New EO | updatedEO: " + updatedEO)
+                        updatedEO
+                      case _ => eo // should never occur but let's have it as a safety nest
+                    }
+
+                  case _ =>
+                    eo
                 }
 
-              case _ =>
+              } else {
+                val resultBody = response.json
+                val array = resultBody.asInstanceOf[JsObject]
+                println("updateEO Saved EO " + eo)
                 eo
+              }
+              savedEO.copy(saved = true)
+            } catch {
+              case parseException: JsonParseException => {
+                println("updateEO | JsonParseException " + parseException)
+                handleException(response.body, eo)
+              }
+              case t: Throwable => {
+                println("updateEO | Throwable " + t)
+                handleException(t.getMessage(), eo)
+              }
             }
-
-          } else {
-            val resultBody = response.json
-            val array = resultBody.asInstanceOf[JsObject]
-            println("updateEO Saved EO " + eo)
-            eo
           }
-          savedEO.copy(saved = true)
-        } catch {
-          case parseException: JsonParseException => {
-            println("updateEO | JsonParseException " + parseException)
-            handleException(response.body, eo)
-          }
-          case t: Throwable => {
-            println("updateEO | Throwable " + t)
-            handleException(t.getMessage(), eo)
-          }
-        }
+        case None =>
+          Future(eo)
       }
+
     } else Future(eo)
+
   }
 
 
@@ -1026,11 +1136,15 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       case IntValue(intV) => Some(JsNumber(intV))
 
       case ObjectValue(eo) => {
-        val destinationEntity = EOModelUtils.destinationEntity(eomodel, entity, key).get
+        val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, key)
+        destinationEntityOpt match {
+          case Some(destinationEntity) =>
+            val entityName = destinationEntity.name
+            val pk = eo.pks.head
+            Some(JsObject(Seq("id" -> JsNumber(pk), "type" -> JsString(entityName))))
+          case None => None
+        }
 
-        val entityName = destinationEntity.name
-        val pk = eo.pks.head
-        Some(JsObject(Seq("id" -> JsNumber(pk), "type" -> JsString(entityName))))
       }
       case EmptyValue => Some(JsNull)
       case _ => None
@@ -1116,8 +1230,6 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       }
 
 
-
-
     case NewEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       Logger.debug("Get NewEO " + eos)
       updateEO(eos).map(rrs =>
@@ -1130,7 +1242,7 @@ class EORepoActor  (eomodelActor: ActorRef, ws: WSClient) extends Actor with Act
       )
 
 
-    case DeleteEO(eo: EO, requester: ActorRef)  =>
+    case DeleteEO(eo: EO, requester: ActorRef) =>
       log.debug("Get GetRulesForMetaData")
       deleteEO(eo).map(rrs =>
         requester ! DeletingResponse(rrs)
