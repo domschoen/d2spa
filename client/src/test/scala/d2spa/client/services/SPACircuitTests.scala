@@ -9,7 +9,7 @@ import d2spa.shared
 import diode.ActionResult._
 import diode.RootModelRW
 import diode.data._
-import d2spa.shared._
+import d2spa.shared.{EOPk, _}
 import utest._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,6 +37,41 @@ object SPACircuitTests extends TestSuite {
   val cacheBefore2 = Map("Project" -> EOMemCacheEntityElement(Map(EOPk(List(-1)) -> EO("Project",List("descr"),List(StringValue("8")),EOPk(List(-1)),None))))
 
   def tests = TestSuite {
+    "EO sorting should give sorted eos" - {
+
+      val sortKey = "descr"
+      val eo1 = EO("Project", List(sortKey), List(StringValue("1")),EOPk(List(1)), None, false)
+      val eo2 = EO("Project", List(sortKey), List(StringValue("2")),EOPk(List(2)), None, false)
+      val eo3 = EO("Project", List(sortKey), List(StringValue("3")),EOPk(List(3)), None, false)
+      val eos = List(eo2, eo1, eo3)
+      val expectedEos = List(eo1, eo2, eo3)
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map.empty[String,EOCacheEntityElement],Map.empty[String,EOCacheEntityElement])
+
+      val eo1StringValueForSortKey = EOCacheUtils.juiceStringAtKeyPath(eo1, sortKey, cache)
+      assert(eo1StringValueForSortKey.equals("1"))
+
+      val goingUp = EOCacheUtils.compareEOs(eo1, eo2, sortKey, true, cache)
+      assert(goingUp)
+      val goingDown = EOCacheUtils.compareEOs(eo3, eo1, sortKey, false, cache)
+      assert(goingDown)
+
+
+      val sortedEOs = EOCacheUtils.sortEOS(eos, Some(EOSortOrdering("descr", EOSortOrdering.CompareAscending)), cache)
+      assert(sortedEOs.equals(expectedEos))
+    }
+    "EO sort descending should give sorted descending eos" - {
+      val sortKey = "descr"
+      val eo1 = EO("Project", List(sortKey), List(StringValue("1")),EOPk(List(1)), None, false)
+      val eo2 = EO("Project", List(sortKey), List(StringValue("2")),EOPk(List(2)), None, false)
+      val eo3 = EO("Project", List(sortKey), List(StringValue("3")),EOPk(List(3)), None, false)
+      val eos = List(eo2, eo1, eo3)
+      val expectedEos = List(eo3, eo2, eo1)
+      val cache = EOCache(Ready(SharedTestData.eomodel),Map.empty[String,EOCacheEntityElement],Map.empty[String,EOCacheEntityElement])
+
+      val sortedEOs = EOCacheUtils.sortEOS(eos, Some(EOSortOrdering("descr", EOSortOrdering.CompareDescending)), cache)
+      assert(sortedEOs.equals(expectedEos))
+    }
+
     "missingKeysForKey componentName should be empty" - {
       val ruleResults = d2spa.client.services.ClientTestData.ruleCache
       val d2wContext = D2WContext(Some("Project"),Some("edit"),None,None)

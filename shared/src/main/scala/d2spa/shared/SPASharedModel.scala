@@ -427,6 +427,9 @@ object EOValue {
     eo
   }
 
+
+
+
   def size(value: EOValue) = value match {
     case StringValue(s) => s.length
     case IntValue(i) => i.toString.length
@@ -469,6 +472,8 @@ object EOValue {
   def juiceEOPkString(eoPk: EOPk) = {
     eoPk.pks.mkString("_")
   }
+
+
 
   def juiceString(value: EOValue): String =
     value match {
@@ -722,6 +727,16 @@ case class EOKeyValueQualifier(key: String, selector : String, value: EOValue) e
 case class EONotQualifier(qualifier: EOQualifier) extends EOQualifier
 
 case class EOSortOrdering(key: String, selector: String)
+
+object EOSortOrdering {
+  val CompareAscending = "CompareAscending"
+  val CompareDescending = "CompareDescending"
+  val CompareCaseInsensitiveAscending = "CompareCaseInsensitiveAscending"
+  val CompareCaseInsensitiveDescending = "CompareCaseInsensitiveDescending"
+
+  def isAscending(sortOrdering: EOSortOrdering) = sortOrdering.selector.equals(EOSortOrdering.CompareAscending)
+
+}
 
 case class EOModel(entities: List[EOEntity])
 case class EOEntity(name: String, pkAttributeNames: List[String] = List(), attributes: List[String] = List(), relationships: List[EORelationship] = List())

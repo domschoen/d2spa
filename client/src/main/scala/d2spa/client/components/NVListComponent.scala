@@ -18,10 +18,10 @@ import diode.data.Ready
 
 object NVListComponent {
 
-
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, isEmbedded: Boolean, proxy: ModelProxy[MegaContent])
+  case class State(sortOrdering: Option[EOSortOrdering])
 
-  class Backend($: BackendScope[Props, Unit]) {
+  class Backend($: BackendScope[Props, State]) {
 
 
     // If we go from D2WEditPage to D2WEdtiPage, it will not trigger the willMount
@@ -125,7 +125,16 @@ object NVListComponent {
         $.props >>= (_.proxy.dispatchCB(DeleteEOFromList(eo)))
     }
 
-    def render(p: Props) = {
+    def sortTableColumnProperty(eos: List[EO], propertyKey: String, p: Props, s: State) = {
+      val isAscending = if(s.sortOrdering.isDefined) EOSortOrdering.isAscending(s.sortOrdering.get) else false
+      val flippedAscending = if (isAscending) EOSortOrdering.CompareDescending else EOSortOrdering.CompareAscending
+      println("NVListComponent | sortTableColumnProperty | isAscending " + isAscending + " goes to " + flippedAscending)
+      $.modState(_.copy(sortOrdering = Some(EOSortOrdering(propertyKey, flippedAscending))))
+    }
+
+
+
+    def render(p: Props, s: State) = {
 
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
@@ -135,161 +144,185 @@ object NVListComponent {
       val entityName = d2wContext.entityName.get
       D2SpaLogger.logfinest(entityName, "NVListComponent render for entity: " + entityName)
 
-          val ruleResultsModel = p.proxy.value.ruleResults
-          //log.finest("NVListComponent render ruleResultsModel: " + ruleResultsModel)
-          D2SpaLogger.logfinest(entityName, "NVListComponent render |  "  + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      val ruleResultsModel = p.proxy.value.ruleResults
+      //log.finest("NVListComponent render ruleResultsModel: " + ruleResultsModel)
+      D2SpaLogger.logfinest(entityName, "NVListComponent render |  " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
 
-          val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
-          D2SpaLogger.logfinest(entityName, "NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
-          val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+      D2SpaLogger.logfinest(entityName, "NVListComponent render task displayPropertyKeys " + displayPropertyKeys)
+      val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
 
-          val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
-          val isEditAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isEditAllowed)
-          val cloneAllowed = false && isEditAllowed // not yet implemented
-          val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
+      val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
+      val isEditAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isEditAllowed)
+      val cloneAllowed = false && isEditAllowed // not yet implemented
+      val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
 
-          D2SpaLogger.logfinest(entityName, "NVListComponent render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
+      D2SpaLogger.logfinest(entityName, "NVListComponent render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
 
-          val dataRepOpt = pageContext.dataRep
+      val dataRepOpt = pageContext.dataRep
 
-          //log.finest("dataRepOpt " + dataRepOpt)
-          val eos: List[EO] = dataRepOpt match {
-            case Some(dataRep) => {
-              val cache = p.proxy.value.cache
-              dataRep match {
-                case DataRep(Some(fs), _) =>
-                  //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
-                  //log.finest("NVListCompoennt look for objects in cache " + cache)
-                  D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
-                  EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
+      //log.finest("dataRepOpt " + dataRepOpt)
+      val eos: List[EO] = dataRepOpt match {
+        case Some(dataRep) => {
+          val cache = p.proxy.value.cache
+          dataRep match {
+            case DataRep(Some(fs), _) =>
+              //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
+              //log.finest("NVListCompoennt look for objects in cache " + cache)
+              D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
+              EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
 
-                case DataRep(_, Some(eosAtKeyPath)) => {
-                  //log.finest("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
-                  D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
-                  D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
-                  val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
-                  eovalueOpt match {
-                    case Some(eovalue) =>
+            case DataRep(_, Some(eosAtKeyPath)) => {
+              //log.finest("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
+              D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
+              D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
+              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
+              eovalueOpt match {
+                case Some(eovalue) =>
 
-                      // ObjectsValue(Vector(1))
-                      eovalue match {
-                        case ObjectsValue(pks) =>
-                          D2SpaLogger.logfinest(entityName, "NVListComponent render pks " + pks)
-                          EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value.cache, entityName, pks).toList
-                        case _ => List.empty[EO]
-                      }
-                    case _ =>
-                      D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo at key path is None")
-                      List.empty[EO]
+                  // ObjectsValue(Vector(1))
+                  eovalue match {
+                    case ObjectsValue(pks) =>
+                      D2SpaLogger.logfinest(entityName, "NVListComponent render pks " + pks)
+                      EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value.cache, entityName, pks).toList
+                    case _ => List.empty[EO]
                   }
-                }
-                case _ => List.empty[EO]
+                case _ =>
+                  D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo at key path is None")
+                  List.empty[EO]
               }
             }
             case _ => List.empty[EO]
           }
-          D2SpaLogger.logfinest(entityName, "NVListComponent render eos " + eos)
+        }
+        case _ => List.empty[EO]
+      }
+      D2SpaLogger.logfinest(entityName, "NVListComponent render eos " + eos)
 
-          var dataExist = eos.size > 0
-          val countText = (entityDisplayNameOpt match {
-            case Some(entityDisplayName) =>
-              eos.size match {
-                case x if x == 0 =>
-                  "No " + entityDisplayName
-                case x if x > 1 =>
-                  entityDisplayName match {
-                    case  "Alias" => eos.size + " " + "Aliases"
-                    case _ => eos.size + " " + entityDisplayName + "s"
-                  }
-                case _ => eos.size + " " + entityDisplayName
+      var dataExist = eos.size > 0
+      var csvFileName = "Export"
+      val countText = (entityDisplayNameOpt match {
+        case Some(entityDisplayName) =>
+          csvFileName = entityDisplayName + "s"
+          eos.size match {
+            case x if x == 0 =>
+              "No " + entityDisplayName
+            case x if x > 1 =>
+              entityDisplayName match {
+                case "Alias" =>
+                  csvFileName = "Aliases"
+                  eos.size + " " + "Aliases"
+                case _ => eos.size + " " + entityDisplayName + "s"
               }
-            case None => ""
-          })
+            case _ => eos.size + " " + entityDisplayName
+          }
+        case None => ""
+      })
 
-          <.div(^.className := "",
-            {
-              val eoOnErrorOpt = eos.find(x => x.validationError.isDefined)
-              eoOnErrorOpt match {
-                case Some(eoOnError) =>
-                  val validationError = eoOnError.validationError.get
-                  val objUserDescription = eoOnError.entityName + " " + eoOnError.values + " : "
-                  <.div(<.span(^.color := "red", "Validation error with object: " + objUserDescription), <.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
-                case _ => <.div()
-              }
-            },
-            {
-              <.table(^.className := "table table-bordered table-hover table-condensed",
-                <.thead(
-                  <.tr(
-                    <.th(^.className := "result-details-header", ^.colSpan := 100,
-                      countText,
-                      if (p.isEmbedded)  "" else <.img(^.className := "text-right", ^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))
-                    )
-                  )
-                ),
+      <.div(^.className := "",
+        {
+          val eoOnErrorOpt = eos.find(x => x.validationError.isDefined)
+          eoOnErrorOpt match {
+            case Some(eoOnError) =>
+              val validationError = eoOnError.validationError.get
+              val objUserDescription = eoOnError.entityName + " " + eoOnError.values + " : "
+              <.div(<.span(^.color := "red", "Validation error with object: " + objUserDescription), <.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
+            case _ => <.div()
+          }
+        },
+        <.div(^.className := "countRow", <.span(^.cursor := "pointer", ^.float := "left", <.span(countText)),
+          <.span(^.cursor := "pointer", ^.float := "right", <.a(^.title := csvFileName, ^.className := "export-to-excel glyphicon glyphicon-download-alt")),
+          if (p.isEmbedded) "" else <.img(^.className := "text-right", ^.src := "/assets/images/ButtonReturn.gif", ^.onClick --> returnAction(p.router, entityName))),
 
-                <.thead(
-                  <.tr(^.className := "",
-                    <.th().when(showFirstCell), {
-                      displayPropertyKeys toTagMod (propertyKey =>
-                        <.th(^.className := "", {
-                          val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
-                          val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
-                          val displayString = displayNameFound match {
-                            case Some(stringValue) => {
-                              //case Some(stringValue) => {
-                              stringValue
+        <.table(^.className := "nvList table table-bordered table-hover table-condensed",
+          <.thead(
+            <.tr(^.className := "",
+              <.th().when(showFirstCell), {
+                displayPropertyKeys toTagMod (propertyKey =>
+                  <.th(^.className := "", {
+                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                    val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
+                    val displayString = displayNameFound match {
+                      case Some(stringValue) => {
+                        stringValue
+                      }
+                      case _ => propertyKey
+                    }
+                    val pointerSpan =
+                      s.sortOrdering match {
+                        case Some(sortOrdering) =>
+                          val orderKey = sortOrdering.key
+                          if (propertyKey.toString.equals(orderKey)) {
+
+                            val icon: String = if (EOSortOrdering.isAscending(sortOrdering)) {
+                              "^.cursor := \"pointer\", ^.float := \"right\", <.span(^.className := icon)-by-attributes"
+                            } else {
+                              "glyphicon glyphicon-sort-by-attributes-alt"
                             }
-                            case _ => propertyKey
+                            <.span(^.cursor := "pointer", ^.float := "right", <.span(^.className := icon))
+
+                          } else {
+                            <.span(^.cursor := "pointer", ^.float := "right", <.span(^.className := "glyphicon glyphicon-sort"))
                           }
-                          <.span(^.className := "", displayString)
-                        })
-                        )
-                    },
-                    <.th().when(!p.isEmbedded)
+
+                        case None =>
+                          <.span()
+                      }
+
+                    <.div(^.onClick --> sortTableColumnProperty(eos, propertyKey.toString, p, s),
+                      <.span(^.cursor := "pointer", ^.float := "left", <.span(displayString)),
+                      pointerSpan)
+                  })
                   )
-                ).when(dataExist),
+              },
+              <.th().when(!p.isEmbedded)
+            )
+          ).when(dataExist),
 
-                <.tbody(
-                  eos toTagMod (eo => {
-                    <.tr(
-                      <.td(^.className := "text-center",
-                        <.i(^.className := "glyphicon glyphicon-search", ^.title := "inspect", ^.onClick --> inspectEO(eo)).when(isInspectAllowed),
-                        <.i(^.className := "glyphicon glyphicon-pencil", ^.title := "edit", ^.onClick --> editEO(eo)).when(isEditAllowed),
-                        <.i(^.className := "glyphicon glyphicon-duplicate", ^.title := "duplicate").when(cloneAllowed)
-                      ).when(showFirstCell),
-                      displayPropertyKeys toTagMod (
-                        propertyKey => {
-                          val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
-                          val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext, eo = Some(eo))
-                          println("NVListComponent | propertyPageContext " + propertyPageContext)
-                          <.td(^.className := "",
-                            D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
-                          )
-                        }
-                        ),
-                      //if (p.isEmbedded) <.td() else
-                      <.td(^.className := "text-center",
-                        <.i(^.className := "glyphicon glyphicon-trash", ^.title := "delete", ^.onClick --> deleteEO(eo))
-                      ).when(!p.isEmbedded)
-                    )
-                  }
+          <.tbody({
+            if (dataExist) {
+              val cache = p.proxy.value.cache
+              println("NVListComponent | sortEOS | s.sortOrdering " + s.sortOrdering)
+
+              val sortedEos = EOCacheUtils.sortEOS(eos, s.sortOrdering, cache)
+              println("NVListComponent | sortEOS " + sortedEos)
+
+              sortedEos toTagMod (eo => {
+                <.tr(
+                  <.td(^.className := "text-center",
+                    <.i(^.className := "glyphicon glyphicon-search", ^.title := "inspect", ^.onClick --> inspectEO(eo)).when(isInspectAllowed),
+                    <.i(^.className := "glyphicon glyphicon-pencil", ^.title := "edit", ^.onClick --> editEO(eo)).when(isEditAllowed),
+                    <.i(^.className := "glyphicon glyphicon-duplicate", ^.title := "duplicate").when(cloneAllowed)
+                  ).when(showFirstCell),
+                  displayPropertyKeys toTagMod (
+                    propertyKey => {
+                      val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                      val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext, eo = Some(eo))
+                      //println("NVListComponent | propertyPageContext " + propertyPageContext)
+                      <.td(^.className := "",
+                        D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
+                      )
+                    }
                     ),
-
-                  <.tr(<.td(^.className := "text-center", ^.colSpan :=100, "No records found.")).when(!dataExist)
-                ).when(dataExist)
-
-
-              )
+                  <.td(^.className := "text-center",
+                    <.i(^.className := "glyphicon glyphicon-trash", ^.title := "delete", ^.onClick --> deleteEO(eo))
+                  ).when(!p.isEmbedded)
+                )
+              }
+                )
+            } else {
+              <.tr(<.td(^.className := "text-center", ^.colSpan := 100, "No records found."))
             }
+          }
           )
-
+        )
+      )
     }
   }
 
-
   private val component = ScalaComponent.builder[Props]("NVListComponent")
+    .initialState(State(None))
     .renderBackend[Backend]
     .componentWillReceiveProps(scope => scope.backend.willReceiveProps(scope.currentProps, scope.nextProps))
     .componentDidMount(scope => scope.backend.willmounted(scope.props))

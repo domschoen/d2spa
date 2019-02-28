@@ -85,20 +85,7 @@ div#c h2 {
 	color: maroon;
 }
 
-td.list1 {
-    background-color: #c2ccd7;
-    font-family: Arial, sans-serif;
-    //color: #0c1830;
-    font-size: 10pt;
-    white-space: nowrap;
-    text-align: left;
-}
 
-
-table.ListPage {
-    border: 0;
-    width: 100%;
-}
 div#vertical_divider {
 	width:1px;
 	border-style:outset;
@@ -219,12 +206,13 @@ fieldset {
 
 legend {
 	font-weight: bold;
+	font-size: 14px;
 	color: black;
 }
 
-table thead tr {
+/*table thead tr {
 	background-color: transparent;
-}
+}*/
 
 .scrollable-table{
     max-height: 300px;
@@ -232,14 +220,14 @@ table thead tr {
 }
 
 th {
-  background-color: #b7b7b7;
-  border: solid 1px;
-  color: #060606;
+   background:#f1f1f1 !important;
+   color: #000000b5;
 }
 
+/*
 tr {
   background-color: rgb(226, 230, 234);
-}
+}*/
 
 a {
 	text-decoration: none;
@@ -577,9 +565,10 @@ h4.eoTitle {
 	background: #d2cfac;
 	padding: 4px;
 }
-div.cell {
+
+/*div.cell {
 	display: table-cell;
-}
+}*/
 
 div.attributeContent, div.attributeName {
 	vertical-align: top;
@@ -596,14 +585,14 @@ div.attributeName {
     width: 130px;
 }
 
-div.row {
+/*div.row {
 	display: table-row;
 }
 
 .row.approval {
 	display: table;
     width: 600px;
-}
+}*/
 
 div.approved div.reportSection {
     width: 600px;
@@ -622,9 +611,9 @@ div.attribute {
 	background-color: #CBCED3;;
 }
 
-div.table {
+/*div.table {
 	display: table;
-}
+}*/
 
 div.eo {
 	top: 0;
@@ -643,59 +632,6 @@ span.licenseZip {
     margin-left: 30px;
 }
 
-tr.nagraSW {
-	background-color: #D2CFAC;
-	font-size: 16px;
-}
-
-table.nagraSW {
-	background-color: #e0e6ea;
-}
-
-table.listPage {
-    table-layout: fixed;
-    width: 1000px;
-}
-
-table.listRepetition {
-    width: 1000px;
-}
-tr.listRepetitionColumnHeader {
-	background-color: white;
-}
-td.listRepetitionColumnHeader {
-	padding-top: 20px;
-}
-span.listRepetitionColumnHeader {
-	font-size: 10pt;
-	font-family: Arial, sans-serif;
-	font-weight: bold;
-}
-
-tr.listHeader {
-    vertical-align : middle;
-    width: 240px;
-    background: #aabbcc;
-}
-
-td.listHeaderEntityName {
-    text-align : left;
-    width: 140px;
-}
-td.listHeaderReturnButton {
-    vertical-align : baseline;
-    white-space: nowrap;
-    width: auto;
-    padding: 5px;
-}
-
-td.buttonsbar
-{
-  font-family: Arial, sans-serif;
-  color: #0c1830;
-  /*background-color: #aabbcc;*/
-  font-size: 10pt;
-}
 div.liner {
 	margin-bottom: 3px;
 }
@@ -723,11 +659,6 @@ span.buttonOfBar {
 
 
 
-span.buttonsbar {
-  display: table-cell;
-  vertical-align: middle;
-}
-
 div.buttonsbar
 {
   font-family: Arial, sans-serif;
@@ -741,41 +672,6 @@ div.buttonsbar
 div.repetition {
 	margin-bottom: 15px;
 	margin-top: 15px;
-}
-
-table.query {
-    border-collapse: separate;
-    border-spacing: 2px;
-    /*width :="100%";*/
-}
-
-th.propertyName {
-    white-space: nowrap;
-    text-align: right;
-    vertical-align: top;
-    border-style: none;
-    border-width: 0;
-}
-
-th.query
-{
-  background-color: #dbdee3; font-weight: bold; text-align: right;
-  color: #000000;
-}
-
-tr.attribute {
-    border: 0;
-    padding-left: 4px;
-    width : 100%;
-    border-style: none;
-    border-width: 0;
-}
-
-td.d2wAttributeValueCell {
-	width: 100%;
-	text-align: left;
-	vertical-align: top;
-	padding-left: 10px;
 }
 
 .input-label {
@@ -801,12 +697,13 @@ td.d2wAttributeValueCell {
 }
 
 .glyphicon-chevron-right, .glyphicon-chevron-down {
-	color: white;
+	color: black;
 	cursor: pointer;
 }
 
 .panel-title>a, td>i{
-    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
 }
 
 td>i{
@@ -818,8 +715,8 @@ td>i{
 }
 
 .panel-heading{
-	background:#000000c7 !important;
-	color:white !important;
+	background:#e2e2e2 !important;
+	color:black !important;
 	padding: 6px !important;
 }
 
@@ -834,6 +731,70 @@ td>i{
 
 .text-center{
 	text-align: center;
+}
+
+
+able{
+	margin-bottom:0px !important;
+	font-size:13px;
+}
+
+td{
+	padding : 3px !important;
+}
+
+.result-details-header{
+    border-style: none !important;
+    padding: 2px !important;
+}
+
+.table-borderless td, .table-borderless th{
+	border-top: none !important;;
+    border-left: none !important;;
+    border-right: none !important;;
+    border-bottom: none !important;;
+}
+
+.right-dashed-border{
+	border-right:3px dashed #00000033;
+}
+
+.right-dashed-border table{
+	border-radius:10px;
+}
+
+b{
+	color: #000000c4;
+}
+
+.glyphicon-download-alt{
+	color : #7d7d7d;
+	padding-right : 2px;
+}
+
+.glyphicon-download-alt:hover{
+	color : black;
+}
+
+.countRow{
+    width: 100%;
+    background: #f1f1f1;
+    float: left;
+    padding : 5px;
+    font-size : 13px;
+    font-weight:500;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #dddddd;
+}
+
+.dummyDiv{
+    color: red;
+    top : 0;
+}
+
+.glyphicon-sort{
+    opacity : 0.3;
 }
 
 

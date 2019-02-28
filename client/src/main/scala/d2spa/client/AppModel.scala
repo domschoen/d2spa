@@ -3,7 +3,7 @@ package d2spa.client
 import diode._
 import diode.data.{Pot, _}
 import diode.util._
-import d2spa.shared.{D2WContext, EntityMetaData, _}
+import d2spa.shared.{D2WContext, EOValue, EntityMetaData, _}
 import boopickle.DefaultBasic._
 import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared.WebSocketMessages.RuleToFire
@@ -733,6 +733,78 @@ object RuleUtils {
 
   object EOCacheUtils {
 
+
+
+    //for sorting list of eos
+    def sortEOS(eos: List[EO], sortOrderingOpt: Option[EOSortOrdering], cache: EOCache): List[EO] = {
+      sortOrderingOpt match {
+        case Some(sortOrdering) =>
+          val key = sortOrdering.key
+          val isAscending = EOSortOrdering.isAscending(sortOrdering)
+          val sortedEOs = eos.sortWith((a, b) => compareEOs(a, b, key, isAscending, cache))
+          sortedEOs
+        case None =>
+          eos
+      }
+    }
+
+    def compareEOs(a: EO, b: EO, propKey: String, isAsc: Boolean, cache: EOCache): Boolean = {
+      val va = EOCacheUtils.juiceStringAtKeyPath(a, propKey, cache)
+      val vb = EOCacheUtils.juiceStringAtKeyPath(b, propKey, cache)
+      if (isAsc) {
+        va < vb
+      } else {
+        va > vb
+      }
+    }
+
+    def eoValueForKeyPath(eo: EO, keyPath: String, cache: EOCache): Option[EOValue] = {
+      if (eo.keys.contains(keyPath)) {
+        EOValue.valueForKey(eo,keyPath)
+      } else {
+        if (keyPath.contains(".")) {
+
+          // currently supporting only a key path of 2 elements maximum
+          val propertyNameList: List[String] = keyPath.split("\\.").map(_.trim).toList
+          val firstKeyPathElement = propertyNameList.head
+          if (eo.values.contains(firstKeyPathElement)) {
+            val destinationEOValue = EOValue.valueForKey(eo,firstKeyPathElement)
+            destinationEOValue match {
+              case Some(ObjectValue(destinationEOPk)) =>
+                val sourceEOEntity = EOModelUtils.entityNamed(cache.eomodel.get, eo.entityName).get
+                val relationshipOpt = EORelationship.relationshipNamed(sourceEOEntity.relationships, firstKeyPathElement)
+                relationshipOpt match {
+                  case Some(relationship) =>
+                    val destinationEntityName = relationship.destinationEntityName
+                    val destinationEOOpt = outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)
+                    destinationEOOpt match {
+                      case Some(destinationEO) =>
+                        EOValue.valueForKey(destinationEO,propertyNameList(1))
+                      case None => None
+                    }
+                  case None =>
+                    None
+                }
+              case _ =>
+                None
+            }
+          } else {
+            None
+          }
+        } else {
+          None
+        }
+      }
+    }
+
+
+    def juiceStringAtKeyPath(eo: EO, keyPath: String, cache: EOCache): String = {
+      val eoValueOpt = eoValueForKeyPath(eo, keyPath, cache)
+      eoValueOpt match {
+        case Some(eoValue) => EOValue.juiceString(eoValue)
+        case None => ""
+      }
+    }
 
     def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
       val pk = eo.pk
