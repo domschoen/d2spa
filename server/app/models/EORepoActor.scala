@@ -491,6 +491,8 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       val toSaveEO = relationshipOpt match {
 
         case Some(relationship) =>
+          Logger.debug("traverseTreeToMany | relationship " + relationship)
+
           // val inverseRelationshipOpt = EORelationship.inverseRelationship(eomodel, relationship)
 
           // 1) Update Root with coming from relationship source EO which could have been saved (This in order to save root with correct references)
@@ -503,6 +505,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           val sourceEO = sourceEOOpt.get
 
           val updateTupleOpts = relationship.joins.map(join => {
+            Logger.debug("traverseTreeToMany | join " + join)
             val sourceValueOpt = EOValue.valueForKey(sourceEO, join.sourceAttributeName)
             val opt: Option[(String, EOValue)] = sourceValueOpt match {
               case Some(sourceValue) =>

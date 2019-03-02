@@ -155,6 +155,7 @@ class EOModelActor (ws: WSClient) extends Actor with ActorLogging  {
       log.debug("GetEOModel")
       fetchedEOModel match {
         case Some(eomodel) =>
+          log.debug("eomodel " + eomodel)
           requester ! EOModelResponse(eomodel, d2wContext)
 
         case None =>
