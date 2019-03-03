@@ -58,7 +58,8 @@ lazy val client = (project in file("client")).settings(commonSettings)
         "com.lihaoyi" %%% "utest" % "0.6.5" % Test,
         "com.lihaoyi" %%% "autowire" % Settings.versions.autowire,
         "io.suzaku" %%% "boopickle" % Settings.versions.booPickle,
-        "org.scala-js" %%% "scalajs-java-logging" % "0.1.5"
+        "org.scala-js" %%% "scalajs-java-logging" % "0.1.5",
+        "eu.unicredit" %%% "paths-scala-js" % "0.4.5"
     ),
     dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2",
     jsDependencies ++= Seq(

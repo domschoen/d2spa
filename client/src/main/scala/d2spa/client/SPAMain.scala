@@ -33,6 +33,7 @@ object SPAMain   extends  js.JSApp {
 
   sealed trait TaskAppPage
   case object TaskRoot extends TaskAppPage
+  case class SVGTrialPage(entity: String) extends TaskAppPage
   case class QueryPage(entity: String) extends TaskAppPage
   case class ListPage(entity: String) extends TaskAppPage
   case class EditPage(entity: String,  pk: Int) extends TaskAppPage
@@ -50,8 +51,15 @@ object SPAMain   extends  js.JSApp {
 
 
       (emptyRule
+        // staticRoute("#hello", Hello) ~> render(HelloComponent())
+        //| staticRoute("#d3", D3Trial) ~> renderR(ctl => menusConnection(D3Trial(ctl)))
+        //| staticRedirect("#d3") ~> redirectToPage(D3Trial)(Redirect.Replace)
+        | dynamicRouteCT("#svg" / string(".*").caseClass[SVGTrialPage]) ~> dynRenderR(
+        (m, ctl) => {
+          SVGTrial(ctl)
+        })
 
-        | staticRedirect(root) ~> redirectToPage(QueryPage("Project"))(Redirect.Replace)
+          | staticRedirect(root) ~> redirectToPage(QueryPage("Project"))(Redirect.Replace)
         /*| staticRoute(root, TaskRoot) ~> renderR(ctl => {
             AfterEffectRouter.setCtl(ctl)
             menusConnection(p => {
