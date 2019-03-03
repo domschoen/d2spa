@@ -1,0 +1,10 @@
+https://reqres.in/
+
+
+https://index.scala-lang.org/scala-rules/rule-engine
+
+https://dzone.com/articles/hammurabi-scala-rule-engine
+
+http://blog.dossot.net/2008/10/two-minutes-scala-rules-engine.html
+
+https://www.drools.org/
