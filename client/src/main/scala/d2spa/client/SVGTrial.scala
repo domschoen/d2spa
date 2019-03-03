@@ -16,8 +16,11 @@ import japgolly.scalajs.react.vdom.SvgAttrs._
 
 
 import paths.high.Bar
+import paths.low.Path
 
 // https://reqres.in/
+// https://github.com/andreaferretti/paths-scala-js-demo
+// https://github.com/andreaferretti/paths-scala-js
 
 object SVGTrial {
   case class Stats(values: List[List[Double]], labels: List[String])
@@ -87,8 +90,7 @@ object SVGTrial {
       Callback.empty
     }
 
-    def render(p: Props) = {
-      //var Pie = require('paths/pie');
+    def renderBarChar() = {
       val bar = Bar[Double](
         data = stats.values,
         accessor = identity,
@@ -112,7 +114,10 @@ object SVGTrial {
       svg(width := 460, height := 400,
         rectangles.toVdomArray
       )
-      /*<.div(
+    }
+
+    def renderCircles() = {
+      <.div(
         ^.className := "react-sortable-handle",
         svg(
           ^.className := "react-sortable-handle-svg",
@@ -120,8 +125,23 @@ object SVGTrial {
           path(d := "M9,8c1.1,0,2-0.9,2-2s-0.9-2-2-2S7,4.9,7,6S7.9,8,9,8z M9,10c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S10.1,10,9,10z M9,16c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S10.1,16,9,16z"),
           path(d := "M15,8c1.1,0,2-0.9,2-2s-0.9-2-2-2s-2,0.9-2,2S13.9,8,15,8z M15,10c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S16.1,10,15,10z M15,16c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S16.1,16,15,16z")
         )
-      )*/
+      )
+    }
 
+    def renderSimpleSvg() = {
+      val p = paths.low.Path()
+        .moveto(10, 20)
+        .lineto(30, 50)
+        .lineto(25, 28)
+        .qcurveto(27, 30, 32, 27)
+        .closepath();
+
+        <.div(svg(path(d := p.print, fill := "blue" )))
+    }
+
+    def render(p: Props) = {
+      //renderBarChar()
+      renderSimpleSvg()
     }
   }
 
