@@ -302,17 +302,30 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     searchOnWORepository(entityName, qualifier, missingKeys)
   }
 
+  def paramStringWithParams(params: List[String]): String = {
+    if (params.size == 0) {
+      ""
+    } else {
+      val head = params.head
+      val tail = params.tail
+      val tailString = if (tail.size == 0) "" else "&" + tail.mkString("&")
+      "?" + head + tailString
+    }
+  }
 
   def searchOnWORepository(entityName: String, qualifierOpt: Option[EOQualifier], missingKeys: List[String]): Future[List[EO]] = {
     Logger.debug("Search with fs:" + entityName)
-    val qualifierSuffix = qualifierOpt match {
-      case Some(q) => "?qualifier=" + qualifiersUrlPart(q)
-      case _ => ""
+    val qualifierSuffixOpt = qualifierOpt match {
+      case Some(q) => Some("qualifier=" + qualifiersUrlPart(q))
+      case _ => None
     }
     val missingKeysFormKeyStr = missingKeysFormKeyString(missingKeys.toSet)
-    val missingKeysAddon = if (missingKeysFormKeyStr.isEmpty) "" else "?" + missingKeysFormKeyStr
+    val missingKeysAddonOpt = if (missingKeysFormKeyStr.isEmpty) None else Some(missingKeysFormKeyStr)
 
-    val url = d2spaServerBaseUrl + "/" + entityName + ".json" + qualifierSuffix + missingKeysAddon
+    val params = List(qualifierSuffixOpt,missingKeysAddonOpt).flatten
+    val paramStr = paramStringWithParams(params)
+
+    val url = d2spaServerBaseUrl + "/" + entityName + ".json" + paramStr
     Logger.debug("Search URL:" + url)
     val request: WSRequest = ws.url(url).withRequestTimeout(timeout)
     val futureResponse: Future[WSResponse] = request.get()
@@ -1228,6 +1241,17 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           println("Hydrate with missingKeys " + missingKeys)
           searchOnWORepository(fs, missingKeys).map(rrs =>
             requester ! CompletedEOs(d2wContextOpt, hydration, rrs, ruleResults)
+          )
+        case DrySubstrate(Some(eosFault), _, _) =>
+          val missingKeys = RulesUtilities.missingKeysWith(hydration.wateringScope, ruleResults)
+          println("Hydrate missingKeys " + missingKeys)
+          println("Hydrate hydration.wateringScope " + hydration.wateringScope)
+
+          hydrateEOs(eosFault.entityName, eosFault.pks, missingKeys.toSet).map(rrs => {
+            println("Hydrate gives " + rrs.size)
+            println("Hydrate send to " + requester)
+            requester ! CompletedEOs(d2wContextOpt, hydration, rrs, ruleResults)
+          }
           )
 
       }

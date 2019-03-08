@@ -111,7 +111,7 @@ object ERD2WInspect {
 
     def inspectEO(eo: EO) = {
       Callback.log(s"Inspect: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
+        $.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo)))
     }
 
     def editEO(eo: EO) = {

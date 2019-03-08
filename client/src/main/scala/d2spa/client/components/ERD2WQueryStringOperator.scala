@@ -21,7 +21,7 @@ import d2spa.shared.{ EOValue, EOKeyValueQualifier, PropertyMetaInfo, RuleKeys}
 object ERD2WQueryStringOperator  {
   //@inline private def bss = GlobalStyles.bootstrapStyles
 //bss.formControl,
-  case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
+  case class Props(router: RouterCtl[TaskAppPage], pageContext: PageContext, proxy: ModelProxy[MegaContent])
 
 
   class Backend($ : BackendScope[Props, Unit]) {
@@ -45,24 +45,33 @@ object ERD2WQueryStringOperator  {
 
 
     def render(p: Props) = {
-      val pageContext = p.d2wContext
+      val pageContext = p.pageContext
       val d2wContext = pageContext.d2wContext
-          val entityName = d2wContext.entityName.get
+      val entityNameOpt = d2wContext.entityName
+      entityNameOpt match {
+        case Some(entityName) =>
+
           val propertyName = d2wContext.propertyKey.get
 
-          //log.finest("ERD2WQueryStringOperator " + propertyName + " query values " + d2wContext.queryValues)
+          //log.finest("ERD2WQueryStringOperator " + propertyName + " query values " + pageContext.queryValues)
+          //log.finest("ERD2WQueryStringOperator " + propertyName + " query values " + pageContext.queryValues)
           val strValue = D2WContextUtils.queryValueAsStringForKey(pageContext, propertyName)
+          //log.finest("ERD2WQueryStringOperator " + propertyName + " strValue " + strValue)
           // set id but make it unique: ^.id := "description",
           <.div(
             <.input(^.value := strValue, ^.className := "form-control",
               ^.placeholder := "write description",  ^.onChange ==> {e: ReactEventFromInput =>
                 queryValueChanged(
-                    entityName,
-                    propertyName,
-                    e.target.value)
+                  entityName,
+                  propertyName,
+                  e.target.value)
               }
             )
           )
+        case None =>
+          <.div()
+      }
+
 
     }
   }
@@ -71,5 +80,5 @@ object ERD2WQueryStringOperator  {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, d2wContext, proxy))
+  def apply(ctl: RouterCtl[TaskAppPage], pageContext: PageContext, proxy: ModelProxy[MegaContent]) = component(Props(ctl, pageContext, proxy))
 }

@@ -20,69 +20,62 @@ object PageRepetition {
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
-  class Backend($ : BackendScope[Props, Unit]) {
-
-
-
-
+  class Backend($: BackendScope[Props, Unit]) {
 
 
     def render(p: Props) = {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
-      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity: " + d2wContext)
-      D2SpaLogger.logfinest(entityName,"Render PageRepetition for entity | object exists: " + pageContext.eo.isDefined)
+      D2SpaLogger.logfinest(entityName, "Render PageRepetition for entity: " + d2wContext)
+      D2SpaLogger.logfinest(entityName, "Render PageRepetition for entity | object exists: " + pageContext.eo.isDefined)
       val ruleResultsModel = p.proxy.value.ruleResults
 
-      val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel,d2wContext)
+      val ruleContainerOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
 
       ruleContainerOpt match {
         case Some(ruleContainer) => {
-          D2SpaLogger.logfinest(entityName,"Render PageRepetition ruleContainer: " + ruleContainer)
+          D2SpaLogger.logfinest(entityName, "Render PageRepetition ruleContainer: " + ruleContainer)
 
           val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
           val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
-          D2SpaLogger.logfinest(entityName,"Render PageRepetition displayPropertyKeys: " + displayPropertyKeys)
+          D2SpaLogger.logfinest(entityName, "Render PageRepetition displayPropertyKeys: " + displayPropertyKeys)
           val taskName = d2wContext.task.get
 
           entityDisplayNameOpt match {
             case Some(entityDisplayName) =>
-                  <.div(^.className := "repetition d2wPage",
-                    <.table(^.className := taskName,
-                      <.tbody(
-                        <.tr(^.className := "attribute customer",
-                          <.td(
-                            <.table(
-                              <.tbody(
-                                displayPropertyKeys toTagMod (
-                                  propertyKey =>
-                                  {
-                                    val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
-                                    val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext)
-                                    <.tr(^.className := "attribute",
-                                      <.th(^.className := "propertyName " + taskName,
-                                        {
-                                          val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
-                                          displayNameFound match {
-                                            case Some(stringValue) => stringValue
-                                            case _ => ""
-                                          }
-                                        }
-                                      ),
-                                      // Component part
-                                      <.td(^.className := taskName + " d2wAttributeValueCell",
-                                        D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
-                                      )
-                                    )
-                                  }
-                                  )
-                              )
-                            )
-                          )
+              <.table(^.className := "table table-bordered table-hover table-condensed " + taskName,
+                <.thead(
+                  <.tr(^.className := "",
+                    <.th(^.className := "result-details-header", ^.colSpan := 100,
+                      <.span(^.cursor := "pointer", ^.float := "right", <.a(^.title := entityDisplayName, ^.className := "export-to-excel glyphicon glyphicon-download-alt"))
+                    )
+                  )
+                ),
+                <.tbody(
+                  displayPropertyKeys toTagMod (
+                    propertyKey => {
+                      val propertyD2WContext = d2wContext.copy(propertyKey = Some(propertyKey))
+                      val propertyPageContext = pageContext.copy(d2wContext = propertyD2WContext)
+                      <.tr(^.className := "attribute",
+                        <.th(^.className := "propertyName " + taskName,
+                          {
+                            val displayNameFound = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, propertyD2WContext, RuleKeys.displayNameForProperty)
+                            displayNameFound match {
+                              case Some(stringValue) => stringValue
+                              case _ => ""
+                            }
+                          }
+                        ),
+                        // Component part
+                        <.td(^.className := taskName + " d2wAttributeValueCell",
+                          D2WComponentInstaller(p.router, propertyPageContext, p.proxy)
                         )
                       )
+                    }
                     )
+                )
+
               )
             case _ => <.div("no entity display name")
           }

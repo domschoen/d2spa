@@ -91,6 +91,7 @@ case class FetchMenu(d2wContext: D2WContext) extends Action
 
 case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class CompletedEO(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class CompletedEOProcessing(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class SetPageForSocketReady(d2wContext: PageContext) extends Action
 
 case class RefreshedEOs(eos: Seq[EO])
@@ -133,7 +134,7 @@ case class UpdateCurrentContextWithEO(eo: EO) extends Action
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
-case class ShowResults(fs: EOFetchSpecification) extends Action
+case class ShowFetchResults(fs: EOFetchSpecification) extends Action
 
 case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
@@ -166,7 +167,7 @@ case class DeleteEOFromList(eo: EO) extends Action
 case class DeletingEO(eo: EO) extends Action
 case class EditEO(dw2Context: PageContext) extends Action
 case class EditEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
-case class InspectEO(fromTask: String, eo: EO, isOneRecord: Boolean = false) extends Action
+case class InspectEO(fromTask: String, eo: EO) extends Action
 
 case class SaveError(eo: EO) extends Action
 object ListEOs extends Action
@@ -243,7 +244,7 @@ object HydrationUtils {
                 val entityName = eoakp.destinationEntityName
                 val eosFault =  EOsFault(entityName, pks)
                 // Materialooze Some(DrySubstrate(eos = Some(eosFault)))
-                Some(DrySubstrate())
+                Some(DrySubstrate(eos = Some(eosFault)))
               case _ => None
             }
           case None => None

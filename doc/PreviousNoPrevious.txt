@@ -151,11 +151,11 @@ Search
     SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
         PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
             socket.Search
-                RulesActor ! GetMetaDataForSearch
+                RulesActor ! GetRulesForHydration
                     EORepoActor ! Search
                         WebSocketActor ! FetchedObjectsForList
                             out ! FetchedObjectsForListMsgOut
-    SearchResult (CacheHandler)
+    CompletedEO (CacheHandler)
         SearchResultWithRuleResults (RuleResultsHandler)
             RegisterSearchResults
                 ShowResults (MyCircuit.PreviousPageHandler)
@@ -163,10 +163,16 @@ Search
         
 
 Search return 1 record
+______________________
     SearchAction (SPACircuit.CacheHandler) [Check the cache to see if meta data fetched]
-        PrepareSearchForServer ((MyCircuit.PreviousPageHandler) [Prepare Fetch Specification for websocket]
-            socket.Search    
-    SearchResult
+        MyCircuit.SearchHydration (SPACircuit.RuleResultsHandler) 
+            socket.Hydrate
+                RulesActor ! GetMetaDataForSearch
+                    EORepoActor ! Search
+                        WebSocketActor ! CompletedEOs
+                            out ! CompletedEOMsgOut
+	    
+    CompletedEO(EOCacheHandler)
         CacheForPrepareEODisplay
             PrepareEODisplayRules
                 socket.AppInitMsgIn

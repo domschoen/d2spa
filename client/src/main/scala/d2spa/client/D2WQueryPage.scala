@@ -84,7 +84,7 @@ object D2WQueryPage {
 
 
     def render(p: Props) = {
-      val pageContext = p.d2wContext
+      val pageContext =  if(p.proxy.value.previousPage.isDefined) p.proxy.value.previousPage.get else p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
       log.finest("Render Query page for entity: " + entityName)

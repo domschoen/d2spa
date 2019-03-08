@@ -78,6 +78,7 @@ object RuleKeys {
   val attributeType = "attributeType"
   val listConfigurationName = "listConfigurationName"
   val inspectConfigurationName = "inspectConfigurationName"
+  val listEmbeddedConfigurationName = "listEmbeddedConfigurationName"
   val pageConfiguration = "pageConfiguration"
   val propertyType = "propertyType"
   val destinationEntity = "destinationEntity"
@@ -541,6 +542,12 @@ object EOValue {
       }
     }
   }
+  def booleanValueForKey(eo: EO, key: String) = {
+    valueForKey(eo, key) match {
+      case Some(value) => juiceBoolean(value)
+      case None => false
+    }
+  }
 
 
   def valueForKey(eo: EO, key: String) = {
@@ -820,7 +827,8 @@ case class D2WContext(
                   entityName: Option[String],
                   task: Option[String],
                   propertyKey:  Option[String] = None,
-                  pageConfiguration: Option[String] = None
+                  pageConfiguration: Option[String] = None,
+                    additionalKey: Option[String] = None
                                 )
 
 
