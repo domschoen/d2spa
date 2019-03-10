@@ -140,7 +140,7 @@ case class SelectMenu(entityName: String) extends Action
 case class Save(entityName: String, eo: EO) extends Action
 case class GoSaving(entityName: String, eo: EO) extends Action
 
-case class SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) extends Action
+case class SavingEO(d2wContext: D2WContext, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
 case class SaveNewEO(entityName: String, eo: EO) extends Action
 case class PrepareSearchForServer(d2wContext: PageContext, ruleRequest: RuleRequest) extends Action
 
