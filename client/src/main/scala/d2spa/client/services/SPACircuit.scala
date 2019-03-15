@@ -333,6 +333,7 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
           effectOnly(Effect.action(EditEO(d2wContext)))
       }
 
+      // Save the rule results
     case SavedEOWithResults(fromTask, eo, d2wContext, ruleResultsOpt: Option[List[RuleResult]]) =>
       log.finest("RuleResultsHandler | EditEOWitResults | ruleResults " + ruleResultsOpt)
       ruleResultsOpt match {
@@ -524,7 +525,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(newCache,Effect.action(PrepareEODisplay(pageContext)))
 
 
-    case SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
+    case SavingEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) =>
+      val eo = eos.head
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO " + eo)
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO | cache " + value)
       D2SpaLogger.logfinest(eo.entityName,"CacheHandler | SavingEO | d2wContext " + d2wContext)

@@ -1052,8 +1052,10 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
     case NewEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       Logger.debug("Get NewEO " + eos)
-      updateEO(eos).map(rrs =>
+      updateEO(eos).map(rrs => {
+        Logger.debug("NewEO response eos; " + rrs)
         requester ! SavingResponse(d2wContext, rrs, ruleResults)
+      }
       )
     case UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       Logger.debug("Get UpdateEO")
