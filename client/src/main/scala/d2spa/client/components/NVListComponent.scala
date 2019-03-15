@@ -29,6 +29,7 @@ object NVListComponent {
     def willReceiveProps(currentProps: Props, nextProps: Props): Callback = {
       //log.finest("NVListComponent willReceiveProps | currentProps: " + currentProps)
       //log.finest("NVListComponent willReceiveProps | nextProps: " + nextProps)
+      log.finest("NVListComponent willReceiveProps ")
 
       val cEntityName = currentProps.d2wContext.d2wContext.entityName
       val nEntityName = nextProps.d2wContext.d2wContext.entityName
@@ -80,11 +81,14 @@ object NVListComponent {
 
         val dataRep = pageContext.dataRep
         val eomodel = p.proxy.value.cache.eomodel.get
+        D2SpaLogger.logfinest(entityName, "NVListComponent mounted: dataRep: " + dataRep)
 
         val drySubstrateOpt: Option[DrySubstrate] = HydrationUtils.drySubstrateFromDataRep(dataRep)
         val displayPropertyKeysRuleResultPot = RuleUtils.potentialFireRuleResultPot(ruleResults, d2wContext, RuleKeys.displayPropertyKeys)
         val needsHydration = HydrationUtils.needsHydration(drySubstrateOpt, displayPropertyKeysRuleResultPot, p.proxy.value.cache, eomodel)
+        D2SpaLogger.logfinest(entityName, "NVListComponent mounted: needsHydration: " + needsHydration)
         if (needsHydration) {
+          D2SpaLogger.logfinest(entityName, "NVListComponent mounted: drySubstrateOpt: " + drySubstrateOpt)
           p.proxy.dispatchCB(HydrationRequest(
             Hydration(drySubstrateOpt.get, // Hydration of objects at the end of relationship, not stored in cache
               WateringScope(ruleResult = displayPropertyKeysRuleResultPot)),
@@ -161,8 +165,7 @@ object NVListComponent {
       D2SpaLogger.logfinest(entityName, "NVListComponent render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
 
       val dataRepOpt = pageContext.dataRep
-
-      //log.finest("dataRepOpt " + dataRepOpt)
+      log.finest("dataRepOpt " + dataRepOpt)
       val eos: List[EO] = dataRepOpt match {
         case Some(dataRep) => {
           val cache = p.proxy.value.cache
@@ -170,13 +173,13 @@ object NVListComponent {
             case DataRep(Some(fs), _) =>
               //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
               //log.finest("NVListCompoennt look for objects in cache " + cache)
-              D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
+              //D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
               EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
 
             case DataRep(_, Some(eosAtKeyPath)) => {
               //log.finest("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
-              D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
-              D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
+              //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
+              //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
               val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
               eovalueOpt match {
                 case Some(eovalue) =>
@@ -184,7 +187,7 @@ object NVListComponent {
                   // ObjectsValue(Vector(1))
                   eovalue match {
                     case ObjectsValue(pks) =>
-                      D2SpaLogger.logfinest(entityName, "NVListComponent render pks " + pks)
+                      //D2SpaLogger.logfinest(entityName, "NVListComponent render pks " + pks)
                       EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value.cache, entityName, pks).toList
                     case _ => List.empty[EO]
                   }
@@ -198,7 +201,8 @@ object NVListComponent {
         }
         case _ => List.empty[EO]
       }
-      D2SpaLogger.logfinest(entityName, "NVListComponent render eos " + eos)
+
+      D2SpaLogger.logfinest(entityName, "NVListComponent render eos " + eos.size)
 
       var dataExist = eos.size > 0
       var csvFileName = "Export"
@@ -283,10 +287,10 @@ object NVListComponent {
           <.tbody({
             if (dataExist) {
               val cache = p.proxy.value.cache
-              println("NVListComponent | sortEOS | s.sortOrdering " + s.sortOrdering)
+              //println("NVListComponent | sortEOS | s.sortOrdering " + s.sortOrdering)
 
               val sortedEos = EOCacheUtils.sortEOS(eos, s.sortOrdering, cache)
-              println("NVListComponent | sortEOS " + sortedEos)
+              //println("NVListComponent | sortEOS " + sortedEos)
 
               sortedEos toTagMod (eo => {
                 <.tr(

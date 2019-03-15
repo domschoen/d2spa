@@ -13,6 +13,7 @@ object WebSocketMessages {
   // __________________
 
   sealed trait WebSocketMsgIn
+  final case class ImportCustomers(info: String) extends WebSocketMsgIn
   final case class StringMsgIn(string: String) extends WebSocketMsgIn
   final case class GetDebugConfiguration(d2wContext: D2WContext) extends WebSocketMsgIn
   final case class FetchEOModel(d2wContext: D2WContext) extends WebSocketMsgIn
@@ -38,21 +39,25 @@ object WebSocketMessages {
 
   sealed trait WebSocketMsgOut
 
-  final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
-  final case class RuleRequestResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends WebSocketMsgOut
-
   final case class FetchedEOModel(eomodel: EOModel,d2wContext: D2WContext) extends WebSocketMsgOut
   final case class FetchedMenus(menus: Menus, d2wContext: D2WContext) extends WebSocketMsgOut
+
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
-  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends WebSocketMsgOut
   final case class RulesForSearchResultResponseMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
 
-  final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
+  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+
+  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
   final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
+
+  final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
+
+
+  //final case class FetchedObjectsForListMsgOut(fs: EOFetchSpecification, eos: Seq[EO]) extends WebSocketMsgOut
 }
 
 //class RuleResults(ruleResults: List[RuleResult])
@@ -87,6 +92,24 @@ object RuleKeys {
   val isDeleteAllowed = "isDeleteAllowed"
 }
 
+object NSSelector {
+  val QualifierOperatorEqual = "QualifierOperatorEqual"
+  val QualifierOperatorNotEqual = "QualifierOperatorNotEqual"
+  val QualifierOperatorLessThan = "QualifierOperatorLessThan"
+  val QualifierOperatorGreaterThan = "QualifierOperatorGreaterThan"
+  val QualifierOperatorGreaterThanOrEqualTo = "QualifierOperatorGreaterThanOrEqualTo"
+  val QualifierOperatorLessThanOrEqualTo = "QualifierOperatorLessThanOrEqualTo"
+  val QualifierOperatorContains = "QualifierOperatorContains"
+  val QualifierOperatorLike = "QualifierOperatorLike"
+  val QualifierOperatorCaseInsensitiveLike = "QualifierOperatorCaseInsensitiveLike"
+}
+
+object EOQualifierType {
+  val EOAndQualifier = "EOAndQualifier"
+  val EOOrQualifier = "EOOrQualifier"
+  val EOKeyValueQualifier = "EOKeyValueQualifier"
+  val EONotQualifier = "EONotQualifier"
+}
 
 
 // Use cases:
@@ -254,7 +277,7 @@ object Test10 extends MaterializePicklerFallback {
   implicit val ruleRequestForAppInitResponseMsgPicker: Pickler[RuleRequestForAppInitResponseMsg] = generatePickler[RuleRequestForAppInitResponseMsg]
   implicit val completedEOMsgOutPicker: Pickler[CompletedEOMsgOut] = generatePickler[CompletedEOMsgOut]
   implicit val fetchedObjectsPicker: Pickler[FetchedObjectsMsgOut] = generatePickler[FetchedObjectsMsgOut]
-  implicit val fetchedObjectsForListMsgOutPicker: Pickler[FetchedObjectsForListMsgOut] = generatePickler[FetchedObjectsForListMsgOut]
+  //implicit val fetchedObjectsForListMsgOutPicker: Pickler[FetchedObjectsForListMsgOut] = generatePickler[FetchedObjectsForListMsgOut]
   implicit val savingResponseMsgOutPicker: Pickler[SavingResponseMsgOut] = generatePickler[SavingResponseMsgOut]
   implicit val deletingResponseMsgOutPicker: Pickler[DeletingResponseMsgOut] = generatePickler[DeletingResponseMsgOut]
 
@@ -269,7 +292,7 @@ object Test10 extends MaterializePicklerFallback {
     .addConcreteType[RuleRequestForAppInitResponseMsg]
     .addConcreteType[CompletedEOMsgOut]
     .addConcreteType[FetchedObjectsMsgOut]
-    .addConcreteType[FetchedObjectsForListMsgOut]
+    //.addConcreteType[FetchedObjectsForListMsgOut]
     .addConcreteType[SavingResponseMsgOut]
     .addConcreteType[DeletingResponseMsgOut]
 
@@ -374,6 +397,33 @@ object Test14 extends MaterializePicklerFallback {
 
   def serializer(c: WebSocketMsgIn) = Pickle.intoBytes(c)
 }
+
+object UrlUtils {
+  // TBD Sorting parameter
+  // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
+  def qualifiersUrlPart(q: EOQualifier): String = {
+    val qualifiersStrings = q match {
+      case EOAndQualifier(qualifiers) => qualifiers.map(q => keyValueQualifierUrlPart(q.asInstanceOf[EOKeyValueQualifier]))
+      case kvq : EOKeyValueQualifier => List(keyValueQualifierUrlPart(kvq))
+      case _ => List()
+    }
+    return qualifiersStrings.mkString(" and ")
+  }
+
+  def keyValueQualifierUrlPart(qualifier: EOKeyValueQualifier): String = {
+    val value = qualifier.value
+    return value match {
+      case StringValue(stringV) => qualifier.key + " caseInsensitiveLike '*" + stringV + "*'"
+      case IntValue(i) => "" // TODO
+      case BooleanValue(b) => qualifier.key + " = " + (if (b) "1" else "0")
+      case ObjectValue(eo) => "" // TODO
+      // To Restore case ObjectsValue(eos) => "" // TODO
+    }
+  }
+
+}
+
+
 
 
 sealed trait EOValue
@@ -549,6 +599,13 @@ object EOValue {
     }
   }
 
+  def intValueForKey(eo: EO, key: String) = {
+    valueForKey(eo, key) match {
+      case Some(value) => juiceInt(value)
+      case None => 0
+    }
+  }
+
 
   def valueForKey(eo: EO, key: String) = {
     val valueMap = keyValues(eo)
@@ -571,7 +628,7 @@ object EOValue {
   }
 
 
-    // Only if the map has all attribute
+  // Only if the map has all attribute
   // Not ok for partial update
   def takeAllValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
     eo.copy(keys = keyValuePairs.keys.toList, values = keyValuePairs.values.toList)
@@ -677,7 +734,7 @@ object EOQualifier {
         val eoValueOpt = EOValue.valueForKey(eo, key)
 
         eoValueOpt match {
-            // eo has a value which is not empty
+          // eo has a value which is not empty
           case Some(eoValue) =>
             //println("Compare " + eoValue + " with " + value)
             // TODO check the value
@@ -686,11 +743,11 @@ object EOQualifier {
                 // Qualifier value hopefully of the same type or empty
                 value match {
                   case StringValue(qualStr) =>
-                        val lStr = str.toLowerCase
-                        val lQualStr = qualStr.toLowerCase
-                        lStr.indexOf(lQualStr) >= 0
+                    val lStr = str.toLowerCase
+                    val lQualStr = qualStr.toLowerCase
+                    lStr.indexOf(lQualStr) >= 0
                   case EmptyValue => false
-                    // comparing apple with banana -> more like an error
+                  // comparing apple with banana -> more like an error
                   case _ => false
                 }
               case EmptyValue => value match {
@@ -707,7 +764,7 @@ object EOQualifier {
                   case _ => false
                 }
 
-                /// For all other type, we fall back the following default behaviour:
+              /// For all other type, we fall back the following default behaviour:
               case _ => eoValue.equals(value)
             }
           // eo has no value defined for that key
@@ -786,7 +843,7 @@ object EORelationship {
     destinationEntity.relationships.find(
       rel => {
         EORelationship.isRelationshipReciprocalToRelationship(sourceEntity, relationship, rel)
-    })
+      })
   }
 
   def isRelationshipReciprocalToRelationship(sourceEntity: EOEntity, of: EORelationship, otherRelationship: EORelationship): Boolean = {
@@ -797,10 +854,10 @@ object EORelationship {
       val count = ourJoins.size
 
       if (count == otherJoins.size) {
-         val notReciprocalJoinsOpt = ourJoins.find(join => {
-            val notReciprocalJoinOpt = otherJoins.find(otherJoin => !EOJoin.isReciprocalToJoin(join,otherJoin))
-            notReciprocalJoinOpt.isDefined
-         })
+        val notReciprocalJoinsOpt = ourJoins.find(join => {
+          val notReciprocalJoinOpt = otherJoins.find(otherJoin => !EOJoin.isReciprocalToJoin(join,otherJoin))
+          notReciprocalJoinOpt.isDefined
+        })
         notReciprocalJoinsOpt.isEmpty
       } else false
     } else false
@@ -824,12 +881,12 @@ case class PotFiringKey (value: Either[RuleToFire, Option[String]])
 
 
 case class D2WContext(
-                  entityName: Option[String],
-                  task: Option[String],
-                  propertyKey:  Option[String] = None,
-                  pageConfiguration: Option[String] = None,
-                    additionalKey: Option[String] = None
-                                )
+                       entityName: Option[String],
+                       task: Option[String],
+                       propertyKey:  Option[String] = None,
+                       pageConfiguration: Option[String] = None,
+                       additionalKey: Option[String] = None
+                     )
 
 
 case class RuleResult(rhs: D2WContext, key: String, value: RuleValue)
@@ -842,7 +899,7 @@ object RulesUtilities {
     ruleResults.find(r => {r.key.equals(key)})
 
 
-// case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
+  // case class RuleValue(stringV: Option[String] = None, stringsV: List[String] = List())
   def ruleListValueWithRuleResult(ruleResultOpt: Option[RuleResult]) = {
     ruleResultOpt match {
       case Some(ruleResult) =>
@@ -890,14 +947,14 @@ object RulesUtilities {
 //case class MetaDatas(entityMetaDatas: List[EntityMetaData])
 
 sealed trait RulesContainer {
-def ruleResults: List[RuleResult]
+  def ruleResults: List[RuleResult]
 }
 
 case class TaskFault(entityName: String, taskName: String, override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 
 // Property
 case class PropertyMetaInfo(typeV: String = "stringV", name: String, entityName : String, task: String,
-                        override val ruleResults: List[RuleResult] = List()) extends RulesContainer
+                            override val ruleResults: List[RuleResult] = List()) extends RulesContainer
 //case class PropertyMetaInfo(d2WContext: D2WContext, value: StringValue, ruleKeyValues: Map[String,RuleResult] )
 
 // A D2W Context of type page (without property)

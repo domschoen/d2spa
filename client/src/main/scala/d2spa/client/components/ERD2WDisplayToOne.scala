@@ -82,7 +82,7 @@ object ERD2WDisplayToOne {
       val eoOpt = pageContext.eo
       eoOpt match {
         case Some(eo) =>
-          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eo " + eo)
+          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eo " + eo)
 
           val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
           entityOpt match {
@@ -97,7 +97,7 @@ object ERD2WDisplayToOne {
               val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
               val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEOValueOpt  " + destinationEOValueOpt)
+              //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEOValueOpt  " + destinationEOValueOpt)
 
               destinationEOValueOpt match {
 
@@ -108,7 +108,7 @@ object ERD2WDisplayToOne {
                       destinationEntityOpt match {
                         case Some(destinationEntity) =>
                           val destinationEntityName = destinationEntity.name
-                          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
+                          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEntityName  " + destinationEntityName)
                           val destEOFault = EOFault(destinationEntityName, destinationEOPk)
                           val hydration = Hydration(DrySubstrate(eo = Some(destEOFault)), WateringScope(ruleResult = keyWhenRelationshipRuleResultPot))
                           p.proxy.dispatchCB(HydrationRequest(hydration, ruleRequestOpt))
@@ -121,7 +121,7 @@ object ERD2WDisplayToOne {
                       Callback.empty
                   }
                 case None =>
-                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no entity for entity name: " + entityName)
+                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no value for property " + propertyName + " in eo: " + eo)
                   Callback.empty
               }
             case None =>
@@ -168,7 +168,7 @@ object ERD2WDisplayToOne {
                         case Some(destinationEntity) =>
 
                           val destinationEntityName = destinationEntity.name
-                          D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEOPk)
+                          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEOPk)
                           val cache = p.proxy.value.cache
                           //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
                           val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)

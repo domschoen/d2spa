@@ -66,6 +66,7 @@ object ERDInspect {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
       val entityName = d2wContext.entityName.get
+      log.finest("ERDInspect render " + entityName)
       D2SpaLogger.logfinest(entityName,"ERDInspect render " + entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
       //log.finest("ERDInspect render with D2WContext: " + d2wContext)

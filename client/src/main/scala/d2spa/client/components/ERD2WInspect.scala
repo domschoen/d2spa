@@ -75,15 +75,13 @@ object ERD2WInspect {
           val dataRep = pageContext.dataRep
           val drySubstrateOpt: Option[DrySubstrate] = dataRep match {
             case Some(DataRep(Some(fetchSpecification), _)) =>
-            // Materialooze Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
-            Some(DrySubstrate())
+              Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
 
             case Some(DataRep(_, Some(eosAtKeyPath))) => {
               val eoValueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
               val eo = EOValue.juiceEO(eoValueOpt.get).get
               val eoFault = EOFault(eosAtKeyPath.destinationEntityName,eo)
-              // Materialooze Some(DrySubstrate(eo = Some(eoFault)))
-              Some(DrySubstrate())
+              Some(DrySubstrate(eo = Some(eoFault)))
             }
             case _ => None
           }
@@ -133,74 +131,74 @@ object ERD2WInspect {
       val entityName = d2wContext.entityName.get
       D2SpaLogger.logfinest(entityName,"ERD2WInspect render for entity: " + entityName)
 
-          val ruleResultsModel = p.proxy.value.ruleResults
-          //log.finest("ERD2WInspect render ruleResultsModel: " + ruleResultsModel)
-          D2SpaLogger.logfinest(entityName,"ERD2WInspect render |  " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      val ruleResultsModel = p.proxy.value.ruleResults
+      //log.finest("ERD2WInspect render ruleResultsModel: " + ruleResultsModel)
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect render |  " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
 
-          val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
-          D2SpaLogger.logfinest(entityName,"ERD2WInspect render task displayPropertyKeys " + displayPropertyKeys)
-          val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
+      val displayPropertyKeys = RuleUtils.ruleListValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayPropertyKeys)
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect render task displayPropertyKeys " + displayPropertyKeys)
+      val entityDisplayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.displayNameForEntity)
 
-          val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
-          val isEditAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isEditAllowed)
-          val cloneAllowed = false && isEditAllowed // not yet implemented
-          val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
+      val isInspectAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isInspectAllowed)
+      val isEditAllowed = RuleUtils.ruleBooleanValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.isEditAllowed)
+      val cloneAllowed = false && isEditAllowed // not yet implemented
+      val showFirstCell = isInspectAllowed || isEditAllowed || cloneAllowed
 
-          D2SpaLogger.logfinest(entityName,"ERD2WInspect render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect render | Inspect: " + isInspectAllowed + " Edit: " + isEditAllowed + " Clone: " + cloneAllowed)
 
-          val dataRepOpt = pageContext.dataRep
+      val dataRepOpt = pageContext.dataRep
 
-          D2SpaLogger.logfinest(entityName,"dataRepOpt " + dataRepOpt)
-          val eoOpt: Option[EO] = dataRepOpt match {
-            case Some(dataRep) => {
-              val cache = p.proxy.value.cache
-              dataRep match {
-                case DataRep(Some(fs), _) =>
-                  //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
-                  //log.finest("NVListCompoennt look for objects in cache " + cache)
-                  //D2SpaLogger.logfinest(entityName,"ERD2WInspect look for objects in cache with fs")
-                  //EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
-                  None
+      D2SpaLogger.logfinest(entityName,"dataRepOpt " + dataRepOpt)
+      val eoOpt: Option[EO] = dataRepOpt match {
+        case Some(dataRep) => {
+          val cache = p.proxy.value.cache
+          dataRep match {
+            case DataRep(Some(fs), _) =>
+              //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
+              //log.finest("NVListCompoennt look for objects in cache " + cache)
+              //D2SpaLogger.logfinest(entityName,"ERD2WInspect look for objects in cache with fs")
+              //EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
+              None
 
-                case DataRep(_, Some(eosAtKeyPath)) => {
-                  //log.finest("ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
-                  D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
-                  val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
-                  D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath eovalueOpt: " + eovalueOpt)
+            case DataRep(_, Some(eosAtKeyPath)) => {
+              //log.finest("ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
+              D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
+              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
+              D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath eovalueOpt: " + eovalueOpt)
 
-                  eovalueOpt match {
-                    case Some(eovalue) =>
+              eovalueOpt match {
+                case Some(eovalue) =>
 
-                      // ObjectsValue(Vector(1))
-                      eovalue match {
-                        case ObjectValue(eo) =>
-                          D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo found")
-                          EOCacheUtils.outOfCacheEOUsingPk(p.proxy.value.cache, entityName, eo)
-                        case _ => None
-                      }
-                    case _ =>
-                      None
+                  // ObjectsValue(Vector(1))
+                  eovalue match {
+                    case ObjectValue(eo) =>
+                      D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo found")
+                      EOCacheUtils.outOfCacheEOUsingPk(p.proxy.value.cache, entityName, eo)
+                    case _ => None
                   }
-                }
-                case _ => None
+                case _ =>
+                  None
               }
             }
             case _ => None
           }
-          D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo foudn " + eoOpt.isDefined)
+        }
+        case _ => None
+      }
+      D2SpaLogger.logfinest(entityName,"ERD2WInspect render eo foudn " + eoOpt.isDefined)
 
-          eoOpt match {
-            case Some(eo) =>
-              val pageContextEO = pageContext.copy(eo = eoOpt)
-              val d2wContext = pageContext.d2wContext
-              D2SpaLogger.logfinest(entityName,"ERD2WInspect render | d2w context for repetition: " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
+      eoOpt match {
+        case Some(eo) =>
+          val pageContextEO = pageContext.copy(eo = eoOpt)
+          val d2wContext = pageContext.d2wContext
+          D2SpaLogger.logfinest(entityName,"ERD2WInspect render | d2w context for repetition: " + d2wContext.entityName + " task " + d2wContext.task + " propertyKey " + d2wContext.propertyKey + " page configuration " + d2wContext.pageConfiguration)
 
-              <.div(PageRepetition(p.router, pageContextEO, p.proxy))
+          <.div(PageRepetition(p.router, pageContextEO, p.proxy))
 
-            case None =>
-              <.div("EO not found")
-          }
+        case None =>
+          <.div("EO not found")
+      }
 
 
 

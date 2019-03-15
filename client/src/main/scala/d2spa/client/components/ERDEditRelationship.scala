@@ -65,8 +65,7 @@ object ERDEditRelationship {
           val isHydrated = HydrationUtils.isHydratedForPropertyKeys(
             eomodel,
             cache,
-            // Materialooze DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
-            DrySubstrate(),
+            DrySubstrate(fetchSpecification = Some(EOFetchAll(destinationEntity.name))),
             List(keyWhenRelahionship))
           log.finest("ERDEditRelationship | willReceiveProps | key when relathionship but isHydrated " + isHydrated)
 
@@ -77,7 +76,7 @@ object ERDEditRelationship {
       }
 
       //Callback.when(continueMount) {
-        mounted(nextProps)
+      mounted(nextProps)
       //}
       //mounted(nextProps)
 
@@ -170,7 +169,7 @@ object ERDEditRelationship {
       }
     }
     def handleSelectionChange(eoOpt: Option[EO]) = {
-        $.modState(_.copy(selectedEO = eoOpt))
+      $.modState(_.copy(selectedEO = eoOpt))
     }
 
     def render(p: Props, s: State) = {

@@ -129,7 +129,7 @@ object ERDList {
                               pageConfiguration = Some(pageConfiguration)
                             )
                           )
-                          //log.finest("ERDList render embedded list with context " + embeddedListD2WContext)
+                          log.finest("ERDList render embedded list with context " + embeddedListD2WContext)
                           <.div(NVListComponent(p.router, embeddedListD2WContext, true, p.proxy))
 
                         case None => <.div("No destinaton Entity name")
