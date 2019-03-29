@@ -53,8 +53,8 @@ lazy val client = (project in file("client")).settings(commonSettings)
         //"com.typesafe.play" %%% "play-json" % "2.6.10",
         "io.suzaku" %%% "diode" % "1.1.4",
         "io.suzaku" %%% "diode-react" % "1.1.4.131",
-        "com.zoepepper" %%% "scalajs-jsjoda" % "1.1.1",
-        "com.zoepepper" %%% "scalajs-jsjoda-as-java-time" % "1.1.1",
+        //"com.zoepepper" %%% "scalajs-jsjoda" % "1.1.1",
+       // "com.zoepepper" %%% "scalajs-js-as-java-time" % "1.1.1",
         "com.lihaoyi" %%% "utest" % "0.6.5" % Test,
         "com.lihaoyi" %%% "autowire" % Settings.versions.autowire,
         "io.suzaku" %%% "boopickle" % Settings.versions.booPickle,
@@ -68,9 +68,8 @@ lazy val client = (project in file("client")).settings(commonSettings)
         "org.webjars.npm" % "react-dom" % "16.5.1" / "umd/react-dom.development.js" minified "umd/react-dom.production.min.js" dependsOn "umd/react.development.js" commonJSName "ReactDOM",
         "org.webjars.npm" % "react-dom" % "16.5.1" / "umd/react-dom-server.browser.development.js" minified  "umd/react-dom-server.browser.production.min.js" dependsOn "umd/react-dom.development.js" commonJSName "ReactDOMServer",
         "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
-        "org.webjars" % "bootstrap" % "3.3.6" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
-        "org.webjars" % "log4javascript" % "1.4.10" / "js/log4javascript_uncompressed.js" minified "js/log4javascript.js",
-        "org.webjars.npm" % "js-joda" % "1.1.8" / "dist/js-joda.js" minified "dist/js-joda.min.js"
+        "org.webjars" % "bootstrap" % "3.3.6" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js" //,
+        //"org.webjars.npm" % "js-joda" % "1.1.8" / "dist/js-joda.js" minified "dist/js-joda.min.js"
     ),
     jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv,
     // by default we do development build, no eliding
@@ -103,7 +102,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .jsSettings(
     libraryDependencies ++= Seq(
         "com.zoepepper" %%% "scalajs-jsjoda" % "1.1.1",
-        "com.zoepepper" %%% "scalajs-jsjoda-as-java-time" % "1.1.1",
+        //"com.zoepepper" %%% "scalajs-jsjoda-as-java-time" % "1.1.1",
         "com.lihaoyi" %%% "autowire" % Settings.versions.autowire,
         "io.suzaku" %%% "boopickle" % Settings.versions.booPickle,
         "org.scala-js" %%% "scalajs-java-logging" % "0.1.5"

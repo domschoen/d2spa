@@ -174,6 +174,7 @@ case class SaveError(eo: EOContaining) extends Action
 object ListEOs extends Action
 case class DeletedEO(eo:EOContaining) extends Action
 case class UpdateEOsForEOOnError(eo: EOContaining) extends Action
+case class ShowResults(fs: EOFetchSpecification) extends Action
 
 //trait D2WAction extends diode.Action
 
