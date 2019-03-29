@@ -22,15 +22,16 @@ object ERDEditRelationship {
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
-  case class State(selectedEO: Option[EO])
+  case class State(selectedEO: Option[EOContaining])
 
-  def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
+  def eoWith(eos: Seq[EOContaining], entity: EOEntity, id: String) = {
     println("eoWith | entity name " + entity.name + " id " + id + " eos " + eos )
     //log.finest("id " + id + " class " + id.getClass.getName)
     if (id.equals("None")) None
     val pk = EOPk(id.split("_").map(_.toInt).toList)
 
-    val optEO = eos.find(eo => {
+    val optEO = eos.find(eoContaining => {
+      val eo = eoContaining.eo
       pk.equals(eo.pk)
     })
     optEO
@@ -76,7 +77,7 @@ object ERDEditRelationship {
       }
 
       //Callback.when(continueMount) {
-      mounted(nextProps)
+        mounted(nextProps)
       //}
       //mounted(nextProps)
 
@@ -147,29 +148,30 @@ object ERDEditRelationship {
       }
     }
 
-    def handleSubmit(p: Props, s: State, pageContext: PageContext, ceo: EO, propertyName: String, e: ReactEventFromInput): Callback = {
+    def handleSubmit(p: Props, s: State, pageContext: PageContext, ceo: EOContaining, propertyName: String, e: ReactEventFromInput): Callback = {
 
       e.preventDefaultCB >> {
         log.finest("ERDEditRelationship handleSubmit " + s.selectedEO)
         s.selectedEO match {
-          case Some(eo) =>
-            val destinationEOsValueOpt = EOValue.valueForKey(ceo, propertyName)
+          case Some(eoContaining) =>
+            val destinationEOsValueOpt = EOValue.valueForKey(eoContaining, propertyName)
             log.finest("ERDEditRelationship handleSubmit : " + destinationEOsValueOpt +  " property " + propertyName)
             val eoPkList: List[EOPk] = destinationEOsValueOpt match {
               case Some(ObjectsValue(eoPks)) =>
                 eoPks
               case _ => List.empty[EOPk]
             }
+            val eo = eoContaining.eo
             val newEOPkList = eo.pk :: eoPkList
-            p.proxy.dispatchCB(UpdateEOValueForProperty(ceo, pageContext, ObjectsValue(newEOPkList)))
+            p.proxy.dispatchCB(UpdateEOValueForProperty(eoContaining, pageContext, ObjectsValue(newEOPkList)))
 
           case None =>
             Callback.empty
         }
       }
     }
-    def handleSelectionChange(eoOpt: Option[EO]) = {
-      $.modState(_.copy(selectedEO = eoOpt))
+    def handleSelectionChange(eoOpt: Option[EOContaining]) = {
+        $.modState(_.copy(selectedEO = eoOpt))
     }
 
     def render(p: Props, s: State) = {
@@ -229,7 +231,8 @@ object ERDEditRelationship {
                                 log.finest("ERDEditRelationship render eoRefs " + eos)
                                 log.finest("ERDEditRelationship render eo " + eo)
                                 val defaultValue = s.selectedEO match {
-                                  case Some(eo) =>
+                                  case Some(eoContaining) =>
+                                    val eo = eoContaining.eo
                                     EOValue.juiceEOPkString(eo.pk)
                                   case _ => "None"
                                 }
@@ -250,7 +253,7 @@ object ERDEditRelationship {
 
                                         //log.finest("id " + id + " for eo: " + x)
                                         val displayName = EOValue.stringValueForKey(deo, keyWhenRelationship)
-                                        val valueString =  EOValue.juiceEOPkString(deo.pk)
+                                        val valueString =  EOValue.juiceEOPkString(deo.eo.pk)
                                         (valueString, displayName)
                                       })
                                       // remove None

@@ -49,7 +49,7 @@ object WebSocketClient {
 
 
   case class Socket(url: String, d2wContextOpt: Option[PageContext])(onMessage: (MessageEvent) => _) {
-    println("  SOCKETE SOCKETE SOCKETE")
+    println("  SOCKETE SOCKETE SOCKETE " + url)
 
     var isClosed = true
     var toBeSent: Option[WebSocketMsgIn] = None
@@ -113,13 +113,13 @@ object WebSocketClient {
               case RuleResults(ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults))
               case RuleRequestResponseMsg(d2wContext, ruleResults) => MyCircuit.dispatch(client.SetJustRuleResults(ruleResults.get))
               case RuleRequestForAppInitResponseMsg(d2wContext, ruleResults, eoOpt) => MyCircuit.dispatch(client.SetRulesForPrepareEO(d2wContext, ruleResults, eoOpt))
-
               case RulesForSearchResultResponseMsgOut(fs,eos,ruleResultsOpt) => MyCircuit.dispatch(client.SearchResultWithRuleResults(fs,eos,ruleResultsOpt))
+
               case CompletedEOMsgOut(d2wContextOpt, hydration, eos, ruleResultsOpt) => MyCircuit.dispatch(client.CompletedEO(d2wContextOpt, hydration, eos,ruleResultsOpt))
               case FetchedObjectsMsgOut(entityName, eos, ruleResultsOpt) => MyCircuit.dispatch(client.FetchedObjectsForEntity(entityName,eos,ruleResultsOpt))
               //CompletedEOMsgOutcase FetchedObjectsForListMsgOut(fs, eos) => MyCircuit.dispatch(client.SearchResult(fs, eos))
-              case SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) =>
-                MyCircuit.dispatch(client.SavingEO(d2wContext, eos, ruleResults))
+              case SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EOContaining], ruleResults: Option[List[RuleResult]]) =>
+                MyCircuit.dispatch(client.SavingEO(d2wContext, eos.head, ruleResults))
               case DeletingResponseMsgOut(eo) => MyCircuit.dispatch(client.DeletingEO(eo))
               case DebugConfMsg(showDebugButton, d2wContext) => MyCircuit.dispatch(SetDebugConfiguration(DebugConf(showDebugButton), d2wContext))
             }

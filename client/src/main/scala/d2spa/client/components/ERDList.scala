@@ -119,7 +119,7 @@ object ERDList {
                           val listConfigurationNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.listConfigurationName)
                           D2SpaLogger.logfinest(entityName,"ERDList render | listConfigurationNameOpt " + listConfigurationNameOpt)
 
-                          D2SpaLogger.logfinest(entityName,"ERDList render | dataRep " + eo.entityName + " propertyName: " + propertyName + " destinationEntityName: " + destinationEntityName)
+                          D2SpaLogger.logfinest(entityName,"ERDList render | dataRep " + eo.eo.entityName + " propertyName: " + propertyName + " destinationEntityName: " + destinationEntityName)
 
                           val embeddedListD2WContext = PageContext (
                             dataRep = Some(DataRep(eosAtKeyPath = Some(EOsAtKeyPath(eo, propertyName, destinationEntityName)))),

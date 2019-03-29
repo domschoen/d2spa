@@ -104,6 +104,8 @@ object ERD2WDisplayToOne {
                 case Some(destinationEOValue) =>
                   destinationEOValue match {
                     case ObjectValue(destinationEOPk) =>
+                      //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: eomodel: " + eomodel)
+
                       val destinationEntityOpt = EOModelUtils.destinationEntity(eomodel, entity, propertyName)
                       destinationEntityOpt match {
                         case Some(destinationEntity) =>

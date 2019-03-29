@@ -88,15 +88,15 @@ object D2WEditPage {
     }
 
 
-    def save(router: RouterCtl[TaskAppPage], entityName: String, eo: EO) = {
+    def save(router: RouterCtl[TaskAppPage], entityName: String, eoContaining: EOContaining) = {
 
-      val isNewEO = EOValue.isNewEO(eo)
+      val isNewEO = EOValue.isNewEO(eoContaining)
       if (isNewEO) {
         Callback.log(s"Save new EO: $entityName") >>
-          $.props >>= (_.proxy.dispatchCB(SaveNewEO(entityName, eo)))
+          $.props >>= (_.proxy.dispatchCB(SaveNewEO(entityName, eoContaining)))
       } else {
         Callback.log(s"Save: $entityName") >>
-          $.props >>= (_.proxy.dispatchCB(Save(entityName, eo)))
+          $.props >>= (_.proxy.dispatchCB(Save(entityName, eoContaining)))
       }
 
     }
@@ -134,13 +134,13 @@ object D2WEditPage {
           //log.finest("D2WEditPage: render eo | inserted eos " + p.proxy.value.cache.insertedEOs)
           //log.finest("D2WEditPage: render eo | db eos " + p.proxy.value.cache.eos)
 
-          val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eoRef)
-          log.finest("D2WEditPage: render eo out of cache: " + eoOpt)
+          val eoContainingOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, eoRef)
+          log.finest("D2WEditPage: render eo out of cache: " + eoContainingOpt)
 
-          eoOpt match {
-            case Some(eo) =>
+          eoContainingOpt match {
+            case Some(eoContaining) =>
               val ruleResults = p.proxy.value.ruleResults
-              val pageContext = shallowPageContext.copy(eo = Some(eo))
+              val pageContext = shallowPageContext.copy(eo = Some(eoContaining))
 
 
               log.finest("D2WEditPage: render check meta data fetched with d2wContext " + d2wContext)
@@ -155,11 +155,13 @@ object D2WEditPage {
               val displayNameOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResults, d2wContext, RuleKeys.displayNameForEntity)
               val displayName = if (displayNameOpt.isDefined) displayNameOpt.get else ""
 
-              log.finest("Edit page EO " + eo)
+              log.finest("Edit page EO " + eoContaining)
               <.div(^.width := "100%",
                 <.div(^.id := "b", MenuHeader(p.router, entityName, p.proxy)),
                 <.div(^.id := "a",
                   {
+                    val eo = eoContaining.eo
+
                     if (eo.validationError.isDefined) {
                       <.div(<.span(^.color := "red", ^.dangerouslySetInnerHtml := eo.validationError.get))
                     } else <.div()
@@ -177,7 +179,7 @@ object D2WEditPage {
                         " "
                       },
                       if (isEdit(p)) {
-                        <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eo))
+                        <.img(^.src := "/assets/images/ButtonSave.gif", ^.onClick --> save(p.router, entityName, eoContaining))
                       } else {
                         " "
                       },

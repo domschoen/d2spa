@@ -25,9 +25,10 @@ object D2WDisplayNumber {
     def render(p: Props) = {
       val pageContext = p.d2wContext
       val d2wContext = pageContext.d2wContext
-      val eoOpt = pageContext.eo
-      eoOpt match {
-        case Some(eo) =>
+      val eoContainingOpt = pageContext.eo
+      eoContainingOpt match {
+        case Some(eoContaining) =>
+          val eo = eoContaining.eo
 
 
           val entityName = d2wContext.entityName.get
@@ -41,7 +42,7 @@ object D2WDisplayNumber {
             // We expect a value for that property. Either:
             // StringValue
             // EmptyValue
-            val eoValue = EOValue.valueForKey(eo,propertyName).get
+            val eoValue = EOValue.valueForKey(eoContaining, propertyName).get
             val value = EOValue.juiceString(eoValue)
             <.div(
               <.span(^.id := "description", value)

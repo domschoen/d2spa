@@ -118,12 +118,12 @@ object SPAMain   extends  js.JSApp {
                      previousPage
                    case None =>
                      val firstD2WContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.edit)),
-                       eo = Some(
+                       eo = Some(EOContainer(
                         EO(
                           entityName = m.entity,
                           pk = EOPk(List(m.pk))
                         )
-                       )
+                       ))
                      )
                      firstD2WContext
                  }
@@ -141,9 +141,9 @@ object SPAMain   extends  js.JSApp {
               menusConnection(p => {
 
                 val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(m.entity), task =  Some(TaskDefine.inspect)),
-                  eo = Some(
+                  eo = Some(EOContainer(
                   EO(entityName = m.entity, pk = EOPk(List(m.pk)))
-                ))
+                )))
                 if (!p.value.appConfiguration.socketReady) {
                   WebSocketClient.setSocket(Some(d2wContext))
                 }

@@ -2,6 +2,7 @@ package d2spa.shared
 
 import boopickle.Default._
 import boopickle.{MaterializePicklerFallback, TransformPicklers}
+import d2spa.shared.EOValue.eoValueForKey
 import d2spa.shared.WebSocketMessages._
 
 
@@ -14,25 +15,26 @@ object WebSocketMessages {
 
   sealed trait WebSocketMsgIn
   final case class ImportCustomers(info: String) extends WebSocketMsgIn
+  final case class ImportCountries(info: String) extends WebSocketMsgIn
   final case class StringMsgIn(string: String) extends WebSocketMsgIn
   final case class GetDebugConfiguration(d2wContext: D2WContext) extends WebSocketMsgIn
   final case class FetchEOModel(d2wContext: D2WContext) extends WebSocketMsgIn
   final case class FetchMenus(d2wContext: D2WContext) extends WebSocketMsgIn
   final case class ExecuteRuleRequest(ruleRequest: RuleRequest) extends WebSocketMsgIn
   final case class RuleToFire(rhs: D2WContext, key: String) extends WebSocketMsgIn
-  final case class DeleteEOMsgIn(eo: EO) extends WebSocketMsgIn
+  final case class DeleteEOMsgIn(eo: EOContaining) extends WebSocketMsgIn
   //final case class CompleteEO(d2wContext: D2WContextFullFledged, eo: EOFault, missingKeys: Set[String], isMetaDataFetched: Boolean) extends WebSocketMsgIn
   //final case class HydrateEOs(d2wContext: D2WContextFullFledged, pks: Seq[EOPk], missingKeys: Set[String]) extends WebSocketMsgIn
   //final case class HydrateAll(fs: EOFetchAll) extends WebSocketMsgIn
   //final case class Hydrate(fs: EOQualifiedFetch) extends WebSocketMsgIn
-  final case class RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class RuleRequestForSearchResult(fs: EOFetchSpecification, eos: Seq[EOContaining], ruleRequest: RuleRequest) extends WebSocketMsgIn
 
   final case class Hydrate(d2wContext: Option[D2WContext], hydration: Hydration, ruleRequest: Option[RuleRequest]) extends WebSocketMsgIn
 
   // D2W Context is needed for the fetch of rules
-  final case class NewEO(d2wContext: D2WContext, eos: List[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
-  final case class UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleRequest: RuleRequest) extends WebSocketMsgIn
-  final case class AppInitMsgIn(ruleRequest: RuleRequest, eoOpt: Option[EO]) extends WebSocketMsgIn
+  final case class NewEO(d2wContext: D2WContext, eos: List[EOContaining], ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class UpdateEO(d2wContext: D2WContext, eos: List[EOContaining], ruleRequest: RuleRequest) extends WebSocketMsgIn
+  final case class AppInitMsgIn(ruleRequest: RuleRequest, eoOpt: Option[EOContaining]) extends WebSocketMsgIn
 
   // Server ---> Client
   // __________________
@@ -44,15 +46,15 @@ object WebSocketMessages {
 
   final case class RuleResults(ruleResults: List[RuleResult]) extends WebSocketMsgOut
   final case class RuleRequestResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends WebSocketMsgOut
-  final case class RulesForSearchResultResponseMsgOut(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class RuleRequestForAppInitResponseMsg(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EOContaining]) extends WebSocketMsgOut
+  final case class RulesForSearchResultResponseMsgOut(fs: EOFetchSpecification, eos: Seq[EOContaining], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
 
-  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class FetchedObjectsMsgOut(entityName: String, eos: Seq[EOContaining], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
 
-  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
-  final case class DeletingResponseMsgOut(eo: EO) extends WebSocketMsgOut
+  final case class CompletedEOMsgOut(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EOContaining], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class SavingResponseMsgOut(d2wContext: D2WContext, eos: List[EOContaining], ruleResults: Option[List[RuleResult]]) extends WebSocketMsgOut
+  final case class DeletingResponseMsgOut(eo: EOContaining) extends WebSocketMsgOut
 
   final case class DebugConfMsg(showD2WDebugButton: Boolean, d2wContext: D2WContext) extends WebSocketMsgOut
 
@@ -152,10 +154,13 @@ object EO {
     keys.zip(values).toMap
   }
 
-  def updateEOWithMap(eo: EO, keyValues: Map[String, EOValue]) = {
+  def updateEOWithMap(eoContaining: EOContaining, keyValues: Map[String, EOValue]) = {
+    val eo = eoContaining.eo
     val keys = keyValues.keys.toList
     val values = keyValues.values.toList
-    eo.copy(keys = keys, values = values)
+
+    val ueo = eo.copy(keys = keys, values = values)
+    EOContaining.updateEOContainingEO(eoContaining,ueo)
   }
 }
 
@@ -398,6 +403,8 @@ object Test14 extends MaterializePicklerFallback {
   def serializer(c: WebSocketMsgIn) = Pickle.intoBytes(c)
 }
 
+
+
 object UrlUtils {
   // TBD Sorting parameter
   // qualifier=product.name='CMS' and parentProductReleases.customer.acronym='ECHO'&sort=composedName|desc
@@ -448,16 +455,19 @@ case class EOPk(pks: List[Int])
 
 object EOValue {
 
-  def escapeValidationError(eo: EO) : EO = {
+  def escapeValidationError(eoContaining: EOContaining) : EOContaining = {
+    val eo = eoContaining.eo
     val escapedHtml = Utils.escapeHtml(eo.validationError.get)
     eo.copy(validationError = Some(escapedHtml))
+    EOContaining.updateEOContainingEO(eoContaining, eo)
   }
 
-  def pkFromValues(eomodel: EOModel, eo: EO) : Option[EOPk] = {
+  def pkFromValues(eomodel: EOModel, eoContaining: EOContaining) : Option[EOPk] = {
+    val eo = eoContaining.eo
     val entity = EOModelUtils.entityNamed(eomodel, eo.entityName).get
     val pkAttributeNames = entity.pkAttributeNames
     val pkOpts = pkAttributeNames.map( pkAttributeName => {
-      EOValue.valueForKey(eo,pkAttributeName) match {
+      EOValue.valueForKey(eoContaining, pkAttributeName) match {
         case Some(IntValue(intV)) => Some(intV)
         case None => None
       }
@@ -474,7 +484,7 @@ object EOValue {
   def isNew(pk: EOPk) = pk.pks.find(_ < 0).isDefined
 
   // When saving an EO, we have to remove any non db attributes
-  def purgedEO(eo: EO) = {
+  def purgedEO(eo: EOContaining) = {
     eo
   }
 
@@ -490,9 +500,11 @@ object EOValue {
     case EmptyValue => 0
   }
 
-  def objectValue(eoOpt: Option[EO]) = {
-    eoOpt match {
-      case Some(eo) => ObjectValue(eo = eo.pk)
+  def objectValue(eoContainingOpt: Option[EOContaining]) = {
+    eoContainingOpt match {
+      case Some(eoContaining) =>
+        val eo = eoContaining.eo
+        ObjectValue(eo = eo.pk)
       case None => EmptyValue
     }
   }
@@ -514,9 +526,13 @@ object EOValue {
 
 
   // For creation of objects only ?
-  def dryEOWithEntity(entityName: String, pk: EOPk) = {
+  def dryEOContainerWithEntity(entityName: String, pk: EOPk) = {
     //val pkAttributeNames = entity.pkAttributeNames
     //val valuesMap = pkAttributeNames.zip(pk.map(IntValue(_))).toMap
+    val newEO = dryEOWithEntity(entityName, pk)
+    EOContainer(newEO)
+  }
+  def dryEOWithEntity(entityName: String, pk: EOPk) = {
     EO(entityName, List.empty[String], List.empty[EOValue], pk)
   }
 
@@ -582,32 +598,64 @@ object EOValue {
     eo.keys.zip(eo.values).toMap
   }
 
-  def stringValueForKey(eo: EO, key: String) = {
+
+  def stringValueForKey(eoContaining: EOContaining, key: String) = {
+    val eo = eoContaining.eo
     if (key.equals("userPresentableDescription")) {
       eo.toString
     } else {
-      valueForKey(eo, key) match {
+      valueForKey(eoContaining, key) match {
         case Some(value) => juiceString(value)
         case None => ""
       }
     }
   }
-  def booleanValueForKey(eo: EO, key: String) = {
-    valueForKey(eo, key) match {
-      case Some(value) => juiceBoolean(value)
-      case None => false
-    }
+  def booleanValueForKey(eoContaining: EOContaining, key: String) = {
+    val eo = eoContaining.eo
+    valueForKey(eoContaining, key) match {
+        case Some(value) => juiceBoolean(value)
+        case None => false
+      }
   }
 
-  def intValueForKey(eo: EO, key: String) = {
-    valueForKey(eo, key) match {
+  def intValueForKey(eoContaining: EOContaining, key: String) = {
+    valueForKey(eoContaining, key) match {
       case Some(value) => juiceInt(value)
       case None => 0
     }
   }
 
+  def containsValueForKey(eoContaining: EOContaining, key: String) = {
+    eoContaining match {
+      case customerContainer: CustomerContainer =>
+        key match {
+          case "preferedName" => true
+          case "dynamicsAccountID" => true
+          case "customerTrigram" => true
+          case _ =>
+            eoContainsValueForKey(eoContaining.eo, key)
+        }
+      case _ =>
+        eoContainsValueForKey(eoContaining.eo, key)
+    }
+  }
 
-  def valueForKey(eo: EO, key: String) = {
+  def eoContainsValueForKey(eo: EO, key: String) = {
+    eo.keys.contains(key)
+  }
+
+
+
+  def valueForKey(eoContaining: EOContaining, key: String) = {
+    CustomerEOValue.customValueForKey(eoContaining,key) match {
+      case Some(opt) => opt
+      case _ =>
+        val eo = eoContaining.eo
+        eoValueForKey(eo, key)
+    }
+  }
+
+  def eoValueForKey(eo: EO, key: String) = {
     val valueMap = keyValues(eo)
     if (valueMap.contains(key)) {
       Some(valueMap(key))
@@ -615,34 +663,46 @@ object EOValue {
       None
   }
 
-  def takeValueForKey(eo: EO, eovalue: EOValue, key: String): EO = {
+  def takeValueForKey(eoContaining: EOContaining, eovalue: EOValue, key: String): EOContaining = {
+    val eo = eoContaining.eo
     val valueMap = keyValues(eo)
     val newValueMap = (valueMap - key) + (key -> eovalue)
-    takeAllValuesForKeys(eo, newValueMap)
+    takeAllValuesForKeys(eoContaining, newValueMap)
   }
 
-  def takeValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
+  def takeValuesForKeys(eoContaining: EOContaining, keyValuePairs: Map[String,EOValue]): EOContaining = {
+    val eo = eoContaining.eo
     val valueMap = keyValues(eo)
     val updatedMap = valueMap ++ keyValuePairs
-    takeAllValuesForKeys(eo, updatedMap)
+    takeAllValuesForKeys(eoContaining, updatedMap)
   }
 
 
   // Only if the map has all attribute
   // Not ok for partial update
-  def takeAllValuesForKeys(eo: EO, keyValuePairs: Map[String,EOValue]): EO = {
-    eo.copy(keys = keyValuePairs.keys.toList, values = keyValuePairs.values.toList)
+  def takeAllValuesForKeys(eoContaining: EOContaining, keyValuePairs: Map[String,EOValue]): EOContaining = {
+    val eo = eoContaining.eo
+    val updatedEO = eo.copy(keys = keyValuePairs.keys.toList, values = keyValuePairs.values.toList)
+    EOContaining.updateEOContainingEO(eoContaining, updatedEO)
   }
 
   // case class EO(entity: EOEntity, values: Map[String,EOValue], validationError: Option[String])
-  def completeEoWithEo(existingEO: EO, refreshedEO: EO): EO = {
+  def completeEoWithEo(existingEOContaining: EOContaining, refreshedEOContaining: EOContaining): EOContaining = {
+    val existingEO = existingEOContaining.eo
+    val refreshedEO = refreshedEOContaining.eo
+
+
     val existingValues = keyValues(existingEO)
     val refreshedValues = keyValues(refreshedEO)
     val newValues = existingValues ++ refreshedValues
-    existingEO.copy(keys = newValues.keys.toList, values = newValues.values.toList, validationError = refreshedEO.validationError)
+
+    val newEO = existingEO.copy(keys = newValues.keys.toList, values = newValues.values.toList, validationError = refreshedEO.validationError)
+    EOContaining.updateEOContainingEO(existingEOContaining,newEO)
   }
 
-  def isNewEO(eo: EO) = {
+  def isNewEO(eoContaining: EOContaining) = {
+    val eo = eoContaining.eo
+
     isNew(eo.pk)
     //val pk = EOValue.pk(eo)
     //(pk.isDefined && pk.get < 0) || pk.isEmpty
@@ -650,14 +710,15 @@ object EOValue {
   }
 
   // For single pk EO
-  def pk(eoModel: EOModel, eo: EO): Option[EOPk] = {
+  def pk(eoModel: EOModel, eoContaining: EOContaining): Option[EOPk] = {
+    val eo = eoContaining.eo
     val entityName = eo.entityName
     val entityOpt = EOModelUtils.entityNamed(eoModel,entityName)
     entityOpt match {
       case Some(entity) =>
         val pkAttributeNames = entity.pkAttributeNames
         if (eo.keys.contains(pkAttributeNames.head)) {
-          Some(EOPk(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(valueForKey(eo,pkAttributeName).get))))
+          Some(EOPk(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(valueForKey(eoContaining,pkAttributeName).get))))
         } else None
       case None => None
     }
@@ -682,7 +743,7 @@ case class EOQualifiedFetch(entityName: String, qualifier: EOQualifier, sortOrde
 
 
 object EOFetchSpecification {
-  def objectsWithFetchSpecification(eos: List[EO], fs: EOFetchSpecification): List[EO] = {
+  def objectsWithFetchSpecification(eos: List[EOContaining], fs: EOFetchSpecification): List[EOContaining] = {
 
     // TODO sort orderings
     fs match {
@@ -705,33 +766,35 @@ object EOFetchSpecification {
 
 object EOQualifier {
 
-  def filteredEOsWithQualifier(eos: List[EO], qualifier: EOQualifier) = {
+  def filteredEOsWithQualifier(eos: List[EOContaining], qualifier: EOQualifier) = {
+    println("Filter with qualifier " + qualifier)
     eos.filter(eo => evaluateWithEO(eo, qualifier))
   }
 
-  def evaluateWithEO(eo: EO, qualifier: EOQualifier): Boolean = {
+  def evaluateWithEO(eoContaining: EOContaining, qualifier: EOQualifier): Boolean = {
+    val eo = eoContaining.eo
     //println("evaluateWithEO " + eo + " q " + qualifier)
     qualifier match {
       case EOAndQualifier(qualifiers) =>
         val headQ = qualifiers.head
         val remaining = qualifiers.tail
-        val headQValue = evaluateWithEO(eo, headQ)
+        val headQValue = evaluateWithEO(eoContaining, headQ)
         if (!headQValue) {
           false
         } else {
-          if (remaining.isEmpty) true else evaluateWithEO(eo, EOAndQualifier(remaining))
+          if (remaining.isEmpty) true else evaluateWithEO(eoContaining, EOAndQualifier(remaining))
         }
 
       case EOOrQualifier(qualifiers) =>
         val headQ = qualifiers.head
         val remaining = qualifiers.tail
-        if (evaluateWithEO(eo, headQ)) {
+        if (evaluateWithEO(eoContaining, headQ)) {
           true
         } else {
-          if (remaining.isEmpty) false else evaluateWithEO(eo, EOOrQualifier(remaining))
+          if (remaining.isEmpty) false else evaluateWithEO(eoContaining, EOOrQualifier(remaining))
         }
       case EOKeyValueQualifier(key, selector, value) =>
-        val eoValueOpt = EOValue.valueForKey(eo, key)
+        val eoValueOpt = EOValue.valueForKey(eoContaining, key)
 
         eoValueOpt match {
           // eo has a value which is not empty
@@ -775,7 +838,7 @@ object EOQualifier {
 
 
       case EONotQualifier(qualifier) =>
-        !evaluateWithEO(eo, qualifier)
+        !evaluateWithEO(eoContaining, qualifier)
     }
   }
 }

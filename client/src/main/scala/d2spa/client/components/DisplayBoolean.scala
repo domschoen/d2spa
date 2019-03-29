@@ -29,22 +29,19 @@ object DisplayBoolean {
         case Some(eo) =>
           val entityName = d2wContext.entityName.get
           val propertyName = d2wContext.propertyKey.get
-          if (eo.values.contains(propertyName)) {
-
-            // We expect a value for that property. Either:
-            // StringValue
-            // EmptyValue
-            val eoValue = EOValue.valueForKey(eo,propertyName).get
-            val value = EOValue.juiceBoolean(eoValue)
-            <.div(
-              (<.i(^.className := "glyphicon glyphicon-ok")).when(value)
-            )
-          } else {
-            <.div(
-              <.span("No data found")
-            )
+          val eoValueForProperty = EOValue.valueForKey(eo,propertyName)
+          eoValueForProperty match{
+            case Some(eoInner) =>
+                val eoValue = EOValue.valueForKey(eo,propertyName).get
+                val value = EOValue.juiceBoolean(eoValue)
+                <.div(
+                  (<.i(^.className := "glyphicon glyphicon-ok")).when(value)
+                )
+            case None =>
+              <.div(
+                <.span("No data found")
+              )
           }
-
         case None =>
           <.div(
             <.span("No eo found")

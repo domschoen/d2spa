@@ -7,9 +7,9 @@ import play.api.libs.json._
 
 object EOUtils {
 
-  def convertEOJsonToEOs(eomodel: EOModel, eo: EO, resultBody: JsObject): List[EO] = {
+  def convertEOJsonToEOs(eomodel: EOModel, eoContaining: EOContaining, resultBody: JsObject): List[EOContaining] = {
     val jObj = resultBody.asInstanceOf[JsObject]
-    val refreshedEOOpt = eoFromJsonJsObject(eomodel, Some(eo), jObj)
+    val refreshedEOOpt = eoFromJsonJsObject(eomodel, Some(eoContaining), jObj)
     //println("convertEOJsonToEOs | refreshedEOOpt " + refreshedEOOpt)
     refreshedEOOpt match {
       case Some(refreshedEO) =>
@@ -21,7 +21,7 @@ object EOUtils {
     }
   }
 
-  def eoFromJsonJsObject(eomodel: EOModel, eoOpt: Option[EO], jsObj: JsObject): Option[EO] = {
+  def eoFromJsonJsObject(eomodel: EOModel, eoOpt: Option[EOContaining], jsObj: JsObject): Option[EOContaining] = {
     //println("eoFromJsonJsObject | eoOpt " + eoOpt)
     //println("eoFromJsonJsObject | jsObj " + jsObj)
     val entityNameOpt: Option[(String, JsValue)] = jsObj.fields.find(x => x._1.equals("type"))
@@ -50,7 +50,7 @@ object EOUtils {
                     }).toList.flatten
                   }
                 }
-                EOValue.dryEOWithEntity(entity.name, EOPk(pk))
+                EOValue.dryEOContainerWithEntity(entity.name, EOPk(pk))
             }
             val jObjValues: Seq[(String, JsValue)] = jsObj.fields.filter(x => {
               //println("x " + x)
@@ -101,7 +101,7 @@ object EOUtils {
               case oneElement: JsObject =>
                 // {"id":1,"type":"Project"}
 
-                val eoOpts: List[Option[EO]] = seqJsValues.toList.map(x => {
+                val eoOpts: List[Option[EOContaining]] = seqJsValues.toList.map(x => {
                   eoFromJsonJsObject(eomodel, None, x.asInstanceOf[JsObject])
                 })
                 /*val hasError = !eos.find(eoOpt => eoOpt.isEmpty).isEmpty
@@ -113,7 +113,7 @@ object EOUtils {
 
 
                 val eos = eoOpts.flatten
-                val eoPks = eos.map(eo => eo.pk)
+                val eoPks = eos.map(eo => eo.eo.pk)
                 ObjectsValue(eoPks)
 
               case oneElement: JsNumber =>
@@ -158,7 +158,7 @@ object EOUtils {
           val eoOpt = eoFromJsonJsObject(eomodel, None, jsObj)
           eoOpt match {
             case Some(eo) =>
-              ObjectValue(eo = eo.pk)
+              ObjectValue(eo = eo.eo.pk)
             case None =>
               println("Failed to create EO with json " + jsObj)
               EmptyValue

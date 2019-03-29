@@ -8,11 +8,11 @@ import boopickle.DefaultBasic._
 import d2spa.client.logger.{D2SpaLogger, log}
 import d2spa.shared.WebSocketMessages.RuleToFire
 import jdk.nashorn.internal.ir.PropertyKey
+import diode.Action
+import upickle.default.{macroRW, ReadWriter => RW}
 /**
   * Created by dschoen on 01.05.17.
   */
-
-
 
 
 
@@ -56,8 +56,8 @@ case class D2WContextEO(pk: Option[Int] = None, memID : Option[Int] = None)
 // concept of qualifier / Batch number --> eos
 
 sealed trait EOCacheEntityElement
-case class EODBCacheEntityElement(data : Pot[Map[EOPk,EO]], hasAllRecords: Boolean = false) extends EOCacheEntityElement
-case class EOMemCacheEntityElement(data : Map[EOPk,EO]) extends EOCacheEntityElement
+case class EODBCacheEntityElement(data : Pot[Map[EOPk,EOContaining]], hasAllRecords: Boolean = false) extends EOCacheEntityElement
+case class EOMemCacheEntityElement(data : Map[EOPk,EOContaining]) extends EOCacheEntityElement
 
 
 case class EOCache(eomodel: Pot[EOModel],
@@ -65,6 +65,7 @@ case class EOCache(eomodel: Pot[EOModel],
                    insertedEOs: Map[String,EOCacheEntityElement])
 
 
+case class SearchInMemory(fs: EOFetchSpecification) extends Action
 case class DebugConf(showD2WDebugButton: Boolean)
 case class SendingAction(action: Action) extends Action
 
@@ -89,11 +90,11 @@ case class SetEOModelThenFetchMenu(eomodel: EOModel, d2wContext: D2WContext) ext
 case class SetEOModel(eomodel: EOModel) extends Action
 case class FetchMenu(d2wContext: D2WContext) extends Action
 
-case class FetchedObjectsForEntity(entityName: String, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class CompletedEO(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class CompletedEOProcessing(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
+case class FetchedObjectsForEntity(entityName: String, eos: Seq[EOContaining], ruleResults: Option[List[RuleResult]]) extends Action
+case class CompletedEO(d2wContext: Option[D2WContext], hydration: Hydration, eo: List[EOContaining], ruleResults: Option[List[RuleResult]]) extends Action
+case class CompletedEOProcessing(d2wContext: Option[D2WContext], hydration: Option[Hydration], eo: List[EOContaining], ruleResults: Option[List[RuleResult]]) extends Action
 case class SetPageForSocketReady(d2wContext: PageContext) extends Action
-
+case class RegisterEO(eo: EOContaining) extends Action
 case class RefreshedEOs(eos: Seq[EO])
 
 case class SendRuleRequest(ruleRequest: RuleRequest) extends Action
@@ -101,7 +102,7 @@ case class SendRuleRequest(ruleRequest: RuleRequest) extends Action
 case class CreateEO(entityName:String) extends Action
 
 case class SetMetaData(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]]) extends Action
-case class SetRulesForPrepareEO(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EO]) extends Action
+case class SetRulesForPrepareEO(d2wContext: D2WContext, ruleResults: Option[List[RuleResult]], eoOpt: Option[EOContaining]) extends Action
 //case class SetMetaDataForMenu(d2wContext: D2WContext, metaData: EntityMetaData) extends Action
 
 case class NewAndRegisteredEO(d2wContext: PageContext) extends Action
@@ -115,7 +116,7 @@ case class InstallEditPage(fromTask: String, eo:EO) extends Action
 case class InstallInspectPage(fromTask: String, eo:EO) extends Action
 case object SetPreviousPage extends Action
 
-case class RegisterAndPrepareEODisplay(eo: EO, d2wContext: PageContext) extends Action
+case class RegisterAndPrepareEODisplay(eo: EOContaining, d2wContext: PageContext) extends Action
 case class PrepareEODisplay(d2wContext: PageContext) extends Action
 case class PrepareEditPage(d2wContext: PageContext) extends Action
 case class SearchHydration(fs: EOFetchSpecification) extends Action
@@ -127,33 +128,33 @@ case class HydrationRequest(hydration: Hydration, ruleRequest: Option[RuleReques
 case class RegisterPreviousPage(d2wContext: PageContext) extends Action
 case class RegisterPreviousPageAndSetPage(d2wContext: PageContext) extends Action
 case class RegisterPreviousPageAndSetPagePure(d2wContext: PageContext) extends Action
-case class RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext: PageContext, eo: EO) extends Action
+case class RegisterPreviousPageAndSetPageRemoveMemEO(d2wContext: PageContext, eo: EOContaining) extends Action
 
 case class SetPage(d2WContext: PageContext) extends Action
-case class UpdateCurrentContextWithEO(eo: EO) extends Action
+case class UpdateCurrentContextWithEO(eo: EOContaining) extends Action
 case object InitMenuSelection extends Action
 
 case object InitAppModel extends Action
 case class ShowFetchResults(fs: EOFetchSpecification) extends Action
 
 case class SelectMenu(entityName: String) extends Action
-case class Save(entityName: String, eo: EO) extends Action
-case class GoSaving(entityName: String, eo: EO) extends Action
+case class Save(entityName: String, eo: EOContaining) extends Action
+case class GoSaving(entityName: String, eo: EOContaining) extends Action
 
-case class SavingEO(d2wContext: D2WContext, eo: List[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class SaveNewEO(entityName: String, eo: EO) extends Action
+case class SavingEO(d2wContext: D2WContext, eo: EOContaining, ruleResults: Option[List[RuleResult]]) extends Action
+case class SaveNewEO(entityName: String, eo: EOContaining) extends Action
 case class PrepareSearchForServer(d2wContext: PageContext, ruleRequest: RuleRequest) extends Action
 
 case class UpdateQueryProperty(entityName: String, queryValue: QueryValue) extends Action
 case class ClearQueryProperty(entityName: String, propertyName: String, operator: String) extends Action
-case class UpdateEOValueForProperty(eo: EO, d2wContext: PageContext, value: EOValue) extends Action
+case class UpdateEOValueForProperty(eo: EOContaining, d2wContext: PageContext, value: EOValue) extends Action
 
 case class SearchAction(entityName: String) extends Action
 //case class SearchResult(entity: String, eos: Seq[EO]) extends Action
-case class SearchResult(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
-case class SearchResultWithRuleResults(fs: EOFetchSpecification, eos: Seq[EO], ruleResults: Option[List[RuleResult]]) extends Action
-case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EO]) extends Action
-case class CacheForPrepareEODisplay(eo: EO, pageContext: PageContext) extends Action
+case class SearchResult(fs: EOFetchSpecification, eos: Seq[EOContaining]) extends Action
+case class SearchResultWithRuleResults(fs: EOFetchSpecification, eos: Seq[EOContaining], ruleResults: Option[List[RuleResult]]) extends Action
+case class RegisterSearchResults(fs: EOFetchSpecification, eos: Seq[EOContaining]) extends Action
+case class CacheForPrepareEODisplay(eo: EOContaining, pageContext: PageContext) extends Action
 
 
 // similar to:
@@ -162,17 +163,17 @@ case class CacheForPrepareEODisplay(eo: EO, pageContext: PageContext) extends Ac
 case class SavedEO(dw2Context: PageContext) extends Action
 case class SavedEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
 
-case class DeleteEO(fromTask: String, eo: EO) extends Action
-case class DeleteEOFromList(eo: EO) extends Action
-case class DeletingEO(eo: EO) extends Action
+case class DeleteEO(fromTask: String, eo: EOContaining) extends Action
+case class DeleteEOFromList(eo: EOContaining) extends Action
+case class DeletingEO(eo: EOContaining) extends Action
 case class EditEO(dw2Context: PageContext) extends Action
-case class EditEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
-case class InspectEO(fromTask: String, eo: EO) extends Action
+case class EditEOWithResults(fromTask: String, eo: EOContaining, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
+case class InspectEO(fromTask: String, eo: EOContaining) extends Action
 
-case class SaveError(eo: EO) extends Action
+case class SaveError(eo: EOContaining) extends Action
 object ListEOs extends Action
-case class DeletedEO(eo:EO) extends Action
-case class UpdateEOsForEOOnError(eo:EO) extends Action
+case class DeletedEO(eo:EOContaining) extends Action
+case class UpdateEOsForEOOnError(eo: EOContaining) extends Action
 
 //trait D2WAction extends diode.Action
 
@@ -186,7 +187,7 @@ case class GetMetaDataForSetPage(d2wContext: PageContext) extends Action
 
 object HydrationUtils {
 
-  def toFault(eo:EO) = EOFault(eo.entityName, eo.pk)
+  def toFault(eoContaining : EOContaining) = EOFault(eoContaining.eo.entityName, eoContaining.eo.pk)
 
   // case class DrySubstrate(eosAtKeyPath: Option[EOsAtKeyPath] = None, eo: Option[EOFault] = None, fetchSpecification: Option[EOFetchSpecification] = None)
 
@@ -197,9 +198,10 @@ object HydrationUtils {
   }
 
   def isEOHydrated(cache: EOCache, entityName: String, pk : EOPk, propertyKeys: List[String]) : Boolean = {
-    val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, entityName, pk)
-    eoOpt match {
-      case Some(eo) =>
+    val eoContainingOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, entityName, pk)
+    eoContainingOpt match {
+      case Some(eoContaining) =>
+        val eo = eoContaining.eo
         val valuesKeys = eo.values
         val anyMissingPropertyKey = propertyKeys.find(p => !valuesKeys.contains(p))
         anyMissingPropertyKey.isEmpty
@@ -235,7 +237,7 @@ object HydrationUtils {
         Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
 
       case Some(DataRep(_, Some(eoakp))) => {
-        val eovalueOpt = EOValue.valueForKey(eoakp.eo, eoakp.keyPath)
+        val eovalueOpt = EOValue.valueForKey(eoakp.eoContaining, eoakp.keyPath)
         eovalueOpt match {
           case Some(eovalue) =>
             eovalue match {
@@ -330,7 +332,7 @@ case class PageQueryValues(
 case class PageContext(previousTask: Option[PageContext] = None,
                        queryValues: PageQueryValues = PageQueryValues(),
                        dataRep: Option[DataRep] = None,
-                       eo: Option[EO] = None,
+                       eo: Option[EOContaining] = None,
                        d2wContext: D2WContext
                       )
 
@@ -347,7 +349,7 @@ case class KeysSubstrate(ruleResult: PotFiredRuleResult)
 
 
 //case class EORefsDefinition()
-case class EOsAtKeyPath(eo: EO, keyPath: String, destinationEntityName: String)
+case class EOsAtKeyPath(eoContaining: EOContaining, keyPath: String, destinationEntityName: String)
 //case class RuleRawResponse(ruleFault: RuleFault, response: WSResponse)
 
 
@@ -717,7 +719,7 @@ object EOCacheUtils {
 
 
   //for sorting list of eos
-  def sortEOS(eos: List[EO], sortOrderingOpt: Option[EOSortOrdering], cache: EOCache): List[EO] = {
+  def sortEOS(eos: List[EOContaining], sortOrderingOpt: Option[EOSortOrdering], cache: EOCache): List[EOContaining] = {
     sortOrderingOpt match {
       case Some(sortOrdering) =>
         val key = sortOrdering.key
@@ -729,19 +731,43 @@ object EOCacheUtils {
     }
   }
 
-  def compareEOs(a: EO, b: EO, propKey: String, isAsc: Boolean, cache: EOCache): Boolean = {
-    val va = EOCacheUtils.juiceStringAtKeyPath(a, propKey, cache)
-    val vb = EOCacheUtils.juiceStringAtKeyPath(b, propKey, cache)
-    if (isAsc) {
-      va < vb
-    } else {
-      va > vb
+  def compareEOs(a: EOContaining, b: EOContaining, propKey: String, isAsc: Boolean, cache: EOCache): Boolean = {
+    val va = EOValue.valueForKey(a,propKey).get
+    val vb = EOValue.valueForKey(b,propKey).get
+
+    val isIntegerVa = va match {
+      case IntValue(va) => true
+      case _ => false
+    }
+
+    val isIntegerVb = vb match {
+      case IntValue(vb) => true
+      case _ => false
+    }
+
+    if(isIntegerVa && isIntegerVb){
+      val v1 = EOValue.juiceInt(va)
+      val v2 = EOValue.juiceInt(vb)
+      if(isAsc){
+        v1 < v2
+      }else{
+        v1 > v2
+      }
+    } else{
+      val v1 = EOCacheUtils.juiceStringAtKeyPath(a, propKey, cache)
+      val v2 = EOCacheUtils.juiceStringAtKeyPath(b, propKey, cache)
+      if (isAsc) {
+        v1 < v2
+      } else {
+        v1 > v2
+      }
     }
   }
 
-  def eoValueForKeyPath(eo: EO, keyPath: String, cache: EOCache): Option[EOValue] = {
+  def eoValueForKeyPath(eoContaining: EOContaining, keyPath: String, cache: EOCache): Option[EOValue] = {
+    val eo = eoContaining.eo
     if (eo.keys.contains(keyPath)) {
-      EOValue.valueForKey(eo,keyPath)
+      EOValue.valueForKey(eoContaining,keyPath)
     } else {
       if (keyPath.contains(".")) {
 
@@ -749,7 +775,7 @@ object EOCacheUtils {
         val propertyNameList: List[String] = keyPath.split("\\.").map(_.trim).toList
         val firstKeyPathElement = propertyNameList.head
         if (eo.values.contains(firstKeyPathElement)) {
-          val destinationEOValue = EOValue.valueForKey(eo,firstKeyPathElement)
+          val destinationEOValue = EOValue.valueForKey(eoContaining,firstKeyPathElement)
           destinationEOValue match {
             case Some(ObjectValue(destinationEOPk)) =>
               val sourceEOEntity = EOModelUtils.entityNamed(cache.eomodel.get, eo.entityName).get
@@ -757,9 +783,10 @@ object EOCacheUtils {
               relationshipOpt match {
                 case Some(relationship) =>
                   val destinationEntityName = relationship.destinationEntityName
-                  val destinationEOOpt = outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)
-                  destinationEOOpt match {
-                    case Some(destinationEO) =>
+                  val destinationEOContainerOpt = outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)
+                  destinationEOContainerOpt match {
+                    case Some(destinationEOContainer) =>
+                      val destinationEO = destinationEOContainer
                       EOValue.valueForKey(destinationEO,propertyNameList(1))
                     case None => None
                   }
@@ -779,21 +806,22 @@ object EOCacheUtils {
   }
 
 
-  def juiceStringAtKeyPath(eo: EO, keyPath: String, cache: EOCache): String = {
-    val eoValueOpt = eoValueForKeyPath(eo, keyPath, cache)
+  def juiceStringAtKeyPath(eoContaining: EOContaining, keyPath: String, cache: EOCache): String = {
+    val eo = eoContaining.eo
+    val eoValueOpt = eoValueForKeyPath(eoContaining, keyPath, cache)
     eoValueOpt match {
       case Some(eoValue) => EOValue.juiceString(eoValue)
       case None => ""
     }
   }
 
-  def refreshedEOMap(eos: List[EO]): Map[EOPk, EO] = eos.map(eo => {
-    val pk = eo.pk
+  def refreshedEOMap(eos: List[EOContaining]): Map[EOPk, EOContaining] = eos.map(eo => {
+    val pk = eo.eo.pk
     Some((pk, eo))
   }).flatten.toMap
 
 
-  def readyEODBCacheEntityElement(eos: List[EO]): EODBCacheEntityElement = {
+  def readyEODBCacheEntityElement(eos: List[EOContaining]): EODBCacheEntityElement = {
     // we create a Map with eo and id
     // From eos to update, we create a map of key ->
     val refreshedEOs = refreshedEOMap(eos)
@@ -806,7 +834,7 @@ object EOCacheUtils {
 }*/
 
 
-  def updatedEOMap(entityMap: Map[EOPk, EO], updatedEOSubset: List[EO]): Map[EOPk, EO] = {
+  def updatedEOMap(entityMap: Map[EOPk, EOContaining], updatedEOSubset: List[EOContaining]): Map[EOPk, EOContaining] = {
     val refreshedEOs = refreshedEOMap(updatedEOSubset)
     // work with new and eo to be updated
     val refreshedPks = refreshedEOs.keySet
@@ -842,7 +870,7 @@ object EOCacheUtils {
 
 
   // Returns None if nothing registered in the cache for that entityName
-  def dbEOsForEntityNamed(cache: EOCache, entityName: String): Option[List[EO]] = {
+  def dbEOsForEntityNamed(cache: EOCache, entityName: String): Option[List[EOContaining]] = {
     val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache.eos, entityName)
     eoCacheEntityElementOpt match {
       case Some(eoCacheEntityElement) =>
@@ -858,10 +886,10 @@ object EOCacheUtils {
   }
 
 
-  def eoCacheEntityElementEos(eoCacheEntityElement: EOCacheEntityElement): List[EO] =
+  def eoCacheEntityElementEos(eoCacheEntityElement: EOCacheEntityElement): List[EOContaining] =
     eoEntityMap(eoCacheEntityElement).values.toList
 
-  def eoEntityMap(eoCacheEntityElement: EOCacheEntityElement): Map[EOPk, EO] =
+  def eoEntityMap(eoCacheEntityElement: EOCacheEntityElement): Map[EOPk, EOContaining] =
     eoEntityMapOpt(eoCacheEntityElement) match {
       case Some(entityMap) =>
         entityMap
@@ -870,7 +898,7 @@ object EOCacheUtils {
     }
 
 
-  def eoEntityMapOpt(eoCacheEntityElement: EOCacheEntityElement): Option[Map[EOPk, EO]] =
+  def eoEntityMapOpt(eoCacheEntityElement: EOCacheEntityElement): Option[Map[EOPk, EOContaining]] =
     eoCacheEntityElement match {
       case EODBCacheEntityElement(data, _) =>
         if (data.isEmpty) None else Some(data.get)
@@ -881,7 +909,7 @@ object EOCacheUtils {
 
   def eoCacheEntityElementForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String) = if (cache.contains(entityName)) Some(cache(entityName)) else None
 
-  def allEOsForEntityNamed(cache: EOCache, entityName: String): List[EO] = {
+  def allEOsForEntityNamed(cache: EOCache, entityName: String): List[EOContaining] = {
     val entityElements = List(
       eoCacheEntityElementForEntityNamed(cache.insertedEOs, entityName),
       eoCacheEntityElementForEntityNamed(cache.eos, entityName)
@@ -900,27 +928,27 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   }
 }*/
 
-  def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EO]): List[EO] = {
+  def outOfCacheEOsUsingPkFromEOs(cache: EOCache, entityName: String, eos: List[EOContaining]): List[EOContaining] = {
     eos.map(eo => outOfCacheEOUsingPkFromEO(cache, entityName, eo)).flatten
   }
 
 
-  def objectsFromAllCachesWithFetchSpecification(cache: EOCache, fs: EOFetchSpecification): List[EO] = {
+  def objectsFromAllCachesWithFetchSpecification(cache: EOCache, fs: EOFetchSpecification): List[EOContaining] = {
     val entityName = EOFetchSpecification.entityName(fs)
     val eos = allEOsForEntityNamed(cache, entityName)
     EOFetchSpecification.objectsWithFetchSpecification(eos, fs)
   }
 
 
-  def outOfCacheEOUsingPkFromEO(cache: EOCache, entityName: String, eo: EO): Option[EO] = {
-    outOfCacheEOUsingPk(cache, entityName, eo.pk)
+  def outOfCacheEOUsingPkFromEO(cache: EOCache, entityName: String, eo: EOContaining): Option[EOContaining] = {
+    outOfCacheEOUsingPk(cache, entityName, eo.eo.pk)
   }
 
-  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: List[EOPk]): Seq[EO] = {
+  def outOfCacheEOUsingPks(cache: EOCache, entityName: String, pks: List[EOPk]): Seq[EOContaining] = {
     pks.map(pk => outOfCacheEOUsingPk(cache, entityName, pk)).flatten
   }
 
-  def outOfCacheEOUsingPk(eoCache: EOCache, entityName: String, pk: EOPk): Option[EO] = {
+  def outOfCacheEOUsingPk(eoCache: EOCache, entityName: String, pk: EOPk): Option[EOContaining] = {
     val isInMemory = EOValue.isNew(pk)
     val cache = if (isInMemory) eoCache.insertedEOs else eoCache.eos
     val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
@@ -935,15 +963,15 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   }
 
 
-  def dbEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EO]] = {
+  def dbEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EOContaining]] = {
     entityMapForEntityNamed(eoCache.eos, entityName)
   }
 
-  def memEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EO]] = {
+  def memEntityMapForEntityNamed(eoCache: EOCache, entityName: String): Option[Map[EOPk, EOContaining]] = {
     entityMapForEntityNamed(eoCache.insertedEOs, entityName)
   }
 
-  def entityMapForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String): Option[Map[EOPk, EO]] = {
+  def entityMapForEntityNamed(cache: Map[String, EOCacheEntityElement], entityName: String): Option[Map[EOPk, EOContaining]] = {
     val eoCacheEntityElementOpt = eoCacheEntityElementForEntityNamed(cache, entityName)
     eoCacheEntityElementOpt match {
       case Some(eoCacheEntityElement) =>
@@ -953,7 +981,8 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   }
 
   // We speak DB Cache here
-  def updatedDBCacheByDeletingEO(eoCache: EOCache, deletedEO: EO): EOCache = {
+  def updatedDBCacheByDeletingEO(eoCache: EOCache, deletedEOContaining: EOContaining): EOCache = {
+    val deletedEO = deletedEOContaining.eo
     val entityName = deletedEO.entityName
     val entitMapOpt = dbEntityMapForEntityNamed(eoCache, deletedEO.entityName)
     entitMapOpt match {
@@ -968,23 +997,24 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
     }
   }
 
-  def updatedCacheForDb(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+  def updatedCacheForDb(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EOContaining]) = {
     val newCache = newUpdatedEntityCache(entityName, eoCache.eos, EODBCacheEntityElement(Ready(entityMap)))
     eoCache.copy(eos = newCache)
   }
 
-  def updatedCacheForMem(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EO]) = {
+  def updatedCacheForMem(eoCache: EOCache, entityName: String, entityMap: Map[EOPk, EOContaining]) = {
     val newCache = newUpdatedEntityCache(entityName, eoCache.insertedEOs, EOMemCacheEntityElement(entityMap))
     eoCache.copy(insertedEOs = newCache)
   }
 
 
-  def updatedDBCacheWithEO(eoCache: EOCache, eo: EO): EOCache = {
+  def updatedDBCacheWithEO(eoCache: EOCache, eoContaining: EOContaining): EOCache = {
+    val eo = eoContaining.eo
     val entityName = eo.entityName
     val entitMapOpt = dbEntityMapForEntityNamed(eoCache, eo.entityName)
     val eoPk = eo.pk
 
-    val innerMap = Map(eoPk -> eo)
+    val innerMap = Map(eoPk -> eoContaining)
 
     val newEntityMap = entitMapOpt match {
       case Some(entityMap) =>
@@ -996,7 +1026,7 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   }
 
 
-  def updatedMemCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EO], entityName: String): EOCache = {
+  def updatedMemCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EOContaining], entityName: String): EOCache = {
     val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
     val newEntityMap = entitMapOpt match {
       case Some(entityMap) =>
@@ -1007,7 +1037,7 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
     updatedCacheForMem(eoCache, entityName, newEntityMap)
   }
 
-  def updatedDBCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EO], entityName: String): EOCache = {
+  def updatedDBCacheWithEOsForEntityNamed(eoCache: EOCache, eos: List[EOContaining], entityName: String): EOCache = {
     val entitMapOpt = dbEntityMapForEntityNamed(eoCache, entityName)
     val newEntityMap = entitMapOpt match {
       case Some(entityMap) =>
@@ -1019,14 +1049,15 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   }
 
 
-  def removeEOFromCache(eo: EO, entityCache: Map[EOPk, EO]): Map[EOPk, EO] = {
+  def removeEOFromCache(eo: EO, entityCache: Map[EOPk, EOContaining]): Map[EOPk, EOContaining] = {
     val entityName = eo.entityName
     val id = eo.pk
     val updatedEntityCache = entityCache - id
     updatedEntityCache
   }
 
-  def updatedMemCacheByRemovingEO(eoCache: EOCache, eo: EO): EOCache = {
+  def updatedMemCacheByRemovingEO(eoCache: EOCache, eoContaining: EOContaining): EOCache = {
+    val eo = eoContaining.eo
     val entityName = eo.entityName
     val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
     entitMapOpt match {
@@ -1038,20 +1069,22 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
     }
   }
 
-  def updatedCachesForSavedEO(eoCache: EOCache, eo: EO, memEO: Option[EO]): EOCache = {
+  def updatedCachesForSavedEO(eoCache: EOCache, eoContaining: EOContaining, memEO: Option[EOContaining]): EOCache = {
     // Adjust the insertedEOs cache
+    val eo = eoContaining.eo
     val entityName = eo.entityName
     val newCache = if (memEO.isDefined) updatedMemCacheByRemovingEO(eoCache, memEO.get) else eoCache
     D2SpaLogger.logfinest(entityName, "CacheHandler | SavedEO | removed if new  " + memEO)
     D2SpaLogger.logfinest(entityName, "CacheHandler | SavedEO | register eo  " + eo)
 
     // Adjust the db cache
-    updatedDBCacheWithEO(newCache, eo)
+    updatedDBCacheWithEO(newCache, eoContaining)
   }
 
-  def updatedMemCacheWithEO(eoCache: EOCache, eo: EO): EOCache = {
+  def updatedMemCacheWithEO(eoCache: EOCache, eoContaining: EOContaining): EOCache = {
+    val eo = eoContaining.eo
     val entityName = eo.entityName
-    updatedMemCacheWithEOsForEntityNamed(eoCache, List(eo), entityName)
+    updatedMemCacheWithEOsForEntityNamed(eoCache, List(eoContaining), entityName)
   }
 
 
@@ -1065,23 +1098,25 @@ def objectsWithFetchSpecification(eos: Map[String, Pot[Map[EOPk,EO]]],fs: EOFetc
   def newEOWithLastMemID(entityName: String, memID: Option[Int]) = {
     val newMemID = newMemIdWithLastId(memID)
     val newPk = EOPk(List(newMemID))
-    EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk, saved = false)
+    val eo = EO(entityName, List.empty[String], List.empty[EOValue], pk = newPk, saved = false)
+    EOContainer(eo)
   }
 
-  def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache: EOCache, entityName: String): (EOCache, EO) = {
+  def updatedMemCacheByCreatingNewEOForEntityNamed(eoCache: EOCache, entityName: String): (EOCache, EOContaining) = {
     val entitMapOpt = memEntityMapForEntityNamed(eoCache, entityName)
     val entityMap = entitMapOpt match {
       case Some(entityMap) => entityMap
-      case None => Map.empty[EOPk, EO]
+      case None => Map.empty[EOPk, EOContaining]
     }
     val existingPks = entityMap.keySet.map(_.pks.head)
     val lastMemIDOpt = if (existingPks.isEmpty) None else Some(existingPks.min)
-    val newEO = newEOWithLastMemID(entityName, lastMemIDOpt)
+    val newEOContainer = newEOWithLastMemID(entityName, lastMemIDOpt)
+    val newEO = newEOContainer.eo
     val newPk = newEO.pk
 
-    val newEntityMap = entityMap + (newPk -> newEO)
+    val newEntityMap = entityMap + (newPk -> newEOContainer)
 
-    (updatedCacheForMem(eoCache, entityName, newEntityMap), newEO)
+    (updatedCacheForMem(eoCache, entityName, newEntityMap), newEOContainer)
   }
 
 

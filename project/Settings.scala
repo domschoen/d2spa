@@ -60,6 +60,7 @@ object Settings {
     "com.lihaoyi" %% "utest" % versions.uTest % Test,
     "com.lihaoyi" %% "autowire" % versions.autowire,
     "io.suzaku" %% "boopickle" % versions.booPickle,
+    "com.lihaoyi" %% "upickle" % "0.7.1",
     "com.github.japgolly.scalacss" %% "core" % versions.scalaCSS
   ))
 

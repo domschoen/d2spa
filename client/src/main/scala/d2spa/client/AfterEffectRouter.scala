@@ -31,7 +31,8 @@ object AfterEffectRouter {
     val entityName = d2wContext.entityName.get
     val taskName = d2wContext.task.get
     pageContext.eo match {
-      case Some(eo) =>
+      case Some(eoContaining) =>
+        val eo = eoContaining.eo
         val pk = eo.pk.pks.head
         if (pk < 0) {
           val page = EditPage(entityName,pk)

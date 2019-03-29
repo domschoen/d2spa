@@ -30,13 +30,14 @@ object ERD2WEditToOneRelationship {
 
   case class Props(router: RouterCtl[TaskAppPage], d2wContext: PageContext, proxy: ModelProxy[MegaContent])
 
-  def eoWith(eos: Seq[EO], entity: EOEntity, id: String) = {
+  def eoWith(eos: Seq[EOContaining], entity: EOEntity, id: String) = {
     println("eoWith | entity name " + entity.name + " id " + id + " eos " + eos )
     //log.finest("id " + id + " class " + id.getClass.getName)
     if (id.equals("None")) None
     val pk = EOPk(id.split("_").map(_.toInt).toList)
 
-    val optEO = eos.find(eo => {
+    val optEO = eos.find(eoContaining => {
+      val eo = eoContaining.eo
       pk.equals(eo.pk)
     })
     optEO
@@ -82,7 +83,7 @@ object ERD2WEditToOneRelationship {
       }
 
       //Callback.when(continueMount) {
-      mounted(nextProps)
+        mounted(nextProps)
       //}
       //mounted(nextProps)
 
@@ -240,10 +241,11 @@ object ERD2WEditToOneRelationship {
                                     {
                                       log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
                                       log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
-                                      val tuples = eos map (deo => {
+                                      val tuples = eos map (deoContaining => {
 
                                         //log.finest("id " + id + " for eo: " + x)
-                                        val displayName = EOValue.stringValueForKey(deo, keyWhenRelationship)
+                                        val displayName = EOValue.stringValueForKey(deoContaining, keyWhenRelationship)
+                                        val deo = deoContaining.eo
                                         val valueString =  EOValue.juiceEOPkString(deo.pk)
                                         (valueString, displayName)
                                       })

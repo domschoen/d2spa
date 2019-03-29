@@ -107,29 +107,31 @@ object NVListComponent {
         $.props >>= (_.proxy.dispatchCB(SetPreviousPage))
     }
 
-    def inspectEO(eo: EO) = {
+    def inspectEO(eoContaining: EOContaining) = {
       //println("NVListCompoennt InspectEO")
-      val pageContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect)), eo = Some(eo))
+      val eo = eoContaining.eo
+      val pageContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.inspect)), eo = Some(eoContaining))
 
       Callback.log(s"Inspect: $eo") >>
         //$.props >>= (_.proxy.dispatchCB(InspectEO(TaskDefine.list, eo, false)))
         $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(pageContext)))
     }
 
-    def editEO(eo: EO) = {
+    def editEO(eoContaining: EOContaining) = {
       //val pk = EOValue.pk(eo)
-      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit)), eo = Some(eo))
+      val eo = eoContaining.eo
+      val d2wContext = PageContext(d2wContext = D2WContext(entityName = Some(eo.entityName), task = Some(TaskDefine.edit)), eo = Some(eoContaining))
 
       Callback.log(s"Edit: $eo") >>
         $.props >>= (_.proxy.dispatchCB(PrepareEODisplay(d2wContext)))
     }
 
-    def deleteEO(eo: EO) = {
-      Callback.log(s"Delete: $eo") >>
-        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList(eo)))
+    def deleteEO(eoContaining: EOContaining) = {
+      Callback.log(s"Delete: $eoContaining") >>
+        $.props >>= (_.proxy.dispatchCB(DeleteEOFromList(eoContaining)))
     }
 
-    def sortTableColumnProperty(eos: List[EO], propertyKey: String, p: Props, s: State) = {
+    def sortTableColumnProperty(eos: List[EOContaining], propertyKey: String, p: Props, s: State) = {
       val isAscending = if(s.sortOrdering.isDefined) EOSortOrdering.isAscending(s.sortOrdering.get) else false
       val flippedAscending = if (isAscending) EOSortOrdering.CompareDescending else EOSortOrdering.CompareAscending
       println("NVListComponent | sortTableColumnProperty | isAscending " + isAscending + " goes to " + flippedAscending)
@@ -166,21 +168,21 @@ object NVListComponent {
 
       val dataRepOpt = pageContext.dataRep
       log.finest("dataRepOpt " + dataRepOpt)
-      val eos: List[EO] = dataRepOpt match {
+      val eos: List[EOContaining] = dataRepOpt match {
         case Some(dataRep) => {
           val cache = p.proxy.value.cache
           dataRep match {
             case DataRep(Some(fs), _) =>
-              //log.finest("NVListCompoennt look for objects in cache with fs " + fs)
+              log.finest("NVListCompoennt look for objects in cache with fs " + fs)
               //log.finest("NVListCompoennt look for objects in cache " + cache)
-              //D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
+              D2SpaLogger.logfinest(entityName, "NVListCompoennt look for objects in cache with fs" + cache)
               EOCacheUtils.objectsFromAllCachesWithFetchSpecification(cache, fs)
 
             case DataRep(_, Some(eosAtKeyPath)) => {
               //log.finest("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
               //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
               //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
-              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eo, eosAtKeyPath.keyPath)
+              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eoContaining, eosAtKeyPath.keyPath)
               eovalueOpt match {
                 case Some(eovalue) =>
 
@@ -189,17 +191,17 @@ object NVListComponent {
                     case ObjectsValue(pks) =>
                       //D2SpaLogger.logfinest(entityName, "NVListComponent render pks " + pks)
                       EOCacheUtils.outOfCacheEOUsingPks(p.proxy.value.cache, entityName, pks).toList
-                    case _ => List.empty[EO]
+                    case _ => List.empty[EOContaining]
                   }
                 case _ =>
                   D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo at key path is None")
-                  List.empty[EO]
+                  List.empty[EOContaining]
               }
             }
-            case _ => List.empty[EO]
+            case _ => List.empty[EOContaining]
           }
         }
-        case _ => List.empty[EO]
+        case _ => List.empty[EOContaining]
       }
 
       D2SpaLogger.logfinest(entityName, "NVListComponent render eos " + eos.size)
@@ -226,11 +228,11 @@ object NVListComponent {
 
       <.div(^.className := "",
         {
-          val eoOnErrorOpt = eos.find(x => x.validationError.isDefined)
+          val eoOnErrorOpt = eos.find(x => x.eo.validationError.isDefined)
           eoOnErrorOpt match {
             case Some(eoOnError) =>
-              val validationError = eoOnError.validationError.get
-              val objUserDescription = eoOnError.entityName + " " + eoOnError.values + " : "
+              val validationError = eoOnError.eo.validationError.get
+              val objUserDescription = eoOnError.eo.entityName + " " + eoOnError.eo.values + " : "
               <.div(<.span(^.color := "red", "Validation error with object: " + objUserDescription), <.span(^.color := "red", ^.dangerouslySetInnerHtml := validationError))
             case _ => <.div()
           }
