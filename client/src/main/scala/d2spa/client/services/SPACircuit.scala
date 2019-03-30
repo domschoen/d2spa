@@ -556,8 +556,9 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       updated(newCache, Effect.action(PrepareEODisplay(pageContext)))
 
 
-    case SavingEO(d2wContext: D2WContext, eo: EO, ruleResults: Option[List[RuleResult]]) =>
-      D2SpaLogger.logfinest(eo.entityName, "CacheHandler | SavingEO " + eo)
+    case SavingEO(d2wContext: D2WContext, eoContaining, ruleResults: Option[List[RuleResult]]) =>
+      val eo = eoContaining.eo
+      D2SpaLogger.logfinest(eo.entityName, "CacheHandler | SavingEO " + eoContaining)
       D2SpaLogger.logfinest(eo.entityName, "CacheHandler | SavingEO | cache " + value)
       D2SpaLogger.logfinest(eo.entityName, "CacheHandler | SavingEO | d2wContext " + d2wContext)
       D2SpaLogger.logfinest(eo.entityName, "CacheHandler | SavingEO | ruleResults " + ruleResults)
@@ -565,15 +566,15 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
       val onError = eo.validationError.isDefined
 
       val pageContext = RuleUtils.pageContextWithD2WContext(d2wContext)
-      val updatedPageContext = pageContext.copy(eo = Some(eo))
+      val updatedPageContext = pageContext.copy(eo = Some(eoContaining))
 
 
       val action = if (onError) {
         // TODO implement it
-        EditEOWithResults("edit", eo, updatedPageContext, ruleResults)
+        EditEOWithResults("edit", eoContaining, updatedPageContext, ruleResults)
 
       } else {
-        SavedEOWithResults("edit", eo, updatedPageContext, ruleResults)
+        SavedEOWithResults("edit", eoContaining, updatedPageContext, ruleResults)
       }
       effectOnly(Effect.action(action))
 

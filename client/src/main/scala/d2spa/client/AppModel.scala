@@ -161,7 +161,7 @@ case class CacheForPrepareEODisplay(eo: EOContaining, pageContext: PageContext) 
 //case class UpdateAllTodos(todos: Seq[TodoItem]) extends Action
 
 case class SavedEO(dw2Context: PageContext) extends Action
-case class SavedEOWithResults(fromTask: String, eo: EO, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
+case class SavedEOWithResults(fromTask: String, eo: EOContaining, dw2Context: PageContext, ruleResults: Option[List[RuleResult]]) extends Action
 
 case class DeleteEO(fromTask: String, eo: EOContaining) extends Action
 case class DeleteEOFromList(eo: EOContaining) extends Action
