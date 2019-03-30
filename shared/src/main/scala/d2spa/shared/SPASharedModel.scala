@@ -625,16 +625,9 @@ object EOValue {
     }
   }
 
-  def containsValueForKey(eoContaining: EOContaining, key: String) = {
-    eoContaining match {
-      case customerContainer: CustomerContainer =>
-        key match {
-          case "preferedName" => true
-          case "dynamicsAccountID" => true
-          case "customerTrigram" => true
-          case _ =>
-            eoContainsValueForKey(eoContaining.eo, key)
-        }
+  def containsValueForKey(eoContaining: EOContaining, key: String): Boolean = {
+    CustomerEOValue.customContainsValueForKey(eoContaining,key) match {
+      case Some(boolValue) => boolValue
       case _ =>
         eoContainsValueForKey(eoContaining.eo, key)
     }

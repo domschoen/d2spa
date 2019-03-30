@@ -61,8 +61,25 @@ object Test15 extends MaterializePicklerFallback {
 
 object CustomerEOValue {
 
+  def customContainsValueForKey(eoContaining: EOContaining, key: String): Option[Boolean] = None
 
-  def customValueForKey(eoContaining: EOContaining, key: String) = {
+  def customContainsValueForKey2(eoContaining: EOContaining, key: String): Option[Boolean] = {
+    eoContaining match {
+      case customerContainer: CustomerContainer =>
+        key match {
+          case "preferedName" => Some(true)
+          case "dynamicsAccountID" => Some(true)
+          case "customerTrigram" => Some(true)
+          case _ =>
+            Some(EOValue.eoContainsValueForKey(eoContaining.eo, key))
+        }
+      case _ =>
+        None
+    }
+  }
+  def customValueForKey(eoContaining: EOContaining, key: String): Option[Option[EOValue]] = None
+
+  def customValueForKey2(eoContaining: EOContaining, key: String): Option[Option[EOValue]] = {
     eoContaining match {
       case customerContainer: CustomerContainer =>
         key match {

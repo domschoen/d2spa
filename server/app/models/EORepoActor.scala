@@ -178,7 +178,8 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       case fq: EOQualifiedFetch => Some(fq.qualifier)
     }
 
-    val isLagomQuery = entityName.equals("Customer") || entityName.equals("Country")
+    //val isLagomQuery = entityName.equals("Customer") || entityName.equals("Country")
+    val isLagomQuery = false
     val queryWO = forceWODataSource || !isLagomQuery
 
     // If Customer or Country, we can fetch WO only if force

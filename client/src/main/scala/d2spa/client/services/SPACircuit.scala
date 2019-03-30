@@ -190,6 +190,8 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
       WebSocketClient.send(WebSocketMessages.UpdateEO(d2wContext, List(purgedEO), ruleRequest))
       noChange
 
+
+      // With no argument: never called !
     case InitAppSpecificClient =>
       //effectOnly(Effect(AjaxClient[Api].searchAll(EOFetchAll("Customer")).call().map(AllCustomerSearchResult(_))))
       val d2wContext = D2WContext(Some("Customer"), Some(TaskDefine.list), None, None)
@@ -233,9 +235,9 @@ class RuleResultsHandler[M](modelRW: ModelRW[M, Map[String, Map[String, Map[Stri
     case SearchHydration(fs) =>
       val entityName = EOFetchSpecification.entityName(fs)
       entityName match {
-        case "Customer" =>
+        // case "Customer" =>
           //effectOnly( Effect.action(SearchInMemory(fs)))
-          noChange
+        //  noChange
         case _ =>
           val d2wContext = D2WContext(entityName = Some(entityName), task = Some(TaskDefine.list))
           val drySubstrate = DrySubstrate(fetchSpecification = Some(fs))
@@ -612,7 +614,8 @@ class EOCacheHandler[M](modelRW: ModelRW[M, EOCache]) extends ActionHandler(mode
             case Some(existingEO) =>
               // case 2.1: Existing EO in cache
               val pageContextUpdated = pageContext.copy(eo = Some(existingEO))
-              val isCustomer = entityName.equals("Customer")
+              //val isCustomer = entityName.equals("Customer")
+              val isCustomer = false
               if (isCustomer) {
                 effectOnly(Effect.action(InspectEO(TaskDefine.list,existingEO)))
 
