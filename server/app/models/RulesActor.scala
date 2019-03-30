@@ -337,7 +337,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
         //println("GetRulesForHydration --> send Hydrate to eorepo" + rrs)
 
-        context.actorSelection("akka://default/user/node-actor/eoRepo") !
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
           EORepoActor.Hydrate(d2wContextOpt, hydration, Some(rrs), requester)
       }
       )
@@ -349,7 +349,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       fireRule(d2wContext, "displayPropertyKeys").map(rr => {
 
           val displayPropertyKeys = RulesUtilities.ruleListValueWithRuleResult(Some(rr))
-          context.actorSelection("akka://default/user/node-actor/eoRepo") !
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.HydrateEOs(d2wContext.entityName.get, pks, displayPropertyKeys.toSet, Some(List(rr)), requester) //: Future[Seq[EO]]
         }
       )
@@ -364,7 +364,7 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
         if (isNewEO) {
           requester ! CompletedEO(d2wContext, EO(entityName = eoFault.entityName, pk = eoFault.pk), Some(rr))
         } else {
-          context.actorSelection("akka://default/user/node-actor/eoRepo") !
+          context.actorSelection("akka://application/user/node-actor/eoRepo") !
             EORepoActor.CompleteEO(d2wContext, eoFault, displayPropertyKeys.toSet, Some(rr), requester) //: Future[Seq[EO]]
         }
       }
@@ -372,17 +372,19 @@ class RulesActor (eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
 
     case GetMetaDataForNewEO(d2wContext: D2WContext, eos: List[EOContaining], ruleRequest, requester: ActorRef) =>
-      println("Rule Actor Receive GetMetaDataForNewEO")
-      getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
-        context.actorSelection("akka://default/user/node-actor/eoRepo") !
+      println("Rule Actor Receive GetMetaDataForNewEO " + self)
+      getRuleResultsForRuleRequest(ruleRequest).map(rrs => {
+        println("RulesActor | getRuleResultsForRuleRequest returned rules ")
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
           EORepoActor.NewEO(d2wContext, eos, Some(rrs), requester) //: Future[Seq[EO]]
+      }
       )
 
 
     case GetMetaDataForUpdatedEO(d2wContext: D2WContext, eos: List[EOContaining], ruleRequest, requester: ActorRef) =>
       println("Rule Actor Receive GetMetaDataForUpdatedEO")
       getRuleResultsForRuleRequest(ruleRequest).map(rrs =>
-        context.actorSelection("akka://default/user/node-actor/eoRepo") !
+        context.actorSelection("akka://application/user/node-actor/eoRepo") !
           EORepoActor.UpdateEO(d2wContext, eos, Some(rrs), requester)
       )
 

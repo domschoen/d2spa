@@ -1047,16 +1047,17 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
   //      if destination of a to many > if not saved, save, flag saved and recurse
   def updateEO(eos: List[EOContaining]): Future[List[EOContaining]] = {
     val savingEOs = savingEOTree(eos)
+    println("updateEO | savingEOs: " + savingEOs)
     //Logger.debug("updateEO | savingEOs: " + savingEOs)
 
     val savedEOsForTo1 = savedEOsForToOne(savingEOs)
-    //Logger.debug("updateEO | savedEOsForToOne: " + savedEOsForTo1)
+    println("updateEO | savedEOsForToOne: " + savedEOsForTo1)
 
     val futureOfList: Future[List[EOContaining]] = Future sequence savedEOsForTo1
 
     val toto = futureOfList.map(rrs => {
       val savedEOsForToM = savedEOsForToMany(rrs)
-      //Logger.debug("updateEO | savedEOsForToM: " + savedEOsForToM)
+      println("updateEO | savedEOsForToM: " + savedEOsForToM)
       val futureOfList2 = Future sequence savedEOsForToM
       futureOfList2
     })
@@ -1515,8 +1516,12 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
     case NewEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       Logger.debug("Get NewEO " + eos)
-      updateEO(eos).map(rrs =>
+      println("Get NewEO " + eos)
+      updateEO(eos).map(rrs => {
+        println("EORepoActor |  updateEO returned response ")
         requester ! SavingResponse(d2wContext, rrs, ruleResults)
+
+      }
       )
     case UpdateEO(d2wContext: D2WContext, eos: List[EO], ruleResults: Option[List[RuleResult]], requester: ActorRef) =>
       Logger.debug("Get UpdateEO")

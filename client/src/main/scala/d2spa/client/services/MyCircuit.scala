@@ -53,8 +53,6 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     )
   }*/
   //case class MegaContent(menuModel: Pot[Menus], metaDatas: Pot[MetaDatas])
-  val previousH = new PreviousPageHandler(zoomTo(_.content.previousPage))
-  val cacheH = new EOCacheHandler(zoomTo(_.content.cache))
 
   override val actionHandler = composeHandlers(
     new SendingActionsHandler(zoomTo(_.content.sendingActions)),
@@ -63,8 +61,8 @@ object MyCircuit extends Circuit[AppModel] with ReactConnector[AppModel] {
     new MenuHandler(zoomTo(_.content.menuModel)),
     new RuleResultsHandler(zoomTo(_.content.ruleResults)),
     new PreviousPageHandler2(zoomTo(_.content.previousPage)),
-    cacheH,
-    previousH
+    new EOCacheHandler(zoomTo(_.content.cache)),
+    new PreviousPageHandler(zoomTo(_.content.previousPage))
   )
 
 
