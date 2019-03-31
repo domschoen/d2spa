@@ -117,13 +117,13 @@ No real solution, just avoid using dynamic route. All possible dynamic routes ar
 ## To Do
 ### Important
 
-  - Implement ERDList
+  - 
   - Implement ERD2WDisplayToOne
   - Why to-many relationship Customer.projects is not part of exported data ?
   - List page > Inspect 1 element > Click Return button should go back to List page
   - Change D2WContext to FullFledgeD2WContext for FireRule
   - in Query page, clear a criteria should remove the query value
-  
+
 ### Open Points
   - How to work with a eo value returned by a method. Let's say a method doing processing on other db attributes like a userPresentableDescription.
     - Should we reimplement the logic in the SPA ?
