@@ -42,7 +42,7 @@ object D2WDisplayNumber {
             // We expect a value for that property. Either:
             // StringValue
             // EmptyValue
-            val eoValue = EOValue.valueForKey(eoContaining, propertyName).get
+            val eoValue = eoContaining.valueForKey(propertyName).get
             val value = EOValue.juiceString(eoValue)
             <.div(
               <.span(^.id := "description", value)

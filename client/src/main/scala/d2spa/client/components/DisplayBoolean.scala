@@ -26,13 +26,13 @@ object DisplayBoolean {
       val eoOpt = pageContext.eo
 
       eoOpt match {
-        case Some(eo) =>
+        case Some(eoContaining) =>
           val entityName = d2wContext.entityName.get
           val propertyName = d2wContext.propertyKey.get
-          val eoValueForProperty = EOValue.valueForKey(eo,propertyName)
+          val eoValueForProperty = eoContaining.valueForKey(propertyName)
           eoValueForProperty match{
             case Some(eoInner) =>
-                val eoValue = EOValue.valueForKey(eo,propertyName).get
+                val eoValue = eoContaining.valueForKey(propertyName).get
                 val value = EOValue.juiceBoolean(eoValue)
                 <.div(
                   (<.i(^.className := "glyphicon glyphicon-ok")).when(value)

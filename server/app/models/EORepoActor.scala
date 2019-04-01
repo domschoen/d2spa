@@ -178,18 +178,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
       case fq: EOQualifiedFetch => Some(fq.qualifier)
     }
 
-    //val isLagomQuery = entityName.equals("Customer") || entityName.equals("Country")
-    val isLagomQuery = false
-    val queryWO = forceWODataSource || !isLagomQuery
-
-    // If Customer or Country, we can fetch WO only if force
-    if (queryWO){
-      println("Search WO")
-      searchOnWORepository(entityName, qualifier, missingKeys)
-    } else{
-      println("Search Lagom")
-      searchOnLagom(entityName, qualifier)
-    }
+    searchOnWORepository(entityName, qualifier, missingKeys)
   }
 
   def paramStringWithParams(params: List[String]): String = {
@@ -221,27 +210,6 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     Json.toJson(valuesMap)
   }
 
-
-  def convertLagomCustomerToCustomerContainer(lagomGetObj: LagomGetObj, countryByIsoCode: Map[String, List[CountryContainer]]): Option[CustomerContainer] = {
-    lagomGetObj match {
-      case customer: Customer =>
-        val entityName = "Customer"
-        val customerEO = EOValue.dryEOWithEntity(entityName, EOPk(List(customer.customerID.toInt)))
-        val country = countryByIsoCode(customer.headCountry).head
-        Some(CustomerContainer(customer.trigram, customer.name, customer.customerType, customer.dynamicsAccountID, country, customer.region, customerEO))
-      case _ => None
-    }
-  }
-
-  def convertLagomCountryToCountryContainer(lagomGetObj: LagomGetObj) : Option[CountryContainer] = {
-    lagomGetObj match {
-      case country: Country =>
-        val entityName = "Customer"
-        val eo = EOValue.dryEOWithEntity(entityName, EOPk(List(country.countryID.toInt)))
-        Some(CountryContainer(country.flagImage, country.isoCode, country.name, country.region, eo))
-      case _ => None
-    }
-  }
 
 
   def convertLagomCustomerToWOCustomerJson(customer: Customer) : JsValue = {
@@ -276,32 +244,6 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     Json.toJson(valuesMap)
   }
 
-  def searchOnLagom(entityName: String, qualifierOpt: Option[EOQualifier]): Future[List[EOContaining]] = {
-    entityName match {
-      case "Customer" =>
-        val result = rawSearchOnLagom("Country", None).map(countries => {
-          val countryCountainerOpts = countries.map(convertLagomCountryToCountryContainer(_))
-          val countryCountainers = countryCountainerOpts.flatten
-          val countryByIsoCode =  countryCountainers.groupBy(c => c.isoCode)
-
-          val toto = rawSearchOnLagom("Customer", None).map(customers => {
-            val custContainterOpts = customers.map( custLagomObj => {
-
-              convertLagomCustomerToCustomerContainer(custLagomObj, countryByIsoCode)
-            })
-            custContainterOpts.flatten
-          })
-          toto
-        })
-        result.flatten
-      case "Country" =>
-        val toto = rawSearchOnLagom(entityName, None).map(custLagomObjs => {
-          val titi = custLagomObjs.map(convertLagomCountryToCountryContainer(_))
-          titi.flatten
-        })
-        toto
-    }
-  }
 
 
   //Some(convertLagomCountryToCountryContainer(country))
@@ -590,7 +532,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           val sourceEO = sourceEOOpt.get
 
           val updateTupleOpts = relationship.joins.map(join => {
-            val sourceValueOpt = EOValue.valueForKey(sourceEO, join.sourceAttributeName)
+            val sourceValueOpt = sourceEO.valueForKey(join.sourceAttributeName)
             val opt: Option[(String, EOValue)] = sourceValueOpt match {
               case Some(sourceValue) =>
                 val key = join.sourceAttributeName
@@ -661,7 +603,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     // for each relationship we go down the tree
     val subEOLists = filteredRelationships.map(relationship => {
       //Logger.debug("traverseTreeToMany | for each relationship we go down the tree " + relationship.name)
-      val eoValueOpt = EOValue.valueForKey(savedRoot, relationship.name)
+      val eoValueOpt = savedRoot.valueForKey(relationship.name)
       eoValueOpt match {
         case Some(eovalue) =>
           eovalue match {
@@ -716,14 +658,14 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
 
 
   def updateDestinationEO(eoContaining: EOContaining, relationship: EORelationship): Option[(EOPk, EOContaining)] = {
-    val eoValueOpt = EOValue.valueForKey(eoContaining, relationship.name)
+    val eoValueOpt = eoContaining.valueForKey(relationship.name)
     eoValueOpt match {
       case Some(eovalue) =>
         eovalue match {
           case ObjectValue(eoPk: EOPk) =>
 
             val updateTupleOpts = relationship.joins.map(join => {
-              val sourceValueOpt = EOValue.valueForKey(eoContaining, join.destinationAttributeName)
+              val sourceValueOpt = eoContaining.valueForKey(join.destinationAttributeName)
               val opt: Option[(String, EOValue)] = sourceValueOpt match {
                 case Some(sourceValue) =>
                   val key = join.sourceAttributeName
@@ -779,7 +721,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     // for each relationship we go down the tree
     // It should return the same sub tree
     val subEOLists: List[List[Future[EOContaining]]] = filteredRelationships.map(relationship => {
-      val eoValueOpt = EOValue.valueForKey(rootContaining, relationship.name)
+      val eoValueOpt = rootContaining.valueForKey(relationship.name)
       eoValueOpt match {
         case Some(eovalue) =>
           eovalue match {
@@ -928,7 +870,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           val rootPk = root.eo.pk.pks.head
 
           // to many to ending eos
-          val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+          val eoValueOpt = root.valueForKey(relationship.name)
           //Logger.debug("Update EO | traverse tree | valueForKey " + eoValueOpt)
 
           eoValueOpt match {
@@ -987,7 +929,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
           //Logger.debug("Update EO | traverse tree | non flatten " + relationship.name)
 
           // Nothing to do
-          val eoValueOpt = EOValue.valueForKey(root, relationship.name)
+          val eoValueOpt = root.valueForKey(relationship.name)
           eoValueOpt match {
             case Some(eovalue) =>
               eovalue match {
@@ -1262,7 +1204,7 @@ class EORepoActor(eomodelActor: ActorRef, ws: WSClient) extends Actor with Actor
     val trigram = EOValue.stringValueForKey(cust,"customerTrigram")
     val name = EOValue.stringValueForKey(cust,"preferedName")
 
-    val dynamicsAccountIDEOValue = EOValue.valueForKey(cust,"dynamicsAccountID")
+    val dynamicsAccountIDEOValue = cust.valueForKey("dynamicsAccountID")
     val dynamicsAccountID = dynamicsAccountIDEOValue match {
       case Some(StringValue(s)) => Some(s)
       case Some(EmptyValue) => None

@@ -154,7 +154,7 @@ object ERDEditRelationship {
         log.finest("ERDEditRelationship handleSubmit " + s.selectedEO)
         s.selectedEO match {
           case Some(eoContaining) =>
-            val destinationEOsValueOpt = EOValue.valueForKey(eoContaining, propertyName)
+            val destinationEOsValueOpt = eoContaining.valueForKey(propertyName)
             log.finest("ERDEditRelationship handleSubmit : " + destinationEOsValueOpt +  " property " + propertyName)
             val eoPkList: List[EOPk] = destinationEOsValueOpt match {
               case Some(ObjectsValue(eoPks)) =>

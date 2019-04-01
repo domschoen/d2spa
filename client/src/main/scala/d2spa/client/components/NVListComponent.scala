@@ -182,7 +182,7 @@ object NVListComponent {
               //log.finest("NVListComponent render eosAtKeyPath " + eosAtKeyPath)
               //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath " + eosAtKeyPath.keyPath)
               //D2SpaLogger.logfinest(entityName, "NVListComponent render eosAtKeyPath | eo " + eosAtKeyPath.eo)
-              val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eoContaining, eosAtKeyPath.keyPath)
+              val eovalueOpt = eosAtKeyPath.eoContaining.valueForKey(eosAtKeyPath.keyPath)
               eovalueOpt match {
                 case Some(eovalue) =>
 

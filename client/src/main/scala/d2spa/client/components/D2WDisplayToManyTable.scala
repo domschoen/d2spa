@@ -83,8 +83,8 @@ object D2WDisplayToManyTable {
 
 
       eoOpt match {
-        case Some(eo) =>
-          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | eo " + eo)
+        case Some(eoContaining) =>
+          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | eoContaining " + eoContaining)
 
           val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
           entityOpt match {
@@ -98,7 +98,7 @@ object D2WDisplayToManyTable {
               val rules = RuleUtils.firingRulesFromPotFiredRuleResult(rulesPots)
               val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
-              val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+              val destinationEOValueOpt = eoContaining.valueForKey(propertyName)
               D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | destinationEOValueOpt  " + propertyName + " - " + destinationEOValueOpt)
 
               destinationEOValueOpt match {
@@ -127,8 +127,8 @@ object D2WDisplayToManyTable {
                   Callback.empty
               }
             case None =>
-              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | no eo")
-              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable mounted: no eo " + entityName)
+              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable | mounted | no eoContaining")
+              D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable mounted: no eoContaining " + entityName)
               Callback.empty
           }
         case None =>
@@ -147,14 +147,14 @@ object D2WDisplayToManyTable {
 
       val eoOpt = pageContext.eo
       eoOpt match {
-        case Some(eo) =>
+        case Some(eoContaining) =>
 
 
 
           // We expect a value for that property. Either:
           // StringValue
           // EmptyValue
-          val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+          val destinationEOValueOpt = eoContaining.valueForKey(propertyName)
           destinationEOValueOpt match {
             case Some(destinationEOValue) =>
               destinationEOValue match {
@@ -169,17 +169,17 @@ object D2WDisplayToManyTable {
                         case Some(destinationEntity) =>
 
                           val destinationEntityName = destinationEntity.name
-                          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable render | get eo out of cache " + destinationEntityName + " eo " + destinationEO)
+                          D2SpaLogger.logfinest(entityName, "D2WDisplayToManyTable render | get eoContaining out of cache " + destinationEntityName + " eoContaining " + destinationEO)
                           val cache = p.proxy.value.cache
-                          //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
+                          //log.finest("ERD2WDisplayToOne render | get eoContaining out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
                           val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, destinationEntityName, destinationEO)
                           eoOpt match {
-                            case Some(eo) =>
+                            case Some(eoContainingFromCache) =>
                               val ruleResultsModel = p.proxy.value.ruleResults
                               val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
                               keyWhenRelationshipOpt match {
                                 case Some(keyWhenRelationship) =>
-                                  val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
+                                  val eoValueOpt = eoContainingFromCache.valueForKey(keyWhenRelationship)
                                   eoValueOpt match {
                                     case Some(eoValue) =>
 
@@ -194,10 +194,10 @@ object D2WDisplayToManyTable {
                                   <.div("No keyWhenRelationship")
                               }
                             case None =>
-                              <.div("No eo out of cache")
+                              <.div("No eoContaining out of cache")
                           }
                         case None =>
-                          <.div("No entity for eo")
+                          <.div("No entity for eoContaining")
                       }
                     case None =>
                       <.div("No destination Entity for key: " + propertyName)

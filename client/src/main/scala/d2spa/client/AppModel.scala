@@ -238,7 +238,7 @@ object HydrationUtils {
         Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
 
       case Some(DataRep(_, Some(eoakp))) => {
-        val eovalueOpt = EOValue.valueForKey(eoakp.eoContaining, eoakp.keyPath)
+        val eovalueOpt = eoakp.eoContaining.valueForKey(eoakp.keyPath)
         eovalueOpt match {
           case Some(eovalue) =>
             eovalue match {
@@ -733,8 +733,8 @@ object EOCacheUtils {
   }
 
   def compareEOs(a: EOContaining, b: EOContaining, propKey: String, isAsc: Boolean, cache: EOCache): Boolean = {
-    val va = EOValue.valueForKey(a,propKey).get
-    val vb = EOValue.valueForKey(b,propKey).get
+    val va = a.valueForKey(propKey).get
+    val vb = b.valueForKey(propKey).get
 
     val isIntegerVa = va match {
       case IntValue(va) => true
@@ -768,7 +768,7 @@ object EOCacheUtils {
   def eoValueForKeyPath(eoContaining: EOContaining, keyPath: String, cache: EOCache): Option[EOValue] = {
     val eo = eoContaining.eo
     if (eo.keys.contains(keyPath)) {
-      EOValue.valueForKey(eoContaining,keyPath)
+      eoContaining.valueForKey(keyPath)
     } else {
       if (keyPath.contains(".")) {
 
@@ -776,7 +776,7 @@ object EOCacheUtils {
         val propertyNameList: List[String] = keyPath.split("\\.").map(_.trim).toList
         val firstKeyPathElement = propertyNameList.head
         if (eo.values.contains(firstKeyPathElement)) {
-          val destinationEOValue = EOValue.valueForKey(eoContaining,firstKeyPathElement)
+          val destinationEOValue = eoContaining.valueForKey(firstKeyPathElement)
           destinationEOValue match {
             case Some(ObjectValue(destinationEOPk)) =>
               val sourceEOEntity = EOModelUtils.entityNamed(cache.eomodel.get, eo.entityName).get
@@ -788,7 +788,7 @@ object EOCacheUtils {
                   destinationEOContainerOpt match {
                     case Some(destinationEOContainer) =>
                       val destinationEO = destinationEOContainer
-                      EOValue.valueForKey(destinationEO,propertyNameList(1))
+                      destinationEO.valueForKey(propertyNameList(1))
                     case None => None
                   }
                 case None =>

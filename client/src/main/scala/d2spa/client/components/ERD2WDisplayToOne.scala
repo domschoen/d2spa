@@ -81,8 +81,8 @@ object ERD2WDisplayToOne {
 
       val eoOpt = pageContext.eo
       eoOpt match {
-        case Some(eo) =>
-          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eo " + eo)
+        case Some(eoContaining) =>
+          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | eoContaining " + eoContaining)
 
           val entityOpt = EOModelUtils.entityNamed(eomodel, entityName)
           entityOpt match {
@@ -96,7 +96,7 @@ object ERD2WDisplayToOne {
               val rules = RuleUtils.firingRulesFromPotFiredRuleResult(rulesPots)
               val ruleRequestOpt = RuleUtils.ruleRequestWithRules(d2wContext, rules)
 
-              val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+              val destinationEOValueOpt = eoContaining.valueForKey(propertyName)
               //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | destinationEOValueOpt  " + destinationEOValueOpt)
 
               destinationEOValueOpt match {
@@ -123,12 +123,12 @@ object ERD2WDisplayToOne {
                       Callback.empty
                   }
                 case None =>
-                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no value for property " + propertyName + " in eo: " + eo)
+                  D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no value for property " + propertyName + " in eoContaining: " + eoContaining)
                   Callback.empty
               }
             case None =>
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | no eo")
-              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eo " + entityName)
+              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne | mounted | no eoContaining")
+              D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne mounted: no eoContaining " + entityName)
               Callback.empty
           }
         case None =>
@@ -148,14 +148,14 @@ object ERD2WDisplayToOne {
 
       val eoOpt = pageContext.eo
       eoOpt match {
-        case Some(eo) =>
+        case Some(eoContaining) =>
 
 
 
           // We expect a value for that property. Either:
           // StringValue
           // EmptyValue
-          val destinationEOValueOpt = EOValue.valueForKey(eo, propertyName)
+          val destinationEOValueOpt = eoContaining.valueForKey(propertyName)
           destinationEOValueOpt match {
             case Some(destinationEOValue) =>
               destinationEOValue match {
@@ -170,17 +170,17 @@ object ERD2WDisplayToOne {
                         case Some(destinationEntity) =>
 
                           val destinationEntityName = destinationEntity.name
-                          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eo out of cache " + destinationEntityName + " eo " + destinationEOPk)
+                          //D2SpaLogger.logfinest(entityName, "ERD2WDisplayToOne render | get eoContaining out of cache " + destinationEntityName + " eoContaining " + destinationEOPk)
                           val cache = p.proxy.value.cache
-                          //log.finest("ERD2WDisplayToOne render | get eo out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
+                          //log.finest("ERD2WDisplayToOne render | get eoContaining out of cache " + (if (cache.eos.contains(destinationEntityName)) cache.eos(destinationEntityName) else " no cache"))
                           val eoOpt = EOCacheUtils.outOfCacheEOUsingPk(cache, destinationEntityName, destinationEOPk)
                           eoOpt match {
-                            case Some(eo) =>
+                            case Some(eoContainingFromCache) =>
                               val ruleResultsModel = p.proxy.value.ruleResults
                               val keyWhenRelationshipOpt = RuleUtils.ruleStringValueForContextAndKey(ruleResultsModel, d2wContext, RuleKeys.keyWhenRelationship)
                               keyWhenRelationshipOpt match {
                                 case Some(keyWhenRelationship) =>
-                                  val eoValueOpt = EOValue.valueForKey(eo, keyWhenRelationship)
+                                  val eoValueOpt = eoContainingFromCache.valueForKey(keyWhenRelationship)
                                   eoValueOpt match {
                                     case Some(eoValue) =>
 
@@ -195,10 +195,10 @@ object ERD2WDisplayToOne {
                                   <.div("No keyWhenRelationship")
                               }
                             case None =>
-                              <.div("No eo out of cache")
+                              <.div("No eoContaining out of cache")
                           }
                         case None =>
-                          <.div("No entity for eo")
+                          <.div("No entity for eoContaining")
                       }
                     case None =>
                       <.div("No destination Entity for key: " + propertyName)

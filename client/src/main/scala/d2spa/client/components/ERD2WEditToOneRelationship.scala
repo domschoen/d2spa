@@ -185,14 +185,14 @@ object ERD2WEditToOneRelationship {
         case Some(deo) =>
           val eoOpt = EOCacheUtils.outOfCacheEOUsingPkFromEO(p.proxy.value.cache, entityName, deo)
           eoOpt match {
-            case Some(eo) =>
+            case Some(eoContaining) =>
               val propertyName = d2wContext.propertyKey.get
               //val properyD2WContext = RuleUtils.convertD2WContextToFullFledged(d2wContext(p))
 
               //log.finest("+ rules " + p.property.ruleResults)
               log.finest("task  " + taskName)
 
-              //log.finest("Edit To One Relationship " + eo)
+              //log.finest("Edit To One Relationship " + eoContaining)
               val ruleResultsOpt = RuleUtils.ruleContainerForContext(ruleResultsModel, d2wContext)
               ruleResultsOpt match {
                 case Some(ruleResults) => {
@@ -222,9 +222,9 @@ object ERD2WEditToOneRelationship {
                             destinationEOs match {
                               case Some(eos) => {
                                 log.finest("ERD2WEditToOneRelationship render eoRefs " + eos)
-                                log.finest("ERD2WEditToOneRelationship render eo " + eo)
+                                log.finest("ERD2WEditToOneRelationship render eoContaining " + eoContaining)
                                 // the selection
-                                val destinationEO = EOValue.valueForKey(eo, propertyName)
+                                val destinationEO = eoContaining.valueForKey(propertyName)
                                 log.finest("ERD2WEditToOneRelationship render destinationEO " + destinationEO)
                                 val defaultValue = destinationEO match {
                                   case Some(ObjectValue(eoPK)) =>
@@ -236,14 +236,14 @@ object ERD2WEditToOneRelationship {
 
                                 <.div(
                                   <.select(bss.formControl, ^.value := defaultValue, ^.id := "priority", ^.onChange ==> { e: ReactEventFromInput =>
-                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eo, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
+                                    p.proxy.dispatchCB(UpdateEOValueForProperty(eoContaining, pageContext, EOValue.objectValue(eoWith(eos, destinationEntity, e.currentTarget.value))))
                                   },
                                     {
                                       log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
                                       log.finest("ERD2WEditToOneRelationship | render | destination eos " + eos)
                                       val tuples = eos map (deoContaining => {
 
-                                        //log.finest("id " + id + " for eo: " + x)
+                                        //log.finest("id " + id + " for eoContaining: " + x)
                                         val displayName = EOValue.stringValueForKey(deoContaining, keyWhenRelationship)
                                         val deo = deoContaining.eo
                                         val valueString =  EOValue.juiceEOPkString(deo.pk)

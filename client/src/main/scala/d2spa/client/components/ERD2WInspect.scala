@@ -78,7 +78,7 @@ object ERD2WInspect {
             Some(DrySubstrate(fetchSpecification = Some(fetchSpecification)))
 
             case Some(DataRep(_, Some(eosAtKeyPath))) => {
-              val eoValueOpt = EOValue.valueForKey(eosAtKeyPath.eoContaining, eosAtKeyPath.keyPath)
+              val eoValueOpt = eosAtKeyPath.eoContaining.valueForKey(eosAtKeyPath.keyPath)
               val eo = EOValue.juiceEO(eoValueOpt.get).get
               val eoFault = EOFault(eosAtKeyPath.destinationEntityName,eo)
               Some(DrySubstrate(eo = Some(eoFault)))
@@ -165,7 +165,7 @@ object ERD2WInspect {
                 case DataRep(_, Some(eosAtKeyPath)) => {
                   //log.finest("ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
                   D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath " + eosAtKeyPath)
-                  val eovalueOpt = EOValue.valueForKey(eosAtKeyPath.eoContaining, eosAtKeyPath.keyPath)
+                  val eovalueOpt = eosAtKeyPath.eoContaining.valueForKey(eosAtKeyPath.keyPath)
                   D2SpaLogger.logfinest(entityName,"ERD2WInspect render eosAtKeyPath eovalueOpt: " + eovalueOpt)
 
                   eovalueOpt match {

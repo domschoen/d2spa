@@ -430,7 +430,34 @@ object UrlUtils {
 
 }
 
+object EOContaining {
 
+  def updateEOContainingEO(eoc: EOContaining, newEO:EO) = {
+    eoc match {
+      case eoContainer: EOContainer => eoContainer.copy(eo = newEO)
+      //case customerContainer: CustomerContainer => customerContainer.copy(eo = newEO)
+      //case countryContainer: CountryContainer => countryContainer.copy(eo = newEO)
+    }
+  }
+
+}
+
+sealed trait EOContaining {
+  val eo: EO
+  def containsValueForKey(key: String): Boolean
+  def valueForKey(key: String): Option[EOValue]
+}
+
+case class EOContainer(eo: EO) extends EOContaining {
+
+  def containsValueForKey(key: String): Boolean = {
+    EOValue.eoContainsValueForKey(eo,key)
+  }
+  def valueForKey(key: String): Option[EOValue] = {
+    EOValue.eoValueForKey(eo, key)
+  }
+
+}
 
 
 sealed trait EOValue
@@ -467,7 +494,7 @@ object EOValue {
     val entity = EOModelUtils.entityNamed(eomodel, eo.entityName).get
     val pkAttributeNames = entity.pkAttributeNames
     val pkOpts = pkAttributeNames.map( pkAttributeName => {
-      EOValue.valueForKey(eoContaining, pkAttributeName) match {
+      eoContaining.valueForKey(pkAttributeName) match {
         case Some(IntValue(intV)) => Some(intV)
         case None => None
       }
@@ -604,7 +631,7 @@ object EOValue {
     if (key.equals("userPresentableDescription")) {
       eo.toString
     } else {
-      valueForKey(eoContaining, key) match {
+      eoContaining.valueForKey(key) match {
         case Some(value) => juiceString(value)
         case None => ""
       }
@@ -612,26 +639,19 @@ object EOValue {
   }
   def booleanValueForKey(eoContaining: EOContaining, key: String) = {
     val eo = eoContaining.eo
-    valueForKey(eoContaining, key) match {
+    eoContaining.valueForKey(key) match {
         case Some(value) => juiceBoolean(value)
         case None => false
       }
   }
 
   def intValueForKey(eoContaining: EOContaining, key: String) = {
-    valueForKey(eoContaining, key) match {
+    eoContaining.valueForKey(key) match {
       case Some(value) => juiceInt(value)
       case None => 0
     }
   }
 
-  def containsValueForKey(eoContaining: EOContaining, key: String): Boolean = {
-    CustomerEOValue.customContainsValueForKey(eoContaining,key) match {
-      case Some(boolValue) => boolValue
-      case _ =>
-        eoContainsValueForKey(eoContaining.eo, key)
-    }
-  }
 
   def eoContainsValueForKey(eo: EO, key: String) = {
     eo.keys.contains(key)
@@ -639,14 +659,7 @@ object EOValue {
 
 
 
-  def valueForKey(eoContaining: EOContaining, key: String) = {
-    CustomerEOValue.customValueForKey(eoContaining,key) match {
-      case Some(opt) => opt
-      case _ =>
-        val eo = eoContaining.eo
-        eoValueForKey(eo, key)
-    }
-  }
+
 
   def eoValueForKey(eo: EO, key: String) = {
     val valueMap = keyValues(eo)
@@ -711,7 +724,7 @@ object EOValue {
       case Some(entity) =>
         val pkAttributeNames = entity.pkAttributeNames
         if (eo.keys.contains(pkAttributeNames.head)) {
-          Some(EOPk(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(valueForKey(eoContaining,pkAttributeName).get))))
+          Some(EOPk(pkAttributeNames.map(pkAttributeName => EOValue.juiceInt(eoContaining.valueForKey(pkAttributeName).get))))
         } else None
       case None => None
     }
@@ -787,7 +800,7 @@ object EOQualifier {
           if (remaining.isEmpty) false else evaluateWithEO(eoContaining, EOOrQualifier(remaining))
         }
       case EOKeyValueQualifier(key, selector, value) =>
-        val eoValueOpt = EOValue.valueForKey(eoContaining, key)
+        val eoValueOpt = eoContaining.valueForKey(key)
 
         eoValueOpt match {
           // eo has a value which is not empty
